@@ -1,5 +1,5 @@
 ---
-title: MathStruct
+title: Math∫truct
 description: Structure-first mathematics, and the software that comes out of it.
 ---
 
@@ -7,7 +7,7 @@ description: Structure-first mathematics, and the software that comes out of it.
 > Replace the italic placeholders below with the real text. Everything else on
 > this page already works.
 
-*MathStruct is a small research group working on __TOPIC__. We care about
+*Math∫truct is a small research group working on __TOPIC__. We care about
 category theory, geometry and the structures that make machine learning
 intelligible — and we write the code that makes those structures usable.*
 

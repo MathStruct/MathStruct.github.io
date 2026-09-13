@@ -72,9 +72,13 @@ const config: QuartzConfig = {
       Plugin.TableOfContents(),
       Plugin.CrawlLinks({ markdownLinkResolution: "shortest" }),
       Plugin.Description(),
-      // LaTeX/KaTeX by default; a page opts into Typst with `math: typst` in its
-      // frontmatter, and ```typst fences render with Typst on any page
-      Plugin.Latex({ renderEngine: "katex", katexOptions: { throwOnError: false, strict: false } }),
+      // Notes may mix Typst and LaTeX formulas freely: each one is tried with
+      // Typst first, and anything Typst rejects falls through to KaTeX. Pin a
+      // page to a single engine with `math: typst` or `math: latex`.
+      Plugin.Latex({
+        renderEngine: ["typst", "katex"],
+        katexOptions: { throwOnError: false, strict: false },
+      }),
     ],
     filters: [Plugin.RemoveDrafts()],
     emitters: [

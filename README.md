@@ -1,6 +1,6 @@
-# MathStruct
+# Math∫truct
 
-The organisation website for [MathStruct](https://github.com/MathStruct), built
+The organisation website for [Math∫truct](https://github.com/MathStruct), built
 with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 
 **Live site:** <https://mathstruct.github.io/>
@@ -44,10 +44,15 @@ math: typst               # optional; omit for LaTeX/KaTeX
   `\begin{document} … \end{document}`. Compiled to SVG at build time by
   `node-tikzjax` and cached by content hash in `site/.tikz-cache` (committed, so
   CI does not recompile everything).
-- **LaTeX** — `$…$` and `$$…$$`, rendered with KaTeX. The default.
-- **Typst** — set `math: typst` in the frontmatter and the whole page's `$…$`
-  goes through Typst instead, matching what the Wypst plugin does in Obsidian.
-  For a single formula on an otherwise-LaTeX page, use a ` ```typst ` fence.
+- **Maths** — notes may mix Typst and LaTeX freely; each formula is routed on
+  its own. A backslash command (`\frac`, `\beta`) means LaTeX and goes to
+  KaTeX; everything else is offered to Typst first and falls through to KaTeX if
+  Typst rejects it. Pin a page with `math: typst` or `math: latex` to forbid the
+  other syntax. A ` ```typst ` fence is always Typst and never falls back.
+
+  The build prints `Mixed math in <file>: N with Typst, M with katex` for every
+  note that used both, which is the list to work through if you want to make the
+  vault pure.
 
 ## Local preview
 
@@ -76,8 +81,9 @@ match — for example `mathstruct.github.io/website`.
 
 - `quartz/plugins/transformers/tikz.ts` — build-time TikZ → SVG with caching.
 - `quartz/plugins/transformers/tabs.ts` — Obsidian Markdown Tabs blocks.
-- `quartz/plugins/transformers/latex.ts` — per-page choice of KaTeX, Typst or
-  MathJax, plus ` ```typst ` fences on any page.
+- `quartz/plugins/transformers/latex.ts` — per-*formula* engine selection with
+  fallback, so one note can mix Typst and LaTeX; ` ```typst ` fences; and a
+  report of which notes are mixed.
 - `quartz/components/Authors.tsx` — bylines from `authors:` frontmatter, linked
   to `content/people.md`; used by `ContentMeta`, `PageList` and `RecentNotes`.
 

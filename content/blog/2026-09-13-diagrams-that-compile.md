@@ -73,9 +73,11 @@ without switching the whole page over:
 integral_(x in cal(C)) [cal(C)(a, x), F x] tilde.equiv F a
 ```
 
-That block is compiled by Typst; everything around it is still KaTeX. My
-colleague's [[blog/2026-09-11-formulas-in-typst|next post]] covers the other
-direction — a page written entirely in Typst.
+That block is compiled by Typst; the `$…$` around it is LaTeX. In fact this
+whole site decides formula by formula, so the two can sit in the same sentence —
+see [[notes/mixed-math|the mixed note]]. My colleague's
+[[blog/2026-09-11-formulas-in-typst|next post]] covers the stricter option: a
+page pinned to Typst.
 
 ## Why build-time rendering
 
