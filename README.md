@@ -1,6 +1,6 @@
-# Math∫truct
+# MathStruct
 
-The organisation website for [Math∫truct](https://github.com/MathStruct), built
+The organisation website for [MathStruct](https://github.com/MathStruct), built
 with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 
 **Live site:** <https://mathstruct.github.io/>
