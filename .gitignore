@@ -1,4 +1,8 @@
 node_modules/
 site/public/
-site/.quartz-cache/
+site/quartz/.quartz-cache/
+site/tsconfig.tsbuildinfo
 .DS_Store
+
+# site/.tikz-cache is deliberately tracked: it keeps CI from recompiling every
+# diagram on each build
