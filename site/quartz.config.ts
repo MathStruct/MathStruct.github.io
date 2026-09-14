@@ -14,7 +14,7 @@ const config: QuartzConfig = {
     enablePopovers: true,
     analytics: null,
     locale: "en-US",
-    baseUrl: "mathstruct.github.io",
+    baseUrl: "mathstruct.org",
     ignorePatterns: ["private", "templates", ".obsidian", ".tikz-cache"],
     // blog posts are listed and dated by when they were published
     defaultDateType: "created",
@@ -93,6 +93,9 @@ const config: QuartzConfig = {
       }),
       Plugin.Assets(),
       Plugin.Static(),
+      // writes a CNAME file from baseUrl, so the custom domain survives a
+      // deploy that replaces the whole published site
+      Plugin.CNAME(),
       Plugin.Favicon(),
       Plugin.NotFoundPage(),
       // Plugin.CustomOgImages(),  // disabled: slows the build considerably
