@@ -177,10 +177,15 @@ vault:
 ## Previewing locally
 
 ```bash
-cd site
-npm ci          # first time only
-npx quartz build --serve -d ../content
+site/build.sh --serve      # needs git and Node 22+
 ```
 
 Then open <http://localhost:8080>. The server watches `content/` and rebuilds on
-save.
+save. The first run downloads the shared Quartz and its dependencies, which
+takes a minute.
+
+Rather not build it yourself? Open a pull request: CI builds the site and
+attaches it to the run as the `site` artifact (on the pull request, *Checks →
+Deploy site to GitHub Pages → Summary → Artifacts*). Download it, unzip, and
+serve the folder with `npx serve <folder>` (Quartz's links leave out `.html`,
+which `serve` fills in and a plain file server does not).

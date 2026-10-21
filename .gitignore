@@ -1,7 +1,5 @@
 node_modules/
 site/public/
-site/quartz/.quartz-cache/
-site/tsconfig.tsbuildinfo
 .DS_Store
 
 # site/.tikz-cache is deliberately tracked: it keeps CI from recompiling every

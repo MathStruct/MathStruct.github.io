@@ -47,4 +47,4 @@ Checklist before publishing — delete this block:
 - [ ] you have a page in `content/people/` ([[people/index|People]])
 - [ ] `math: typst` set (or removed) to match how the formulas are written
 - [ ] `tags` filled in, empty entries removed
-- [ ] previewed locally with `npx quartz build --serve -d ../content`
+- [ ] previewed locally with `site/build.sh --serve`

@@ -18,7 +18,7 @@ with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 │   ├── projects/      #   one page per project
 │   ├── guides/        #   authoring guide
 │   └── templates/     #   Obsidian templates (not published)
-├── site/              # vendored Quartz + our plugins
+├── site/              # this site's Quartz config; the engine is MathStruct/quartz
 └── .github/workflows/ # build and deploy to GitHub Pages
 ```
 
@@ -57,13 +57,15 @@ math: typst               # optional; omit for LaTeX/KaTeX
 ## Local preview
 
 ```bash
-cd site
-npm ci                              # first time only
-npx quartz build --serve -d ../content
+site/build.sh --serve      # needs git and Node 22+
 ```
 
-Then open <http://localhost:8080>. Run `npm run check` for typechecking and
-formatting.
+Then open <http://localhost:8080>; it rebuilds as you edit. `site/build.sh`
+alone builds into `site/public/`.
+
+A pull request is built by CI too: the rendered site is attached to the
+workflow run as the `site` artifact, so reviewers can look at it without
+building anything.
 
 ## Deployment
 
@@ -75,17 +77,19 @@ Quartz and publishes to GitHub Pages. For the site to live at
 different repository name, update `baseUrl` in `site/quartz.config.ts` to
 match — for example `mathstruct.github.io/website`.
 
-## What we changed in Quartz
+## Quartz
 
-`site/` is a vendored copy of Quartz 4.5.2 with:
+The site is built with [MathStruct's Quartz](https://github.com/MathStruct/quartz),
+shared by all MathStruct sites: Quartz 4 plus our plugins (TikZ with dark-mode
+variants, Markdown Tabs, per-formula Typst/LaTeX, bylines) and a preset with the
+shared theme and layout. `site/` holds only what is particular to this site:
 
-- `quartz/plugins/transformers/tikz.ts` — build-time TikZ → SVG with caching.
-- `quartz/plugins/transformers/tabs.ts` — Obsidian Markdown Tabs blocks.
-- `quartz/plugins/transformers/latex.ts` — per-*formula* engine selection with
-  fallback, so one note can mix Typst and LaTeX; ` ```typst ` fences; and a
-  report of which notes are mixed.
-- `quartz/components/Authors.tsx` — bylines from `authors:` frontmatter, linked
-  to `content/people/<name>.md`; used by `ContentMeta`, `PageList` and `RecentNotes`.
+- `quartz.config.ts` and `quartz.layout.ts` — a call to the preset (title,
+  address, footer links, giscus, the blog list on the front page);
+- `build.sh` — fetches the shared Quartz into `site/.quartz/` (gitignored) and
+  builds;
+- `.tikz-cache/` — rendered diagrams, committed.
 
-To pull in upstream Quartz changes, merge them into `site/` and keep those four
-files.
+A change to the plugins or the theme goes to MathStruct/quartz and reaches every
+site on its next build; see its
+[MATHSTRUCT.md](https://github.com/MathStruct/quartz/blob/main/MATHSTRUCT.md).
