@@ -6,12 +6,34 @@ import { SimpleSlug } from "./quartz/util/path"
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
   header: [],
-  afterBody: [],
+  afterBody: [
+    // a comment thread under every page (giscus, stored in this repository's Discussions);
+    // not on the tag and folder listings
+    Component.ConditionalRender({
+      component: Component.Comments({
+        provider: "giscus",
+        options: {
+          repo: "MathStruct/MathStruct.github.io",
+          repoId: "R_kgDOUZNu4A",
+          category: "Announcements",
+          categoryId: "DIC_kwDOUZNu4M4DJQY5",
+          mapping: "pathname",
+          strict: true,
+          reactionsEnabled: true,
+          inputPosition: "bottom",
+        },
+      }),
+      condition: (page) =>
+        !(page.fileData.slug ?? "").startsWith("tags/"),
+    }),
+  ],
   footer: Component.Footer({
     links: {
       GitHub: "https://github.com/MathStruct",
-      "Category Theory & ML Wiki": "https://mathstruct.github.io/CategoryTheory-ML-Wiki/",
-      "Lenticulum.jl": "https://mathstruct.github.io/Lenticulum.jl/dev/",
+      "Lenticulum.jl": "https://mathstruct.org/Lenticulum.jl/",
+      Sophia: "https://mathstruct.org/Sophia/",
+      Moonkale: "https://mathstruct.org/Moonkale/",
+      "Category Theory & ML Wiki": "https://mathstruct.org/CategoryTheory-ML-Wiki/",
     },
   }),
 }

@@ -3,7 +3,7 @@
 The organisation website for [MathStruct](https://github.com/MathStruct), built
 with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 
-**Live site:** <https://mathstruct.github.io/>
+**Live site:** <https://mathstruct.org/>
 
 ## Layout
 
@@ -12,7 +12,7 @@ with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 ├── content/           # the site — this is what you edit
 │   ├── index.md       #   landing page
 │   ├── about.md
-│   ├── people.md      #   headings here are the targets of blog bylines
+│   ├── people.md      #   people; headings here are the targets of blog bylines
 │   ├── blog/          #   dated, signed posts (YYYY-MM-DD-slug.md)
 │   ├── notes/         #   undated reference notes
 │   ├── projects/      #   one page per project

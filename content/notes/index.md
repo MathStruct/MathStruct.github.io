@@ -7,9 +7,6 @@ Short, undated pages: definitions, worked examples, reading notes, things that
 want to be linked to rather than read front to back. Blog posts argue; notes
 just state.
 
-> [!todo] Fill me in
-> Delete this callout once there are real notes here. Until then, this folder
-> exists so the structure is visible.
 
 Start a note by copying `content/templates/Note.md`, or read the
 [[guides/authoring|authoring guide]] first.

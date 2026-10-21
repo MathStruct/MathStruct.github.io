@@ -1,7 +1,7 @@
 ---
 title: Writing formulas in Typst
 authors:
-  - Co-Author Name
+  - Daniel Boigk
 created: 2026-09-11
 math: typst
 tags:

@@ -1,37 +1,33 @@
 ---
 title: Category Theory & ML Wiki
-description: A linked wiki connecting category theory to machine learning.
+description: The shared mathematics of the MathStruct projects, one note per concept, with runnable code.
 tags:
   - project
   - category-theory
 ---
 
-**Site:** <https://mathstruct.github.io/CategoryTheory-ML-Wiki/>
+**Wiki:** <https://mathstruct.org/CategoryTheory-ML-Wiki/>
 **Source:** <https://github.com/MathStruct/CategoryTheory-ML-Wiki>
 
 ## What it is
 
-*A few sentences: what the wiki covers, who it is for, and how finished it is.*
+An Obsidian vault of several hundred notes, one per definition, theorem or construction, built
+from *Seven Sketches in Compositionality*, *Category Theory for Scientists*, *The Dao of
+Functional Programming* and the *Kittenlab.jl* lectures. Each note reconciles what the sources
+say, gives exact section and exercise numbers, and carries code tabs in **Julia** (Catlab),
+**Lean 4** (Mathlib) and **Haskell**. Exercises come with worked solutions.
 
-A densely cross-linked set of notes on category theory, written with an eye on
-where those structures actually show up in machine learning — functors and
-natural transformations, limits and colimits, monoidal structure and wiring
-diagrams, the Yoneda lemma and its computational shadows.
+It is the root vault of the MathStruct projects. Where [[projects/lenticulum-jl|Lenticulum]]
+uses Bayesian lenses, Markov categories or Bayesian inversion, and where
+[[projects/sophia|Sophia]] uses categorical semantics, e-graphs or Datalog, their notes link
+here for the general concept and keep only what is specific to them.
 
 ## How to read it
 
-*Suggest an entry point. Which note should a newcomer open first?*
-
-- Start at *__entry note__*.
-- *__second suggestion__*
-
-## Status
-
-> [!todo] Fill me in
-> *What is being worked on right now, and what would you like help with?*
-
-## Technical notes
-
-The wiki runs on the same stack as this site: Quartz 4 with build-time TikZ
-rendering. If you want to write there, the [[guides/authoring|authoring guide]]
-applies almost unchanged.
+- Start at [Start Here](https://mathstruct.org/CategoryTheory-ML-Wiki/Start-Here), which
+  explains the conventions and proposes an order of study in stages, from sets and preorders to
+  monoidal categories, adjunctions and beyond.
+- For the bridge to machine learning, the notes on
+  [Bayesian lenses](https://mathstruct.org/CategoryTheory-ML-Wiki/Bayesian-Lens) and
+  [backpropagation as a functor](https://mathstruct.org/CategoryTheory-ML-Wiki/Backprop-as-Functor)
+  are good entry points.
