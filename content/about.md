@@ -49,7 +49,7 @@ explains how, including authorship on releases.
 
 - [[projects/index|Projects]]: the software and the vaults.
 - [[blog/index|Blog]]: essays, notes in progress, release announcements.
-- [[people|People]]: who we are.
+- [[people/index|People]]: who we are.
 - [[guides/authoring|Authoring guide]]: how to write a page for this site.
 
 ## Citing us

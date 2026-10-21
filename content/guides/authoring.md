@@ -29,8 +29,8 @@ draft: true           # optional; excluded from the build entirely
 
 `authors` also accepts a single name (`authors: Daniel Boigk`) or a
 comma-separated string. Every name becomes a link to
-[[people|the people page]], so add yourself there once and the bylines take care
-of themselves.
+your page in `content/people/` (the file name is your name in lower case, with
+hyphens for spaces), so add one once and the bylines take care of themselves.
 
 ## Where things go
 
@@ -167,7 +167,7 @@ def f(x): return x**2
 
 ## Links and callouts
 
-Wikilinks (`[[people]]`, `[[people|our people]]`), embeds (`![[image.png]]`),
+Wikilinks (`[[about]]`, `[[about|about us]]`), embeds (`![[image.png]]`),
 backlinks, the graph view and Obsidian callouts all work as they do in the
 vault:
 

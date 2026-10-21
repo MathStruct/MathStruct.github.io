@@ -15,8 +15,8 @@ export function getAuthors(data: QuartzPluginData): string[] {
   return parts.map((author) => String(author).trim()).filter((author) => author.length > 0)
 }
 
-// where author names link to; headings on that page become the anchors
-const peoplePage = "people" as SimpleSlug
+// author names link to their pages: "Daniel Boigk" → people/daniel-boigk
+const personPage = (author: string) => `people/${slugAnchor(author)}` as SimpleSlug
 
 type Props = {
   data: QuartzPluginData
@@ -34,7 +34,7 @@ export function Authors({ data, currentSlug }: Props) {
           {i > 0 ? ", " : ""}
           <a
             class="internal"
-            href={`${resolveRelative(currentSlug, peoplePage)}#${slugAnchor(author)}`}
+            href={resolveRelative(currentSlug, personPage(author))}
           >
             {author}
           </a>

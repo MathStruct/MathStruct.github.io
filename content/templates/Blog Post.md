@@ -44,7 +44,7 @@ What you concluded, and what is still open.
 Checklist before publishing — delete this block:
 
 - [ ] `title`, `authors`, `created` and `description` filled in
-- [ ] your name has a heading on [[people|the People page]]
+- [ ] you have a page in `content/people/` ([[people/index|People]])
 - [ ] `math: typst` set (or removed) to match how the formulas are written
 - [ ] `tags` filled in, empty entries removed
 - [ ] previewed locally with `npx quartz build --serve -d ../content`

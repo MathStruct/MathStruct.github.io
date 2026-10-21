@@ -63,7 +63,7 @@ what is planned.
   computing and machine learning; [[about|About]] says what we are trying to do and why.
 - **Companies and investors.** The open-source core stays open source. Applications built
   downstream of it can be commercial; if that interests you, get in touch.
-- **People.** Who we are: [[people|People]]. More will join.
+- **People.** Who we are: [[people/index|People]]. More will join.
 
 Contact: comment on any page, start a discussion on
 [GitHub](https://github.com/MathStruct/MathStruct.github.io/discussions), or reach the

@@ -1,11 +1,7 @@
 ---
-title: People
-description: The people behind MathStruct.
+title: Daniel Boigk
+description: Mathematician; founder of MathStruct.
 ---
-
-MathStruct is small for now, and open to new members: [[about#Collaboration|how to join in]].
-
-## Daniel Boigk
 
 Mathematician working on scientific computing, inverse problems and machine learning. Founder of
 MathStruct; maintains [[projects/lenticulum-jl|Lenticulum.jl]],
@@ -13,7 +9,7 @@ MathStruct; maintains [[projects/lenticulum-jl|Lenticulum.jl]],
 
 - GitHub: [@DanielBoigk](https://github.com/DanielBoigk)
 
-### Other projects
+## Other projects
 
 **[ModularEIT.jl](https://github.com/DanielBoigk/ModularEIT.jl)**: a Julia library for
 electrical impedance tomography (EIT), the inverse problem of recovering a conductivity from
@@ -41,9 +37,3 @@ data, the others from the prior, and the spread of the samples shows which is wh
 posterior mean of 8 samples has a relative error of 0.143 against 0.188 for the
 Levenberg–Marquardt reconstruction; there is no evaluation over a test set yet.*
 
----
-
-> [!info] Bylines
-> Blog posts list their authors from the `authors:` field of their frontmatter, and each name
-> links to the matching heading on this page: `## Daniel Boigk` ↔ `authors: [Daniel Boigk]`.
-> To join, add a `## Your Name` section here.

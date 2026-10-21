@@ -12,7 +12,7 @@ with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 ├── content/           # the site — this is what you edit
 │   ├── index.md       #   landing page
 │   ├── about.md
-│   ├── people.md      #   people; headings here are the targets of blog bylines
+│   ├── people/        #   one page per person; blog bylines link to them
 │   ├── blog/          #   dated, signed posts (YYYY-MM-DD-slug.md)
 │   ├── notes/         #   undated reference notes
 │   ├── projects/      #   one page per project
@@ -33,7 +33,7 @@ See [the authoring guide](content/guides/authoring.md). The short version:
 ```yaml
 ---
 title: Post title
-authors: [Your Name]      # byline; add yourself to content/people.md
+authors: [Your Name]      # byline; add content/people/your-name.md
 created: 2026-09-13       # publication date; blog is sorted by it, newest first
 description: One sentence.
 math: typst               # optional; omit for LaTeX/KaTeX
@@ -85,7 +85,7 @@ match — for example `mathstruct.github.io/website`.
   fallback, so one note can mix Typst and LaTeX; ` ```typst ` fences; and a
   report of which notes are mixed.
 - `quartz/components/Authors.tsx` — bylines from `authors:` frontmatter, linked
-  to `content/people.md`; used by `ContentMeta`, `PageList` and `RecentNotes`.
+  to `content/people/<name>.md`; used by `ContentMeta`, `PageList` and `RecentNotes`.
 
 To pull in upstream Quartz changes, merge them into `site/` and keep those four
 files.
