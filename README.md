@@ -89,6 +89,9 @@ shared theme and layout. `site/` holds only what is particular to this site:
 - `build.sh` — fetches the shared Quartz into `site/.quartz/` (gitignored) and
   builds;
 - `.tikz-cache/` — rendered diagrams, committed.
+- `redirects/` — copied into the built site as it is: `mathstruct.org/sophia`
+  and the other lowercase spellings redirect to the project sites, whose paths
+  are the case-sensitive repository names. A new project site gets one here.
 
 A change to the plugins or the theme goes to MathStruct/quartz and reaches every
 site on its next build; see its

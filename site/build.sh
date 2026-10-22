@@ -23,4 +23,12 @@ if [[ -z "${QUARTZ_DIR:-}" ]]; then
     echo ">> offline: building with site/.quartz as it is ($(git -C "$ENGINE" rev-parse --short HEAD))"
   fi
 fi
-exec "$ENGINE/mathstruct/site.sh" "$HERE" "$CONTENT" "$@"
+"$ENGINE/mathstruct/site.sh" "$HERE" "$CONTENT" "$@"
+
+# Project sites live at their repository's name, and GitHub Pages paths are case-sensitive:
+# mathstruct.org/sophia would be a 404 next to mathstruct.org/Sophia/. site/redirects/ holds a
+# redirect page for each lowercase spelling, copied into the output as it is (Quartz would turn
+# an index.html in content/ into a page of its own).
+OUT="$HERE/public"
+for arg in "$@"; do [[ "$arg" == --* ]] || OUT="$arg"; done
+cp -r "$HERE/redirects/." "$OUT/"
