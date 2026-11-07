@@ -92,6 +92,8 @@ shared theme and layout. `site/` holds only what is particular to this site:
 - `redirects/` — copied into the built site as it is: `mathstruct.org/sophia`
   and the other lowercase spellings redirect to the project sites, whose paths
   are the case-sensitive repository names. A new project site gets one here.
+  `eit/` and `EIT/` forward to the ModularEIT wiki on danielboigk.github.io (not
+  linked from the site).
 
 A change to the plugins or the theme goes to MathStruct/quartz and reaches every
 site on its next build; see its
