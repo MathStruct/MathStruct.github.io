@@ -77,7 +77,7 @@ Proposed, in the library's backlog:
 - the whole library to the SciML standard: typed for dispatch, any AD backend, any array type,
   parallel, benchmarked.
 
-[LenticulumLM](https://mathstruct.org/LenticulumLM/) is a sister project: a diffusion
+[LenticulumLM](/projects/lenticulumLM) is a sister project: a diffusion
 language model assembled from such relations.
 
 ## Installation

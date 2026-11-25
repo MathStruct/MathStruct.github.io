@@ -1,7 +1,7 @@
 # MathStruct
 
 The organisation website for [MathStruct](https://github.com/MathStruct). The front page and
-a few promotional pages (`/projects/lenticulum-jl`, `/projects/sophia`, `/projects/moonkale`) are a small [Astro](https://astro.build)
+a few promotional pages (`/projects/lenticulum-jl`, `/projects/lenticulumLM`, `/projects/sophia`, `/projects/moonkale`) are a small [Astro](https://astro.build)
 site in `landing/`; everything else (blog, projects,
 people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
 same style as the project wikis.
@@ -68,6 +68,10 @@ address (plus `/assets/` and `/favicon.svg`):
 - `src/pages/projects/lenticulum-jl.astro`: Lenticulum.jl's page, with the interactive circle
   model (`src/components/lenticulum/`). Its demos are a list in `src/lib/lenticulum-demos.ts`:
   add an entry, with the image or video in `public/projects/lenticulum-jl-media/`.
+- `src/pages/projects/lenticulumLM.astro`: LenticulumLM's page. LenticulumLM is a plan, not code
+  yet, and the page says so; its animations (`src/components/lenticulum-lm/`) are toys drawn in
+  the browser: generation as iSAM2-style incremental smoothing, two denoising schedules, and the
+  part of a store a query reaches.
 - `src/pages/projects/sophia.astro`: Sophia's page, with a toy content-id normaliser that runs in
   the browser (`src/components/sophia/`). Its facts come from Sophia's README and vault.
 - `src/pages/projects/moonkale.astro`: Moonkale's page, with the README's screenshots

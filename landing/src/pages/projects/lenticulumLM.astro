@@ -1,0 +1,1254 @@
+---
+// /projects/lenticulumLM: the promotional page of LenticulumLM, in the style of /projects/lenticulum-jl,
+// /projects/sophia and /projects/moonkale. LenticulumLM is not implemented: this page describes
+// the plan and says so. What it says exists today is in Lenticulum.jl, Sophia and Moonkale, as of
+// 2026-11-25; the plan's pieces that are already on Lenticulum.jl's backlog are cited by row
+// (I10, O1–O5, L18) and its caveats come from the vault note Parked/Applications/Language Models.
+// The Markdown note content/projects/lenticulumLM.md stays, for the site's search and previews.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+import IsamText from "../../components/lenticulum-lm/IsamText.astro"
+import DenoiseFront from "../../components/lenticulum-lm/DenoiseFront.astro"
+import QueryDepth from "../../components/lenticulum-lm/QueryDepth.astro"
+
+const links = {
+  vault: "https://mathstruct.org/LenticulumLM/",
+  discussions: "https://github.com/MathStruct/MathStruct.github.io/discussions",
+  lenticulum: "/projects/lenticulum-jl",
+  sophia: "/projects/sophia",
+  moonkale: "/projects/moonkale",
+  lmNote: "https://mathstruct.org/Lenticulum.jl/Parked/Applications/Language-Models",
+  dynamic: "https://mathstruct.org/Lenticulum.jl/Gaussian-Graphs/Dynamic-Graphs",
+  beliefs: "https://mathstruct.org/Lenticulum.jl/Gaussian-Graphs/Beliefs",
+  isam2: "https://doi.org/10.1177/0278364911430419",
+}
+
+// ------------------------------------------------------------- hero picture
+// many small factors, a sentence threading through them, and the messages it sends
+let seed = 3
+const rnd = () => {
+  seed = (seed * 16807) % 2147483647
+  return seed / 2147483647
+}
+const HW = 560
+const HH = 460
+const field: [number, number][] = []
+for (let k = 0; field.length < 150 && k < 9000; k++) {
+  const x = 14 + rnd() * (HW - 28)
+  const y = 14 + rnd() * (HH - 28)
+  if (field.every(([a, b]) => (a - x) ** 2 + (b - y) ** 2 > 30 ** 2)) field.push([x, y])
+}
+const words = ["every", "prime", "p", "is", "odd", "since", "2∣p", "▒▒", "░░"]
+const path = words.map((w, i) => {
+  const x = 46 + i * ((HW - 92) / (words.length - 1))
+  const y = 250 + 46 * Math.sin(i * 0.8 + 0.4)
+  return { w, x, y, noise: Math.max(0, (i - 5) / 3) }
+})
+// each word reaches its nearest factors
+const reach = path.flatMap((p, i) =>
+  field
+    .map(([x, y], j) => ({ j, d: (x - p.x) ** 2 + (y - p.y) ** 2 }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, i < 7 ? 4 : 2)
+    .map(({ j }) => ({ i, j })),
+)
+const hot = new Set(reach.map((r) => r.j))
+const fieldEdges: [number, number][] = []
+field.forEach(([x, y], i) => {
+  field.forEach(([a, b], j) => {
+    if (j > i && (a - x) ** 2 + (b - y) ** 2 < 52 ** 2) fieldEdges.push([i, j])
+  })
+})
+
+// ---------------------------------------------------------------- the pitch
+const compare: [string, string, string][] = [
+  ["What the model is", "One fixed function: billions of parameters in one checkpoint", "A graph of thousands to tens of thousands of small relations (factors), kept in a store"],
+  ["Adding knowledge", "Fine-tune or retrain the network, or paste it into the prompt", "Append factors, and train only those, against the graph around them"],
+  ["Removing knowledge", "No reliable way: unlearning is an open problem", "Delete the factors: their contribution is gone"],
+  ["Generating text", "Left to right, one committed token per forward pass", "Denoising beliefs at any positions; a token stays revisable until it settles"],
+  ["Cost of a query", "The same for every query of a given length", "Set by the part of the graph the query reaches"],
+  ["Uncertainty", "A softmax over the next token", "A belief on every position; the free energy says how much the factors disagree"],
+  ["Hard constraints", "Mask logits, or check the output afterwards", "Constraint factors in the graph: a grammar, a type checker, a Lean 4 kernel"],
+  ["Tools, retrieval, agent loop", "Code outside the model (the harness)", "Variables and factors inside the graph, edited like the rest"],
+  ["Why this answer?", "Post-hoc attribution", "Per-factor energies: which factors pulled where"],
+  ["Direction", "Prompt → continuation", "Any: continue, fill a gap, infer a premise from a conclusion"],
+]
+
+const slam: [string, string][] = [
+  ["the pose xₜ of a robot", "the state of position t: a belief over its token"],
+  ["an odometry factor between poses", "a local language relation between neighbouring positions"],
+  ["a landmark", "a fact, a definition, a document from the store"],
+  ["a loop closure", "a reference back: a name, a variable, a claim made earlier"],
+  ["a GPS fix, a global constraint", "a verifier over a span: Lean 4, a type checker, a test"],
+  ["the marginal covariance", "how settled a position is: its noise level"],
+  ["iSAM2's incremental update", "the next token: re-solve only what the new factors reach"],
+  ["relinearisation", "revising an earlier token when new evidence says it was wrong"],
+]
+
+const blocks = [
+  { k: "Factors", t: "Small relation learners", d: "Diffusion models and EnergyNetworks from Lenticulum.jl, n-gram windows, small networks. Each is a relation, queried in any direction." },
+  { k: "Beliefs", t: "A belief on every position", d: "Categorical over tokens, Gaussian over embeddings, a point for what is clamped, a mixture for several readings at once." },
+  { k: "Belief algebra", t: "The wiring", d: "Pooling two beliefs is the product of their densities; for tokens, an elementwise product. Messages are exact where they can be and labelled approximate where not." },
+  { k: "Store", t: "Factors in Sophia", d: "Content-addressed: a factor is keyed by the hash of its structure, versioned, and loaded only when a query reaches it." },
+  { k: "Verifiers", t: "DSLs as factors", d: "A Lean 4 kernel, a type checker, a SQL engine, a JSON schema: hard factors, exact where they apply." },
+  { k: "Learning", t: "Training along graphs", d: "Knowledge graphs and code graphs give the structure. A new fact or a new library version is a new factor, trained locally." },
+  { k: "Harness", t: "The agent loop inside", d: "Retrieval, tool calls, plans and checks are subgraphs, edited in Moonkale like any other part of the model." },
+  { k: "Budget", t: "Anytime inference", d: "The free energy measures disagreement: stop when it is low, reach further when it is high, abstain when it stays high." },
+]
+
+const exists = [
+  { text: "Lenticulum.jl: factor graphs, message passing and free energies, checked against closed forms", href: links.lenticulum },
+  { text: "Diffusion models and EnergyNetworks used as relations, queried in any direction by root finding", href: links.lenticulum },
+  { text: "The belief algebra, with categorical beliefs and their exact product", href: links.beliefs },
+  { text: "Sophia: a content-addressed store for code with a Datalog query language", href: links.sophia },
+  { text: "Moonkale: a graph-native editor, with LLM agents behind an approval gate", href: links.moonkale },
+]
+const missing = [
+  "LenticulumLM itself: no tokeniser, no language factors, no trained model",
+  "Factors kept in a store and loaded where a query reaches (Lenticulum.jl backlog O1–O5)",
+  "Incremental inference that reuses factorisations after an append (backlog I10)",
+  "A GPU path for categorical beliefs; verifier factors; the harness as a graph",
+]
+const open = [
+  "Adding the scores of diffusion models samples their product only at t = 0; along the trajectory it needs a correction, such as MCMC at each noise level (Du et al. 2023)",
+  "Products of experts are hard to sample, and agreement tends to select bland text",
+  "Message passing on loopy graphs need not converge; schedules matter",
+  "The central bet, unmeasured: whether many small factors match one large network on fluency at equal compute",
+]
+
+const roadmap = [
+  { n: "01", t: "An n-gram chain", d: "Window relations joined by separators, exact in every query direction. The smallest language model that is honestly a factor graph." },
+  { n: "02", t: "Next token as an append", d: "Generation as incremental smoothing: each token appends factors, and only what they reach is re-solved." },
+  { n: "03", t: "A store behind the graph", d: "Factors in Sophia, loaded lazily where a query reaches; training on a loaded subgraph, with parameters written back." },
+  { n: "04", t: "Denoising over spans", d: "Diffusion and energy factors over spans of positions; several positions denoised at once; a sequence-level energy per step." },
+  { n: "05", t: "Verifiers in the loop", d: "Lean 4 and type checkers as hard factors, so the parts they cover come out checked." },
+  { n: "06", t: "The harness in the graph", d: "Retrieval, tools and agent loops as editable subgraphs in Moonkale; benchmarks against transformers at equal compute." },
+]
+---
+
+<Layout
+  title="LenticulumLM: a language model you can edit · MathStruct"
+  description="LenticulumLM is a plan for a language model built as a factor graph of thousands of small models, wired by belief algebra: text generated as incremental smoothing, as iSAM2 does for SLAM; knowledge added and removed as factors; verifiers such as Lean 4 inside the model; cost set by query depth. Not implemented yet."
+  path="/projects/lenticulumLM"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/#projects">← Projects · Models</a>
+          <h1 class="reveal" style="--d:.05s">
+            A language model<br /><span class="serif">you can edit.</span>
+          </h1>
+          <p class="lede reveal" style="--d:.1s">
+            A transformer is one frozen function. <strong>LenticulumLM</strong> is a plan for a
+            language model built as a <em>factor graph</em>: thousands to tens of thousands of small
+            models, each a relation between a few variables, wired together by the belief algebra of
+            <a href={links.lenticulum}>Lenticulum.jl</a>. Factors are added, deleted and loaded from a
+            store. Writing text becomes a problem roboticists already solve well, incremental
+            smoothing, and the effort spent on a query grows with how deep the query reaches.
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#slam">See how it works <span class="arrow">→</span></a>
+            <a class="btn" href="#status">What exists today</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Julia</li>
+            <li>On Lenticulum.jl · Sophia · Moonkale</li>
+            <li class="fact-flag">Concept: not implemented yet</li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <svg viewBox={`0 0 ${HW} ${HH}`} aria-label="Many small factors; a sentence runs through them, its earlier words clean and its last words still noise, each word exchanging messages with the factors nearest it">
+            <g class="h-mesh">
+              {fieldEdges.map(([a, b]) => (
+                <line x1={field[a][0]} y1={field[a][1]} x2={field[b][0]} y2={field[b][1]} />
+              ))}
+            </g>
+            <g class="h-reach">
+              {reach.map(({ i, j }, k) => (
+                <line
+                  x1={path[i].x}
+                  y1={path[i].y}
+                  x2={field[j][0]}
+                  y2={field[j][1]}
+                  style={`animation-delay:${(-(k * 0.37) % 2.4).toFixed(2)}s`}
+                />
+              ))}
+            </g>
+            <g class="h-field">
+              {field.map(([x, y], j) => (
+                <rect x={x - 4} y={y - 4} width="8" height="8" class={hot.has(j) ? "hot" : ""} />
+              ))}
+            </g>
+            <polyline class="h-path" points={path.map((p) => `${p.x},${p.y}`).join(" ")} />
+            <g class="h-words">
+              {path.map((p, i) => (
+                <g style={`opacity:${(1 - 0.55 * p.noise).toFixed(2)}`}>
+                  <circle cx={p.x} cy={p.y} r={7 + 9 * p.noise} class="h-halo" />
+                  <circle cx={p.x} cy={p.y} r="6.5" class={p.noise > 0 ? "h-var noisy" : "h-var"} />
+                  <text x={p.x} y={p.y + (i % 2 ? 30 : -18)}>{p.w}</text>
+                </g>
+              ))}
+            </g>
+          </svg>
+          <figcaption class="mono">
+            Squares are small models · circles are positions in the text · older words settled, newer ones still noise
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ compare -->
+    <section class="section" id="difference">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">The difference</span>
+            <h2 class="reveal" style="--d:.05s">Not one network, <span class="serif">a graph of small ones.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            In statistical terms: a transformer is a single conditional distribution, fitted once.
+            LenticulumLM is a <em>probabilistic graphical model</em> whose factors are learned
+            relations, whose structure changes while it runs, and on which generation is
+            inference. What that changes, row by row:
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare vs">
+            <thead>
+              <tr><th></th><th>a transformer LLM</th><th>LenticulumLM, the goal</th></tr>
+            </thead>
+            <tbody>
+              {compare.map(([k, a, b]) => (
+                <tr><th scope="row">{k}</th><td class="them">{a}</td><td>{b}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------------- slam -->
+    <section class="section" id="slam">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Generation is SLAM</span>
+            <h2 class="reveal" style="--d:.05s">Writing is mapping <span class="serif">while you move.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            A robot doing SLAM keeps a factor graph of where it has been and what it has seen, and
+            adds to it at every step. <a href={links.isam2}>iSAM2</a> (Kaess et al., 2012) made
+            that fast: it keeps the graph factorised and, when new factors arrive, re-solves only the
+            variables they reach. Generating text has the same shape: each new token is a new pose,
+            and a reference back to something said earlier is a loop closure.
+          </p>
+        </div>
+        <div class="reveal">
+          <IsamText />
+        </div>
+        <p class="fineprint mono">
+          A toy, solved exactly in your browser. The halos are the marginal standard deviations of a
+          small linear-Gaussian graph, recomputed at every step; the count of re-solved variables is
+          iSAM2's for a graph eliminated in time order. In LenticulumLM the positions would carry
+          beliefs over tokens, and the factors would be learned.
+        </p>
+
+        <div class="slam-map">
+          <div class="slam-copy">
+            <h3 class="reveal">The dictionary</h3>
+            <p class="reveal" style="--d:.05s">
+              Every piece of SLAM has a counterpart in text. Lenticulum.jl was built with
+              <a class="il" href="https://gtsam.org/">GTSAM</a> as its inspiration, and its notes on
+              <a class="il" href={links.dynamic}>dynamic graphs</a> already plan appends that touch
+              only the newest factors, for SLAM and for next-token prediction alike (backlog I10, O4).
+            </p>
+          </div>
+          <div class="table-wrap reveal" style="--d:.08s">
+            <table class="compare">
+              <thead>
+                <tr><th>in SLAM</th><th>in LenticulumLM</th></tr>
+              </thead>
+              <tbody>
+                {slam.map(([a, b]) => (
+                  <tr><th scope="row">{a}</th><td>{b}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ denoise -->
+    <section class="section" id="denoise">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Denoising</span>
+            <h2 class="reveal" style="--d:.05s">Text that settles, <span class="serif">not text that is committed.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            The factors can be diffusion models or energy networks, both of which Lenticulum.jl already
+            queries as relations. Two ways to read generation with them. As a <em>stream</em>: older
+            tokens carry little noise, newer ones a lot, and a front moves forward. Or as a
+            <em>graph</em>: many positions are denoised at once, wherever the graph knows enough.
+          </p>
+        </div>
+        <div class="reveal">
+          <DenoiseFront />
+        </div>
+        <p class="fineprint mono">
+          A schedule drawn in your browser, not a model. The stream reading is close to rolling
+          diffusion (Ruhe et al., 2024) and diffusion forcing (Chen et al., 2024); masked diffusion
+          language models (LLaDA, MDLM, SEDD) denoise all positions together. The graph reading lets
+          the structure decide which positions go first.
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- depth -->
+    <section class="section" id="depth">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Query depth is model size</span>
+            <h2 class="reveal" style="--d:.05s">Pay for <span class="serif">what you ask.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            A transformer runs all of its weights for every token, whether the question is
+            arithmetic or a proof. Here a query clamps the variables it mentions and loads only the
+            factors connected to them through what is still unknown. A shallow question touches a
+            few dozen factors; a deep one reaches far into the store. The model's size, for that
+            query, is how far the query reaches.
+          </p>
+        </div>
+        <div class="reveal">
+          <QueryDepth />
+        </div>
+        <p class="fineprint mono">
+          A random graph of a few hundred factors, drawn at build time. The presets are illustrative depths,
+          not measurements. In the library this is the subgraph a query reaches by d-separation from
+          its clamps, with a schedule restricted to it (Lenticulum.jl backlog O4).
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- verify -->
+    <section class="section north" id="verified">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">Verified output</span>
+          <h2 class="reveal" style="--d:.05s">A checker <span class="serif">is just a factor.</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            Any language with a checker can run inside the model as a factor: Lean 4, a type checker,
+            a SQL engine, a JSON schema, a unit system. To the graph a checker is a hard constraint
+            on the positions it covers, and it combines with the learned factors through the same
+            belief algebra. The model can still propose something wrong, but in the parts a checker
+            covers, nothing wrong comes out.
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li><span>Constrained decoding already masks logits with a grammar. That is a categorical belief combined with a hard factor, done ad hoc. Here it is the general rule.</span></li>
+            <li><span>A tool result (a compiler verdict, a query result, a retrieved document) is a clamped variable, and the rest is inferred around it.</span></li>
+            <li><span>Lenticulum.jl marks every belief as exact or approximate. A checked span says exact; everything else says it is not.</span></li>
+          </ul>
+        </div>
+        <figure class="code reveal" style="--d:.08s">
+          <figcaption class="mono">A sketch of the intended API · none of this exists yet</figcaption>
+          <pre><code><span class="c"># a model is a graph, backed by a store</span>
+g = LMGraph(store = Sophia("factors"))
+
+<span class="c"># the prompt is clamped</span>
+prompt!(g, "Lemma: every prime p > 2 is odd.")
+
+<span class="c"># retrieved facts become factors</span>
+attach!(g, Retrieve(kind = :theorem, k = 8))
+
+<span class="c"># a hard factor: the kernel must accept</span>
+attach!(g, LeanFactor(span = :proof))
+
+<span class="c"># denoise until the free energy is low,</span>
+<span class="c"># or the budget runs out</span>
+ans = denoise!(g; budget = :adaptive)
+
+isexact(ans.proof)    <span class="c"># true: checked</span>
+energies(ans)         <span class="c"># who pulled where</span></code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- learning -->
+    <section class="section" id="learning">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Learning by insertion</span>
+            <h2 class="reveal" style="--d:.05s">New knowledge, <span class="serif">new factors.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Training runs along knowledge graphs and code graphs. Teaching the model a new library
+            version, a new paper or a company's internal API means adding the factors that encode
+            it and training those, against the graph around them. Nothing else is retrained.
+          </p>
+        </div>
+        <div class="learn">
+          <figure class="learn-art reveal" aria-label="A new fact enters as a new factor joined to the existing graph; only it and its neighbours are trained, the rest stays frozen">
+            <svg viewBox="0 0 520 300">
+              <g class="lg-old">
+                <line x1="70" y1="80" x2="170" y2="60" /><line x1="170" y1="60" x2="250" y2="130" />
+                <line x1="70" y1="80" x2="110" y2="190" /><line x1="110" y1="190" x2="250" y2="130" />
+                <line x1="110" y1="190" x2="200" y2="250" /><line x1="250" y1="130" x2="200" y2="250" />
+                <line x1="250" y1="130" x2="340" y2="90" />
+              </g>
+              <g class="lg-new">
+                <line x1="340" y1="90" x2="430" y2="150" /><line x1="250" y1="130" x2="430" y2="150" />
+                <line x1="430" y1="150" x2="400" y2="250" />
+              </g>
+              <g class="lg-nodes">
+                <rect x="64" y="74" width="12" height="12" /><rect x="164" y="54" width="12" height="12" />
+                <rect x="104" y="184" width="12" height="12" /><rect x="194" y="244" width="12" height="12" />
+                <rect class="nb" x="244" y="124" width="12" height="12" /><rect class="nb" x="334" y="84" width="12" height="12" />
+                <rect class="nb" x="394" y="244" width="12" height="12" />
+                <rect class="nw" x="421" y="141" width="18" height="18" />
+              </g>
+              <text class="lbl" x="430" y="128">new fact</text>
+              <text class="lbl" x="140" y="290">frozen</text>
+              <text class="lbl" x="320" y="290">trained now</text>
+            </svg>
+          </figure>
+          <ul class="ticks learn-ticks">
+            <li class="reveal"><span><strong>Append.</strong> A fact, a definition, a function from the code graph: a new factor, keyed in Sophia by the hash of its structure, so the same definition is never stored twice.</span></li>
+            <li class="reveal" style="--d:.04s"><span><strong>Train locally.</strong> Gradients are local to each factor's parameters, so a loaded subgraph trains as one block of coordinates and writes its parameters back (backlog O5).</span></li>
+            <li class="reveal" style="--d:.08s"><span><strong>Delete.</strong> A factor removed is knowledge removed: for retracted facts, outdated APIs, and data that must be forgotten.</span></li>
+            <li class="reveal" style="--d:.12s"><span><strong>Trace.</strong> Every answer comes with the factors that shaped it and their energies: provenance by construction.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ harness -->
+    <section class="section" id="harness">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">The harness inside</span>
+            <h2 class="reveal" style="--d:.05s">The agent loop <span class="serif">is part of the model.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Around today's models sits a growing harness: prompts, retrieval, tool calls, agent
+            chains, checks, all written outside the weights and invisible to them. In LenticulumLM
+            they are subgraphs of the model itself: variables and factors that inference sees,
+            training can tune, and a person can open and edit in <a href={links.moonkale}>Moonkale</a>.
+          </p>
+        </div>
+        <div class="harness">
+          <figure class="h-panel reveal">
+            <figcaption class="mono">today</figcaption>
+            <svg viewBox="0 0 420 260" aria-label="Today: a fixed model in the middle, and the harness around it as separate code">
+              <rect class="hz-out" x="14" y="14" width="392" height="232" rx="14" />
+              <text class="hz-k" x="30" y="40">harness: code outside the model</text>
+              <rect class="hz-box solid" x="150" y="100" width="120" height="64" rx="10" />
+              <text class="hz-t inv" x="210" y="128">LLM</text>
+              <text class="hz-s inv" x="210" y="146">fixed weights</text>
+              {[["prompt", 40, 70], ["retrieve", 300, 70], ["tools", 40, 200], ["check", 300, 200]].map(([t, x, y]) => (
+                <g>
+                  <rect class="hz-box" x={x as number} y={(y as number) - 16} width="80" height="30" rx="7" />
+                  <text class="hz-s" x={(x as number) + 40} y={(y as number) + 3}>{t}</text>
+                </g>
+              ))}
+              <path class="hz-arrow" d="M120 70 C 140 80, 150 95, 160 100" />
+              <path class="hz-arrow" d="M300 70 C 280 80, 270 95, 260 100" />
+              <path class="hz-arrow" d="M160 164 C 150 175, 135 190, 120 200" />
+              <path class="hz-arrow" d="M260 164 C 270 175, 285 190, 300 200" />
+            </svg>
+          </figure>
+          <figure class="h-panel reveal" style="--d:.08s">
+            <figcaption class="mono">LenticulumLM</figcaption>
+            <svg viewBox="0 0 420 260" aria-label="LenticulumLM: prompt, retrieval, tools and checks are factors in the same graph as the language factors">
+              <rect class="hz-out solidline" x="14" y="14" width="392" height="232" rx="14" />
+              <text class="hz-k" x="30" y="40">one graph: the model</text>
+              {[[90, 120], [150, 90], [210, 130], [270, 95], [330, 130], [150, 170], [270, 175], [210, 205]].map(([x, y], i, a) =>
+                i ? <line class="hz-wire" x1={a[i - 1][0]} y1={a[i - 1][1]} x2={x} y2={y} /> : null,
+              )}
+              <line class="hz-wire" x1="90" y1="120" x2="150" y2="170" />
+              <line class="hz-wire" x1="210" y1="130" x2="270" y2="175" />
+              {[[90, 120], [150, 90], [210, 130], [270, 95], [330, 130], [150, 170], [270, 175], [210, 205]].map(([x, y]) => (
+                <circle class="hz-var" cx={x} cy={y} r="6" />
+              ))}
+              {[["prompt", 60, 72], ["retrieve", 300, 62], ["tools", 60, 214], ["Lean ✓", 300, 214]].map(([t, x, y]) => (
+                <g>
+                  <rect class="hz-box solid" x={x as number} y={(y as number) - 15} width="70" height="28" rx="7" />
+                  <text class="hz-s inv" x={(x as number) + 35} y={(y as number) + 3}>{t}</text>
+                </g>
+              ))}
+              <line class="hz-wire" x1="95" y1="86" x2="90" y2="114" />
+              <line class="hz-wire" x1="335" y1="76" x2="330" y2="124" />
+              <line class="hz-wire" x1="95" y1="200" x2="150" y2="176" />
+              <line class="hz-wire" x1="300" y1="205" x2="270" y2="181" />
+            </svg>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- blocks -->
+    <section class="section" id="blocks">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">The parts</span>
+            <h2 class="reveal" style="--d:.05s">Eight pieces, <span class="serif">one graph.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            What LenticulumLM is made of. Most of the pieces exist in some form in the sister
+            projects; what is new is putting them together into a language model.
+          </p>
+        </div>
+        <ul class="features">
+          {blocks.map((f, i) => (
+            <li class="feature reveal" style={`--d:${0.03 * (i % 4)}s`}>
+              <span class="feature-k mono">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Where it stands</span>
+            <h2 class="reveal" style="--d:.05s">A plan, <span class="serif">on working parts.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            LenticulumLM has no code yet. What it would be built from does: a factor-graph library
+            with learned relations, a content-addressed store and a graph editor. Here is what
+            exists, what does not, and what could make it fail.
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">Exists today</h3>
+            <ul class="ticks">{exists.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">Not built yet</h3>
+            <ul class="ticks ticks--next">{missing.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">Open questions</h3>
+            <ul class="ticks ticks--limit">{open.map((w) => <li>{w}</li>)}</ul>
+          </div>
+        </div>
+        <p class="fineprint mono">
+          The open questions come from Lenticulum.jl's own review of the idea,
+          <a class="il" href={links.lmNote}>Language Models</a>: a product of experts over diffusion
+          models, where it pays (heterogeneous spans, hard constraints, tool outputs) and where it
+          does not.
+        </p>
+
+        <h3 class="sub reveal">The road, in six steps</h3>
+        <ol class="road">
+          {roadmap.map((r, i) => (
+            <li class="reveal" style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="road-n mono">{r.n}</span>
+              <h4>{r.t}</h4>
+              <p>{r.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ contact -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">Get involved</span>
+          <h2 class="reveal" style="--d:.05s">Help build <span class="serif">the first one.</span></h2>
+          <p class="reveal" style="--d:.1s">
+            LenticulumLM is a research bet: that a language model can be a graph you can grow, prune,
+            inspect and verify, rather than a checkpoint you can only run. If you fund research, work
+            on probabilistic inference, SLAM or diffusion models, or want a model whose knowledge you
+            can edit, we would like to hear from you.
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.discussions}>Start a conversation <span class="arrow">→</span></a>
+            <a class="btn" href={links.vault}>Design notes</a>
+          </div>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href={links.lenticulum} style="--d:.06s">
+            <span class="mono sib-k">Models · the factors</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">Relations learned on factor graphs, queried in any direction: the beliefs, messages and diffusion factors LenticulumLM is made of.</span>
+          </a>
+          <a class="sib reveal" href={links.sophia} style="--d:.1s">
+            <span class="mono sib-k">Code · the store</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">A content-addressed store keyed by structure: where the factors and the code graph would live.</span>
+          </a>
+          <a class="sib reveal" href={links.moonkale} style="--d:.14s">
+            <span class="mono sib-k">Interface · the editor</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">One graph, every editor a view: where the model, its harness and its knowledge would be edited.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .fact-flag {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+    margin-top: -2px;
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    color: var(--fg);
+  }
+  .hero-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .h-mesh line {
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .h-field rect {
+    fill: var(--bg);
+    stroke: var(--faint);
+    stroke-width: 1;
+  }
+  .h-field rect.hot {
+    fill: var(--fg);
+    stroke: var(--fg);
+  }
+  .h-reach line {
+    stroke: var(--fg);
+    stroke-width: 1.1;
+    stroke-dasharray: 2 7;
+    animation: h-flow 2.4s linear infinite;
+  }
+  @keyframes h-flow {
+    to {
+      stroke-dashoffset: -18;
+    }
+  }
+  .h-path {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.6;
+  }
+  .h-halo {
+    fill: var(--glow);
+    stroke: var(--line-strong);
+    stroke-dasharray: 3 3;
+  }
+  .h-var {
+    fill: var(--fg);
+    stroke: var(--bg);
+    stroke-width: 2;
+  }
+  .h-var.noisy {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+  }
+  .h-words text {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    text-anchor: middle;
+    fill: var(--fg);
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 5px;
+  }
+
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 38%;
+  }
+  .compare td {
+    color: var(--fg);
+    font-size: 15px;
+  }
+  .vs {
+    min-width: 720px;
+  }
+  .vs tbody th {
+    width: 20%;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .vs td {
+    width: 40%;
+  }
+  .vs td.them {
+    color: var(--muted);
+  }
+
+  .slam-map {
+    display: grid;
+    gap: 32px;
+    margin-top: clamp(56px, 8vw, 88px);
+  }
+  @media (min-width: 960px) {
+    .slam-map {
+      grid-template-columns: 1fr 1.5fr;
+      gap: 56px;
+    }
+  }
+  .slam-copy p {
+    color: var(--fg-2);
+    margin: 14px 0 0;
+    max-width: 46ch;
+  }
+
+  /* -------------------------------------------------------------- verify */
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .code figcaption {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .code pre {
+    margin: 0;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .code .c {
+    color: var(--muted);
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------ learning */
+  .learn {
+    display: grid;
+    gap: 40px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .learn {
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+    }
+  }
+  .learn-art {
+    margin: 0;
+  }
+  .learn-art svg {
+    width: 100%;
+    height: auto;
+  }
+  .lg-old line {
+    stroke: var(--line-strong);
+    stroke-width: 1.4;
+  }
+  .lg-new line {
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+    animation: h-flow 1.6s linear infinite;
+  }
+  .lg-nodes rect {
+    fill: var(--bg);
+    stroke: var(--faint);
+    stroke-width: 1.4;
+  }
+  .lg-nodes rect.nb {
+    stroke: var(--fg);
+  }
+  .lg-nodes rect.nw {
+    fill: var(--fg);
+    stroke: var(--fg);
+  }
+  .learn-art .lbl {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--muted);
+    text-anchor: middle;
+  }
+  .learn-ticks {
+    margin: 0;
+    gap: 20px;
+  }
+
+  /* ------------------------------------------------------------- harness */
+  .harness {
+    display: grid;
+    gap: 24px;
+  }
+  @media (min-width: 900px) {
+    .harness {
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+  }
+  .h-panel {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    background: var(--bg-raised);
+  }
+  .h-panel figcaption {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .h-panel svg {
+    width: 100%;
+    height: auto;
+  }
+  .hz-out {
+    fill: none;
+    stroke: var(--faint);
+    stroke-dasharray: 5 5;
+  }
+  .hz-out.solidline {
+    stroke: var(--fg);
+    stroke-dasharray: none;
+    stroke-width: 1.4;
+  }
+  .hz-k {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  .hz-box {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.2;
+  }
+  .hz-box.solid {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+  }
+  .hz-t {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 500;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .hz-s {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .inv {
+    fill: var(--invert-fg);
+  }
+  .hz-arrow {
+    fill: none;
+    stroke: var(--faint);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 3;
+  }
+  .hz-wire {
+    stroke: var(--fg);
+    stroke-opacity: 0.55;
+    stroke-width: 1.2;
+  }
+  .hz-var {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .road {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 700px) {
+    .road {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .road {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .road li {
+    background: var(--bg);
+    padding: 24px 24px 28px 0;
+  }
+  @media (min-width: 700px) {
+    .road li {
+      padding: 24px 28px 28px 0;
+    }
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  @media (min-width: 1000px) {
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 0;
+    }
+    .road li:not(:nth-child(3n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  .road-n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .road h4 {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .road p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ------------------------------------------------------------- contact */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>

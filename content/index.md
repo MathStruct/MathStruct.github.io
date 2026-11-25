@@ -45,7 +45,7 @@ what is planned.
   non-Gaussian factors whose messages are exact or labelled as approximate; message passing and
   free energies on factor graphs; all of it checked against closed forms. Citable on Zenodo
   ([10.5281/zenodo.23314723](https://doi.org/10.5281/zenodo.23314723)). Its sister project
-  [LenticulumLM](https://mathstruct.org/LenticulumLM/) assembles language models from such
+  [LenticulumLM](/projects/lenticulumLM) assembles language models from such
   relations.
 - **Moonkale** is a working prototype on Linux, in the browser and on Android: code editing with
   language servers, Markdown notes with wiki-links and formulas, GPU graph views of 100k nodes,

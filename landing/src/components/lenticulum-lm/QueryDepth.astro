@@ -1,0 +1,242 @@
+---
+// Query depth is model size. A store of small factors, as a random geometric graph (seeded, so
+// the same picture every build); a query clamps the variables it mentions and loads only the
+// factors within reach. The slider is that reach; the presets are illustrative depths, not
+// measurements.
+const W = 1000
+const H = 520
+let seed = 7
+const rnd = () => {
+  seed = (seed + 0x6d2b79f5) | 0
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+}
+// points with a minimum spacing (dart throwing), denser towards the middle
+const pts: [number, number][] = []
+for (let tries = 0; pts.length < 300 && tries < 20000; tries++) {
+  const x = 24 + rnd() * (W - 48)
+  const y = 20 + rnd() * (H - 40)
+  if (pts.every(([a, b]) => (a - x) ** 2 + (b - y) ** 2 > 34 ** 2)) pts.push([x, y])
+}
+// the query: the point nearest the centre
+const c = pts.reduce((best, p, i) => ((p[0] - W / 2) ** 2 + (p[1] - H / 2) ** 2 < (pts[best][0] - W / 2) ** 2 + (pts[best][1] - H / 2) ** 2 ? i : best), 0)
+// each point joined to its three nearest
+const edgeSet = new Set<string>()
+pts.forEach(([x, y], i) => {
+  const near = pts
+    .map(([a, b], j) => [j, (a - x) ** 2 + (b - y) ** 2] as const)
+    .filter(([j]) => j !== i)
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, 3)
+  for (const [j] of near) edgeSet.add(i < j ? `${i}-${j}` : `${j}-${i}`)
+})
+const edges = [...edgeSet].map((s) => s.split("-").map(Number) as [number, number])
+const adj: number[][] = pts.map(() => [])
+for (const [a, b] of edges) adj[a].push(b), adj[b].push(a)
+const dist = new Array(pts.length).fill(99)
+dist[c] = 0
+const q = [c]
+while (q.length) {
+  const a = q.shift()!
+  for (const b of adj[a]) if (dist[b] > dist[a] + 1) (dist[b] = dist[a] + 1), q.push(b)
+}
+const maxD = Math.min(14, Math.max(...dist.filter((d) => d < 99)))
+const presets = [
+  { label: "“2 + 2 = ?”", depth: 1 },
+  { label: "Summarise a paragraph", depth: 4 },
+  { label: "Answer from the codebase", depth: 7 },
+  { label: "A proof, checked in Lean", depth: 11 },
+]
+---
+
+<div class="qd" data-qd data-total={pts.length} data-max={maxD}>
+  <div class="qd-top">
+    <div class="qd-presets" role="group" aria-label="Example queries">
+      {presets.map((p) => (
+        <button type="button" class="qd-p" data-depth={p.depth}>{p.label}</button>
+      ))}
+    </div>
+    <label class="qd-slider mono">
+      <span>reach</span>
+      <input type="range" min="0" max={maxD} step="1" value="4" data-range />
+      <span class="qd-dv" data-dv>4</span>
+    </label>
+  </div>
+  <div class="qd-art">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="A large graph of small factors; the factors within reach of the query are drawn solid, the rest stay faint in the store">
+      <g class="qd-edges">
+        {edges.map(([a, b]) => (
+          <line x1={pts[a][0]} y1={pts[a][1]} x2={pts[b][0]} y2={pts[b][1]} data-d={Math.max(dist[a], dist[b])} />
+        ))}
+      </g>
+      <g class="qd-nodes">
+        {pts.map(([x, y], i) =>
+          i === c ? null : <rect x={x - 5} y={y - 5} width="10" height="10" data-d={dist[i]} />,
+        )}
+      </g>
+      <circle class="qd-q" cx={pts[c][0]} cy={pts[c][1]} r="11" />
+      <text class="qd-ql" x={pts[c][0]} y={pts[c][1] - 20}>query</text>
+    </svg>
+  </div>
+  <div class="qd-stats">
+    <div><span class="qd-n" data-loaded>0</span><span class="qd-k mono">factors loaded</span></div>
+    <div><span class="qd-n" data-share>0%</span><span class="qd-k mono">of the store</span></div>
+    <div><span class="qd-n" data-rest>0</span><span class="qd-k mono">left on disk, never touched</span></div>
+  </div>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>("[data-qd]")) {
+    const total = Number(root.dataset.total) - 1
+    const range = root.querySelector<HTMLInputElement>("[data-range]")!
+    const nodes = [...root.querySelectorAll<SVGElement>(".qd-nodes rect")]
+    const edges = [...root.querySelectorAll<SVGElement>(".qd-edges line")]
+    const presets = [...root.querySelectorAll<HTMLButtonElement>(".qd-p")]
+    const out = (k: string) => root.querySelector<HTMLElement>(`[data-${k}]`)!
+    function set(d: number) {
+      range.value = String(d)
+      let k = 0
+      for (const n of nodes) {
+        const on = Number(n.dataset.d) <= d
+        n.classList.toggle("on", on)
+        n.classList.toggle("edge", Number(n.dataset.d) === d && d > 0)
+        if (on) k++
+      }
+      for (const e of edges) e.classList.toggle("on", Number(e.dataset.d) <= d)
+      out("dv").textContent = String(d)
+      out("loaded").textContent = String(k)
+      out("share").textContent = `${Math.round((100 * k) / total)}%`
+      out("rest").textContent = String(total - k)
+      presets.forEach((p) => p.setAttribute("aria-pressed", String(Number(p.dataset.depth) === d)))
+    }
+    range.addEventListener("input", () => set(Number(range.value)))
+    presets.forEach((p) => p.addEventListener("click", () => set(Number(p.dataset.depth))))
+    set(Number(range.value))
+  }
+</script>
+
+<style>
+  .qd {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    padding: clamp(16px, 3vw, 28px);
+  }
+  .qd-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 28px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qd-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .qd-p {
+    font: inherit;
+    font-size: 13.5px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+  }
+  .qd-p:hover {
+    border-color: var(--fg);
+  }
+  .qd-p[aria-pressed="true"] {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .qd-slider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .qd-slider input {
+    width: 180px;
+    accent-color: var(--fg);
+  }
+  .qd-dv {
+    min-width: 2ch;
+    color: var(--fg);
+    font-size: 14px;
+  }
+  .qd-art {
+    margin-top: 18px;
+  }
+  .qd-art svg {
+    width: 100%;
+    height: auto;
+  }
+  .qd-edges line {
+    stroke: var(--line);
+    stroke-width: 1;
+    transition: stroke 0.4s var(--ease);
+  }
+  .qd-edges line.on {
+    stroke: var(--fg);
+    stroke-opacity: 0.55;
+  }
+  .qd-nodes rect {
+    fill: var(--bg);
+    stroke: var(--faint);
+    stroke-width: 1;
+    stroke-opacity: 0.6;
+    transition: fill 0.4s var(--ease), stroke 0.4s var(--ease);
+  }
+  .qd-nodes rect.on {
+    fill: var(--fg);
+    stroke: var(--fg);
+    stroke-opacity: 1;
+  }
+  .qd-nodes rect.edge {
+    fill: var(--bg);
+    stroke-width: 2;
+  }
+  .qd-q {
+    fill: var(--fg);
+    stroke: var(--bg-raised);
+    stroke-width: 4;
+  }
+  .qd-ql {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    text-anchor: middle;
+    fill: var(--fg);
+    paint-order: stroke;
+    stroke: var(--bg-raised);
+    stroke-width: 5px;
+  }
+  .qd-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .qd-stats div {
+    display: grid;
+    gap: 2px;
+  }
+  .qd-n {
+    font-size: clamp(24px, 3.4vw, 36px);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .qd-k {
+    font-size: 11px;
+    color: var(--muted);
+  }
+</style>
