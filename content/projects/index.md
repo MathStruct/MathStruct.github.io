@@ -42,5 +42,5 @@ inference and programming.
 
 ## Related
 
-- [LenticulumLM](https://mathstruct.org/LenticulumLM/): a diffusion language model assembled
+- [LenticulumLM](/projects/lenticulumLM): a diffusion language model assembled
   from Lenticulum's relations.

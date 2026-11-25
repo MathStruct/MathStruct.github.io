@@ -1,0 +1,603 @@
+---
+// Generation as incremental smoothing (iSAM2, Kaess et al. 2012) on a factor graph.
+// Token positions are the poses of a trajectory; the prompt is clamped; a fact from the store is
+// a landmark; a back-reference ("p" refers to the p of the statement) is a loop closure; a Lean 4
+// check is one factor over the whole proof. Each step appends a variable and its factors, and
+// only the variables the new factors reach are re-solved (in a chain eliminated in time order,
+// iSAM2's Bayes tree is a path to the newest variable, so a factor on x_j touches x_j … x_n).
+// The halos are exact: the marginal standard deviations of the linear-Gaussian toy graph,
+// diag(Λ⁻¹) by a dense Cholesky solve, recomputed at every step. The graph is a toy; the
+// bookkeeping (what is touched, what batch would redo) is the real one.
+---
+
+<div class="isam" data-isam>
+  <div class="isam-top">
+    <div class="isam-event" aria-live="polite">
+      <span class="isam-step mono" data-step>step 0</span>
+      <p class="isam-text" data-text>The prompt is clamped: four known positions, like the first poses of a map.</p>
+      <p class="isam-slam mono" data-slam>SLAM: the starting poses, known</p>
+    </div>
+    <div class="isam-ctrl">
+      <button class="btn btn--solid isam-btn" type="button" data-play aria-pressed="true">Pause</button>
+      <button class="btn isam-btn" type="button" data-next>Step</button>
+      <button class="btn isam-btn" type="button" data-reset>Restart</button>
+    </div>
+  </div>
+
+  <div class="isam-scroll">
+    <svg class="isam-svg" viewBox="0 0 1000 400" role="img" aria-label="A factor graph of token positions growing one token at a time; at each step the variables that are re-solved are highlighted, and a halo around each position shows its uncertainty">
+      <g data-layer="arcs"></g>
+      <g data-layer="edges"></g>
+      <g data-layer="halos"></g>
+      <g data-layer="factors"></g>
+      <g data-layer="vars"></g>
+      <g data-layer="labels"></g>
+    </svg>
+  </div>
+
+  <div class="isam-meter">
+    <div class="meter-row">
+      <span class="meter-k mono">re-solved this step</span>
+      <span class="meter-bars"><span class="bar bar--inc" data-bar-inc></span></span>
+      <span class="meter-v mono" data-inc>0</span>
+    </div>
+    <div class="meter-row">
+      <span class="meter-k mono">batch would re-solve</span>
+      <span class="meter-bars"><span class="bar bar--batch" data-bar-batch></span></span>
+      <span class="meter-v mono" data-batch>0</span>
+    </div>
+    <div class="meter-row meter-total">
+      <span class="meter-k mono">total so far</span>
+      <span class="meter-v mono" data-total>incremental 0 · batch 0</span>
+    </div>
+  </div>
+
+  <ul class="isam-legend mono" aria-hidden="true">
+    <li><span class="lg lg-clamp"></span>prompt token (clamped)</li>
+    <li><span class="lg lg-var"></span>generated token</li>
+    <li><span class="lg lg-fac"></span>factor</li>
+    <li><span class="lg lg-mark"></span>fact from the store</li>
+    <li><span class="lg lg-hot"></span>re-solved now</li>
+    <li><span class="lg lg-halo"></span>uncertainty (±1 sd)</li>
+  </ul>
+</div>
+
+<script>
+  type Ev = {
+    tok: string
+    clamp?: boolean
+    mark?: string // a landmark: a fact loaded from the store
+    loop?: number // a loop closure to this earlier position
+    verify?: [number, number] // a hard factor over positions a..b
+    text: string
+    slam: string
+  }
+
+  // the proof being written; positions 0–3 are the prompt
+  const EVENTS: Ev[] = [
+    { tok: "Lemma", clamp: true, text: "", slam: "" },
+    { tok: "every", clamp: true, text: "", slam: "" },
+    { tok: "prime", clamp: true, text: "", slam: "" },
+    { tok: "p > 2", clamp: true, text: "The prompt is clamped: four known positions, like the first poses of a map.", slam: "SLAM: the starting poses, known" },
+    { tok: "is", text: "A new position, linked to the last by a local language factor. Only the two ends of the new factor are re-solved.", slam: "SLAM: odometry, one step forward" },
+    { tok: "odd", text: "Each step forward adds uncertainty, as dead reckoning does: the halo grows with distance from what is known.", slam: "SLAM: odometry, drift accumulates" },
+    { tok: ".", text: "Still a chain. The work per token stays constant however long the text gets.", slam: "SLAM: odometry" },
+    { tok: "Proof", text: "Still constant work. A batch solver would redo all eight positions now, and more every step.", slam: "SLAM: odometry" },
+    { tok: "if", text: "Far from the prompt, the new positions are the least certain ones.", slam: "SLAM: odometry, far from the start" },
+    { tok: "p", loop: 3, text: "“p” refers back to the p of the statement: a loop closure. Every position between them is re-solved, and their uncertainty collapses.", slam: "SLAM: loop closure, a place seen before" },
+    { tok: "even", mark: "2 | even", text: "A fact loaded from the store is observed here: a landmark. Still only the newest positions are touched.", slam: "SLAM: a landmark observation" },
+    { tok: "then", text: "Back to a plain step forward.", slam: "SLAM: odometry" },
+    { tok: "2 | p", text: "Constant work again: the earlier corrections are already folded into the factorisation.", slam: "SLAM: odometry" },
+    { tok: "so", text: "Drift builds up again after the last correction.", slam: "SLAM: odometry" },
+    { tok: "p = 2", loop: 3, text: "A contradiction with “p > 2”: another long-range factor back to the statement, and another re-solve of the span between.", slam: "SLAM: a second loop closure" },
+    { tok: "∎", verify: [4, 15], text: "A Lean 4 check over the whole proof: one hard factor across the span. Where it holds, the positions it covers are pinned.", slam: "SLAM: a global constraint, like a GPS fix" },
+  ]
+
+  const N = EVENTS.length
+  const X0 = 46
+  const DX = (1000 - 2 * X0) / (N - 1)
+  const px = (i: number) => X0 + i * DX
+  const py = (i: number) => 236 + 22 * Math.sin(i * 0.72)
+  const MARK_Y = 92
+  const VER_Y = 44
+
+  // ------------------------------------------------- the linear-Gaussian toy
+  const Q = 1.0 // variance of a step (odometry)
+  const P0 = 1e-4 // clamp
+  const RL = 0.25 // landmark
+  const RC = 0.15 // loop closure
+  const RV = 0.01 // the verifier
+
+  function marginalSD(n: number): number[] {
+    // information matrix Λ over positions 0..n-1
+    const L = Array.from({ length: n }, () => new Float64Array(n))
+    const addPair = (a: number, b: number, v: number) => {
+      const w = 1 / v
+      L[a][a] += w
+      L[b][b] += w
+      L[a][b] -= w
+      L[b][a] -= w
+    }
+    for (let i = 0; i < n; i++) {
+      const e = EVENTS[i]
+      if (e.clamp) L[i][i] += 1 / P0
+      if (i > 0) addPair(i - 1, i, Q)
+      if (e.mark) L[i][i] += 1 / RL
+      if (e.loop !== undefined) addPair(e.loop, i, RC)
+      if (e.verify) for (let k = e.verify[0]; k <= Math.min(e.verify[1], n - 1); k++) L[k][k] += 1 / RV
+    }
+    // Cholesky Λ = C Cᵀ, then diag(Λ⁻¹) column by column
+    const C = Array.from({ length: n }, () => new Float64Array(n))
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        let s = L[i][j]
+        for (let k = 0; k < j; k++) s -= C[i][k] * C[j][k]
+        C[i][j] = i === j ? Math.sqrt(Math.max(s, 1e-12)) : s / C[j][j]
+      }
+    }
+    const sd: number[] = []
+    for (let c = 0; c < n; c++) {
+      const y = new Float64Array(n)
+      for (let i = 0; i < n; i++) {
+        let s = i === c ? 1 : 0
+        for (let k = 0; k < i; k++) s -= C[i][k] * y[k]
+        y[i] = s / C[i][i]
+      }
+      const x = new Float64Array(n)
+      for (let i = n - 1; i >= 0; i--) {
+        let s = y[i]
+        for (let k = i + 1; k < n; k++) s -= C[k][i] * x[k]
+        x[i] = s / C[i][i]
+      }
+      sd.push(Math.sqrt(x[c]))
+    }
+    return sd
+  }
+
+  // the variables iSAM2 re-eliminates when step i adds its factors
+  function touched(i: number): number[] {
+    const e = EVENTS[i]
+    if (e.clamp) return [i]
+    let lo = i - 1
+    if (e.mark) lo = Math.min(lo, i)
+    if (e.loop !== undefined) lo = Math.min(lo, e.loop)
+    if (e.verify) lo = Math.min(lo, e.verify[0])
+    const out: number[] = []
+    for (let k = Math.max(lo, 0); k <= i; k++) if (!EVENTS[k].clamp) out.push(k)
+    return out
+  }
+
+  // ------------------------------------------------------------------ drawing
+  const NS = "http://www.w3.org/2000/svg"
+  function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>, parent: Element) {
+    const e = document.createElementNS(NS, tag)
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v))
+    parent.appendChild(e)
+    return e
+  }
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-isam]")) {
+    const svg = root.querySelector("svg")!
+    const layer = (k: string) => svg.querySelector(`[data-layer="${k}"]`)!
+    const $ = (k: string) => root.querySelector<HTMLElement>(`[data-${k}]`)!
+    const playBtn = root.querySelector<HTMLButtonElement>("[data-play]")!
+    const halos: SVGCircleElement[] = []
+    const vars: SVGCircleElement[] = []
+    let n = 0
+    let totInc = 0
+    let totBatch = 0
+    let timer: number | undefined
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    let playing = !reduce
+
+    function clear() {
+      for (const k of ["arcs", "edges", "halos", "factors", "vars", "labels"]) layer(k).replaceChildren()
+      halos.length = 0
+      vars.length = 0
+      n = 0
+      totInc = 0
+      totBatch = 0
+    }
+
+    function factor(x: number, y: number, cls = "") {
+      return el("rect", { x: x - 5, y: y - 5, width: 10, height: 10, class: `fac ${cls} fresh` }, layer("factors"))
+    }
+
+    function addPosition(i: number) {
+      const e = EVENTS[i]
+      const x = px(i)
+      const y = py(i)
+      if (i > 0) {
+        const x1 = px(i - 1)
+        const y1 = py(i - 1)
+        el("line", { x1, y1, x2: x, y2: y, class: "wire fresh" }, layer("edges"))
+        factor((x1 + x) / 2, (y1 + y) / 2)
+      }
+      if (e.mark) {
+        el("line", { x1: x, y1: y, x2: x, y2: MARK_Y + 14, class: "wire fresh" }, layer("edges"))
+        factor(x, (y + MARK_Y) / 2)
+        const g = el("g", { class: "mark fresh" }, layer("vars"))
+        el("rect", { x: x - 46, y: MARK_Y - 14, width: 92, height: 28, rx: 6 }, g)
+        el("text", { x, y: MARK_Y + 4, class: "mark-t" }, g).textContent = e.mark
+        el("text", { x, y: MARK_Y - 22, class: "mark-k" }, g).textContent = "fact · Sophia"
+      }
+      if (e.loop !== undefined) {
+        const xa = px(e.loop)
+        const ya = py(e.loop)
+        const mx = (xa + x) / 2
+        const depth = 350 + (i - e.loop) * 3
+        el("path", { d: `M${xa} ${ya} Q ${mx} ${depth + 40} ${x} ${y}`, class: "wire arc fresh" }, layer("arcs"))
+        // the factor sits on the curve's midpoint (a quadratic Bézier at t = ½)
+        factor(mx, (ya + y) / 4 + (depth + 40) / 2, "fac--loop")
+      }
+      if (e.verify) {
+        const [a, b] = e.verify
+        const xc = (px(a) + px(b)) / 2
+        for (let k = a; k <= b; k++) el("line", { x1: xc, y1: VER_Y + 8, x2: px(k), y2: py(k), class: "wire wire--ver fresh" }, layer("arcs"))
+        const g = el("g", { class: "mark mark--ver fresh" }, layer("vars"))
+        el("rect", { x: xc - 70, y: VER_Y - 16, width: 140, height: 30, rx: 6 }, g)
+        el("text", { x: xc, y: VER_Y + 4, class: "mark-t" }, g).textContent = "Lean 4 kernel ✓"
+      }
+      halos.push(el("circle", { cx: x, cy: y, r: 9, class: "halo" }, layer("halos")) as SVGCircleElement)
+      vars.push(el("circle", { cx: x, cy: y, r: 8, class: e.clamp ? "var var--clamp fresh" : "var fresh" }, layer("vars")) as SVGCircleElement)
+      const t = el("text", { x, y: y + (i % 2 ? 46 : -26), class: "tok fresh" }, layer("labels"))
+      t.textContent = e.tok
+      el("text", { x, y: y + (i % 2 ? 62 : -42), class: "idx" }, layer("labels")).textContent = `x${sub(i + 1)}`
+      requestAnimationFrame(() => svg.querySelectorAll(".fresh").forEach((f) => f.classList.remove("fresh")))
+    }
+
+    const SUB = "₀₁₂₃₄₅₆₇₈₉"
+    const sub = (k: number) => String(k).replace(/\d/g, (d) => SUB[+d])
+
+    function update(i: number) {
+      const sd = marginalSD(n)
+      sd.forEach((s, k) => halos[k].setAttribute("r", String(9 + Math.min(s, 2.4) * 16)))
+      const hot = new Set(touched(i))
+      vars.forEach((v, k) => v.classList.toggle("hot", hot.has(k)))
+      halos.forEach((h, k) => h.classList.toggle("hot", hot.has(k)))
+      const generated = EVENTS.slice(0, n).filter((e) => !e.clamp).length
+      const inc = EVENTS[i].clamp ? 0 : hot.size
+      const batch = EVENTS[i].clamp ? 0 : generated
+      totInc += inc
+      totBatch += batch
+      $("inc").textContent = String(inc)
+      $("batch").textContent = String(batch)
+      $("bar-inc").style.width = `${(inc / 12) * 100}%`
+      $("bar-batch").style.width = `${(batch / 12) * 100}%`
+      $("total").textContent = `incremental ${totInc} · batch ${totBatch}`
+      $("step").textContent = i < 4 ? "prompt" : `step ${i - 3} · token “${EVENTS[i].tok}”`
+      if (EVENTS[i].text) $("text").textContent = EVENTS[i].text
+      if (EVENTS[i].slam) $("slam").textContent = EVENTS[i].slam
+    }
+
+    function step() {
+      if (n >= N) {
+        clear()
+        for (let k = 0; k < 4; k++) {
+          addPosition(k)
+          n++
+        }
+        update(3)
+        return
+      }
+      addPosition(n)
+      n++
+      update(n - 1)
+    }
+
+    function schedule() {
+      window.clearTimeout(timer)
+      if (!playing) return
+      timer = window.setTimeout(() => {
+        step()
+        schedule()
+      }, n >= N ? 4200 : 2300)
+    }
+
+    function setPlaying(p: boolean) {
+      playing = p
+      playBtn.textContent = p ? "Pause" : "Play"
+      playBtn.setAttribute("aria-pressed", String(p))
+      schedule()
+    }
+
+    playBtn.addEventListener("click", () => setPlaying(!playing))
+    root.querySelector("[data-next]")!.addEventListener("click", () => {
+      setPlaying(false)
+      step()
+    })
+    root.querySelector("[data-reset]")!.addEventListener("click", () => {
+      n = N
+      step()
+      schedule()
+    })
+
+    // start with the prompt; run when it scrolls into view
+    n = N
+    step()
+    setPlaying(false)
+    if (!reduce) {
+      const io = new IntersectionObserver((es) => {
+        if (es.some((e) => e.isIntersecting)) {
+          setPlaying(true)
+          io.disconnect()
+        }
+      }, { threshold: 0.35 })
+      io.observe(root)
+    }
+  }
+</script>
+
+<style>
+  .isam {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    padding: clamp(16px, 3vw, 28px);
+  }
+  .isam-top {
+    display: grid;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (min-width: 820px) {
+    .isam-top {
+      grid-template-columns: 1fr auto;
+    }
+  }
+  .isam-event {
+    min-height: 108px;
+  }
+  .isam-step {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .isam-text {
+    margin: 6px 0 0;
+    font-size: 16px;
+    max-width: 62ch;
+    color: var(--fg);
+  }
+  .isam-slam {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .isam-ctrl {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .isam-btn {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .isam-btn:not(.btn--solid) {
+    background: transparent;
+    color: var(--fg);
+  }
+  .isam-scroll {
+    overflow-x: auto;
+    margin: 8px -4px 0;
+  }
+  .isam-svg {
+    width: 100%;
+    min-width: 720px;
+    height: auto;
+    overflow: visible;
+  }
+  .isam-svg :global(.wire) {
+    stroke: var(--line-strong);
+    stroke-width: 1.4;
+    fill: none;
+    transition: opacity 0.6s var(--ease);
+  }
+  .isam-svg :global(.wire.arc) {
+    stroke: var(--fg);
+    stroke-dasharray: 4 4;
+    stroke-width: 1.2;
+  }
+  .isam-svg :global(.wire--ver) {
+    stroke: var(--faint);
+    stroke-width: 0.9;
+  }
+  .isam-svg :global(.fac) {
+    fill: var(--fg);
+    transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .isam-svg :global(.halo) {
+    fill: var(--glow);
+    stroke: var(--line-strong);
+    stroke-width: 1;
+    transition: r 0.9s var(--ease), stroke 0.4s, fill 0.4s;
+  }
+  .isam-svg :global(.halo.hot) {
+    stroke: var(--fg);
+    stroke-dasharray: 3 3;
+  }
+  .isam-svg :global(.var) {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    transition: opacity 0.6s var(--ease), fill 0.4s;
+  }
+  .isam-svg :global(.var--clamp) {
+    fill: var(--fg);
+  }
+  .isam-svg :global(.var.hot) {
+    fill: var(--faint);
+    stroke-width: 2.4;
+    animation: isam-pulse 1.1s var(--ease);
+  }
+  @keyframes isam-pulse {
+    0% {
+      stroke-width: 7;
+    }
+    100% {
+      stroke-width: 2.4;
+    }
+  }
+  .isam-svg :global(.mark rect) {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.3;
+  }
+  .isam-svg :global(.mark--ver rect) {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+  }
+  .isam-svg :global(.mark-t) {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .isam-svg :global(.mark--ver .mark-t) {
+    fill: var(--invert-fg);
+  }
+  .isam-svg :global(.mark-k) {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-anchor: middle;
+    fill: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .isam-svg :global(.tok) {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    text-anchor: middle;
+    fill: var(--fg);
+    transition: opacity 0.6s var(--ease);
+  }
+  .isam-svg :global(.idx) {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-anchor: middle;
+    fill: var(--faint);
+  }
+  .isam-svg :global(.fresh) {
+    opacity: 0;
+  }
+  .isam-svg :global(.fac.fresh) {
+    transform: scale(0.2);
+  }
+
+  .isam-meter {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .meter-row {
+    display: grid;
+    grid-template-columns: 170px 1fr 40px;
+    gap: 14px;
+    align-items: center;
+  }
+  .meter-k {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .meter-bars {
+    height: 8px;
+    background: var(--bg-sunken);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .bar {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 99px;
+    transition: width 0.7s var(--ease);
+  }
+  .bar--inc {
+    background: var(--fg);
+  }
+  .bar--batch {
+    background: var(--faint);
+  }
+  .meter-v {
+    font-size: 13px;
+    text-align: right;
+  }
+  .meter-total {
+    grid-template-columns: 170px 1fr;
+  }
+  .meter-total .meter-v {
+    text-align: left;
+    color: var(--fg-2);
+  }
+  @media (max-width: 520px) {
+    .meter-row {
+      grid-template-columns: 1fr 36px;
+    }
+    .meter-bars {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .meter-total {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .isam-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .isam-legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .lg {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+  }
+  .lg-clamp {
+    border-radius: 50%;
+    background: var(--fg);
+  }
+  .lg-var {
+    border-radius: 50%;
+    border: 1.5px solid var(--fg);
+  }
+  .lg-fac {
+    width: 9px;
+    height: 9px;
+    background: var(--fg);
+  }
+  .lg-mark {
+    width: 18px;
+    border: 1.3px solid var(--fg);
+    border-radius: 3px;
+  }
+  .lg-hot {
+    border-radius: 50%;
+    background: var(--faint);
+    border: 2px solid var(--fg);
+    box-shadow: 0 0 0 3px var(--line-strong);
+  }
+  .lg-halo {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px dashed var(--fg);
+    background: var(--glow);
+  }
+</style>

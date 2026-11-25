@@ -36,7 +36,7 @@ export const projects: Project[] = [
     ],
     related: {
       label: "LenticulumLM",
-      href: "https://mathstruct.org/LenticulumLM/",
+      href: "/projects/lenticulumLM",
       note: "a language model assembled from such relations",
     },
   },

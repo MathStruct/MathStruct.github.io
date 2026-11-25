@@ -1,0 +1,271 @@
+---
+// Two noise schedules over the same text. "Stream": a front moves left to right, old tokens are
+// clean and new ones noisy (rolling diffusion, diffusion forcing). "Graph": noise falls at many
+// positions at once, from wherever the graph pins something down (the prompt and the end of the
+// proof; every later "p" is tied to the statement's p), at a rate set by the distance to a pin.
+// The glyphs are scrambled with probability equal to each position's noise level; the bars below
+// are that level, position by position.
+---
+
+<div class="dn" data-dn>
+  <div class="dn-top">
+    <div class="seg" role="radiogroup" aria-label="Noise schedule">
+      <button type="button" role="radio" aria-checked="true" data-mode="stream">Stream</button>
+      <button type="button" role="radio" aria-checked="false" data-mode="graph">Graph</button>
+    </div>
+    <p class="dn-cap" data-cap aria-live="polite"></p>
+  </div>
+  <p class="dn-text mono" data-text aria-hidden="true"></p>
+  <p class="sr-only">
+    The proof “Lemma: every prime p &gt; 2 is odd. Proof: if p were even, then 2 ∣ p, so p = 2,
+    contradicting p &gt; 2. ∎”, its tokens denoised one schedule or the other.
+  </p>
+  <svg class="dn-bars" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true" data-bars></svg>
+  <div class="dn-axis mono" aria-hidden="true">
+    <span>position 1</span><span data-active></span><span>position 26</span>
+  </div>
+</div>
+
+<script>
+  const TOKS = [
+    "Lemma:", "every", "prime", "p", ">", "2", "is", "odd.",
+    "Proof:", "if", "p", "were", "even,", "then", "2", "∣", "p,", "so", "p", "=", "2,",
+    "contradicting", "p", ">", "2.", "∎",
+  ]
+  const PROMPT = 8
+  const N = TOKS.length
+  const NOISE = "▓▒░#%*+=~:·"
+
+  // the graph: neighbours in the text, and each later p, 2 and > tied to the statement's
+  const adj: number[][] = TOKS.map(() => [])
+  const link = (a: number, b: number) => {
+    adj[a].push(b)
+    adj[b].push(a)
+  }
+  for (let i = 1; i < N; i++) link(i - 1, i)
+  TOKS.forEach((t, i) => {
+    if (i < PROMPT) return
+    const w = t.replace(/[.,]/g, "")
+    if (w === "p") link(i, 3)
+    if (w === "2") link(i, 5)
+    if (w === ">") link(i, 4)
+  })
+  // distance to a pin: the prompt and the closing ∎
+  const dist = new Array(N).fill(Infinity)
+  const queue: number[] = []
+  for (let i = 0; i < PROMPT; i++) (dist[i] = 0), queue.push(i)
+  dist[N - 1] = 0
+  queue.push(N - 1)
+  while (queue.length) {
+    const a = queue.shift()!
+    for (const b of adj[a]) if (dist[b] > dist[a] + 1) (dist[b] = dist[a] + 1), queue.push(b)
+  }
+
+  const W = 6 // width of the stream's front, in tokens
+  const schedules = {
+    stream: {
+      end: N - PROMPT + W + 1,
+      noise: (i: number, t: number) => (i < PROMPT ? 0 : clamp((i - PROMPT + 1 - t) / W)),
+      cap: "Stream: one front moves forward. Behind it the text is clean; ahead of it, pure noise. Tokens near the front are partly denoised, and can still change.",
+    },
+    graph: {
+      end: 6.4,
+      noise: (i: number, t: number) => (dist[i] === 0 ? 0 : clamp(1 - (t - 1.1 * (dist[i] - 1)) / 3.2)),
+      cap: "Graph: the prompt and the closing ∎ are pinned, and every later p, 2 and > is tied to the statement by an edge. Noise falls at many positions at once, fastest next to what is known, in no fixed order.",
+    },
+  }
+  type Mode = keyof typeof schedules
+  function clamp(x: number) {
+    return Math.max(0, Math.min(1, x))
+  }
+  // a fixed pseudo-random number per (position, character, tick)
+  function hash(a: number, b: number, c: number) {
+    let h = (a * 374761393 + b * 668265263 + c * 2246822519) >>> 0
+    h = Math.imul(h ^ (h >>> 13), 1274126177)
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+  }
+
+  const NS = "http://www.w3.org/2000/svg"
+  for (const root of document.querySelectorAll<HTMLElement>("[data-dn]")) {
+    const text = root.querySelector<HTMLElement>("[data-text]")!
+    const cap = root.querySelector<HTMLElement>("[data-cap]")!
+    const active = root.querySelector<HTMLElement>("[data-active]")!
+    const bars = root.querySelector<SVGSVGElement>("[data-bars]")!
+    const btns = [...root.querySelectorAll<HTMLButtonElement>("[data-mode]")]
+    const spans = TOKS.map((t, i) => {
+      const s = document.createElement("span")
+      s.className = i < PROMPT ? "tk tk--prompt" : "tk"
+      text.appendChild(s)
+      text.appendChild(document.createTextNode(" "))
+      return s
+    })
+    const bw = 1000 / N
+    const rects = TOKS.map((_, i) => {
+      const r = document.createElementNS(NS, "rect")
+      r.setAttribute("x", String(i * bw + 3))
+      r.setAttribute("width", String(bw - 6))
+      bars.appendChild(r)
+      return r
+    })
+
+    let mode: Mode = "stream"
+    let t = 0
+    let tick = 0
+    let hold = 0
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+
+    function draw() {
+      const S = schedules[mode]
+      let k = 0
+      TOKS.forEach((tok, i) => {
+        const z = S.noise(i, t)
+        if (z > 0 && z < 1) k++
+        let out = ""
+        for (let j = 0; j < tok.length; j++) {
+          const h = hash(i, j, Math.floor(tick / 2))
+          out += h < z ? NOISE[Math.floor(hash(j, i, tick) * NOISE.length)] : tok[j]
+        }
+        spans[i].textContent = out
+        spans[i].style.opacity = String(1 - 0.6 * z)
+        spans[i].classList.toggle("tk--live", z > 0 && z < 1)
+        const h = 6 + 110 * z
+        rects[i].setAttribute("y", String(120 - h))
+        rects[i].setAttribute("height", String(h))
+        rects[i].setAttribute("class", i < PROMPT || dist[i] === 0 ? "pin" : z > 0 && z < 1 ? "live" : "")
+      })
+      active.textContent = `noise level per position · ${k} being denoised now`
+    }
+
+    function setMode(m: Mode) {
+      mode = m
+      btns.forEach((b) => b.setAttribute("aria-checked", String(b.dataset.mode === m)))
+      cap.textContent = schedules[m].cap
+      t = reduce ? schedules[m].end * 0.45 : 0
+      hold = 0
+      draw()
+    }
+    btns.forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode as Mode)))
+    setMode("stream")
+    if (reduce) continue
+
+    let visible = false
+    new IntersectionObserver((es) => (visible = es.some((e) => e.isIntersecting))).observe(root)
+    let last = performance.now()
+    function frame(now: number) {
+      const dt = Math.min(0.1, (now - last) / 1000)
+      last = now
+      if (visible) {
+        tick++
+        if (t >= schedules[mode].end) {
+          hold += dt
+          if (hold > 2.4) {
+            t = 0
+            hold = 0
+          }
+        } else t += dt * 1.25
+        if (tick % 3 === 0) draw()
+      }
+      requestAnimationFrame(frame)
+    }
+    requestAnimationFrame(frame)
+  }
+</script>
+
+<style>
+  .dn {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    padding: clamp(16px, 3vw, 28px);
+  }
+  .dn-top {
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 820px) {
+    .dn-top {
+      grid-template-columns: auto 1fr;
+      gap: 28px;
+      align-items: center;
+    }
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 3px;
+    width: max-content;
+  }
+  .seg button {
+    font: inherit;
+    font-size: 14px;
+    height: 34px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .seg button[aria-checked="true"] {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .dn-cap {
+    margin: 0;
+    font-size: 15px;
+    color: var(--fg-2);
+    max-width: 70ch;
+    min-height: 3.2em;
+  }
+  .dn-text {
+    margin: 26px 0 22px;
+    font-size: clamp(15px, 2vw, 21px);
+    line-height: 1.9;
+    word-spacing: 0.15em;
+    min-height: 5.7em;
+  }
+  .dn-text :global(.tk) {
+    white-space: pre;
+    transition: opacity 0.25s linear;
+  }
+  .dn-text :global(.tk--prompt) {
+    color: var(--muted);
+  }
+  .dn-text :global(.tk--live) {
+    border-bottom: 1px dashed var(--fg);
+  }
+  .dn-bars {
+    width: 100%;
+    height: 90px;
+    display: block;
+  }
+  .dn-bars :global(rect) {
+    fill: var(--faint);
+  }
+  .dn-bars :global(rect.live) {
+    fill: var(--fg);
+  }
+  .dn-bars :global(rect.pin) {
+    fill: var(--line-strong);
+  }
+  .dn-axis {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .dn-axis span:nth-child(2) {
+    text-align: center;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>
