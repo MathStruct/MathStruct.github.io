@@ -34,6 +34,14 @@ not, and where the idea could fail.
   this theorem rest on?" agrees with metamath.exe on every one; and Julia's LinearAlgebra
   library, where Sophia and [[projects/moonkale|Moonkale]] compute identical identities.
 
+## Languages
+
+Support is stated by level, per language: L1 parsed, L2 normalised, L3 resolved, L4 lowered, L5
+executable, L6 verified. Julia, Rust and Python are read through the normaliser shared with
+Moonkale (L1 and L2; Rust partly), with names resolved within a module or a file (L3, partly).
+Nothing is lowered, run or verified yet, apart from Sophia's own query language, which runs on
+every backend, and Metamath, whose dependency analysis is checked against metamath.exe.
+
 ## Where it goes
 
 Sophia is designed as the store that Moonkale edits, and later as a home for

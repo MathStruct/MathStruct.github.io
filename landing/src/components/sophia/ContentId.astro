@@ -1,0 +1,779 @@
+---
+// Sophia's central idea, live: a definition's id is the hash of its normalised structure. This is
+// a toy normaliser for one-line arithmetic definitions, written for this page. It parses
+// Julia-flavoured (f(x) = …, function … end) or Rust-flavoured (fn f(x) { … }) text, drops what
+// Sophia drops before hashing (the definition's name, parameter names, layout, redundant
+// parentheses, comments), keeps what it keeps (structure, literals, operand order) and hashes the
+// result. Sophia's own normaliser works on full languages, refers to other definitions by their
+// ids and hashes with BLAKE3; this one refers to them by name and uses the browser's SHA-256.
+//
+//   mode="cycle"        one card cycling through rewritings of a definition (the opening picture)
+//   mode="interactive"  two editors, presets, and the verdict: same id or not
+interface Props {
+  mode?: "cycle" | "interactive"
+}
+const { mode = "interactive" } = Astro.props
+
+const presets = [
+  { id: "rename", label: "Rename it" },
+  { id: "syntax", label: "Other syntax" },
+  { id: "format", label: "Reformat it" },
+  { id: "commute", label: "Swap the operands" },
+  { id: "change", label: "Change it" },
+]
+---
+
+{
+  mode === "cycle" ? (
+    <div class="cid cid--cycle" data-mode="cycle">
+      <div class="cyc-card">
+        <div class="cyc-head mono">
+          <span class="cyc-step">source</span>
+          <span class="cyc-what" aria-live="polite">written</span>
+        </div>
+        <pre class="cyc-src"><code>add2(x, y) = x + y * 2</code></pre>
+      </div>
+      <div class="cyc-arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 40"><path d="M12 2 V34 M5 27 L12 35 L19 27" /></svg>
+        <span class="mono">normalise · hash</span>
+      </div>
+      <div class="cyc-id">
+        <span class="cyc-k mono">content id</span>
+        <span class="cyc-v mono">#············</span>
+        <span class="cyc-badge mono">same id</span>
+      </div>
+    </div>
+  ) : (
+    <div class="cid cid--interactive" data-mode="interactive">
+      <div class="cid-controls" role="group" aria-label="Examples">
+        {presets.map((p, i) => (
+          <button type="button" class:list={["cid-p", { "is-on": i === 0 }]} data-p={p.id}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div class="cid-pair">
+        {["A", "B"].map((side) => (
+          <div class="cid-card" data-side={side}>
+            <label class="cid-label mono" for={`cid-${side}`}>
+              definition {side}
+            </label>
+            <textarea id={`cid-${side}`} class="cid-src" spellcheck="false" autocomplete="off" rows="4" />
+            <div class="cid-row">
+              <span class="cid-k mono">as the store sees it</span>
+              <code class="cid-canon" />
+            </div>
+            <div class="cid-row">
+              <span class="cid-k mono">content id</span>
+              <code class="cid-hash" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div class="cid-verdict" aria-live="polite">
+        <span class="cid-mark" aria-hidden="true" />
+        <div>
+          <strong class="cid-title">…</strong>
+          <p class="cid-note" />
+        </div>
+      </div>
+      <div class="cid-prints">
+        <span class="cid-k mono">definition A, printed back by the store</span>
+        <div class="cid-print-grid">
+          <figure>
+            <figcaption class="mono">julia profile</figcaption>
+            <pre><code class="cid-julia" /></pre>
+          </figure>
+          <figure>
+            <figcaption class="mono">rust profile</figcaption>
+            <pre><code class="cid-rust" /></pre>
+          </figure>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  // ------------------------------------------------------------------ the toy language
+  type Node =
+    | { t: "num"; v: string; float: boolean }
+    | { t: "var"; name: string }
+    | { t: "call"; f: string; args: Node[] }
+    | { t: "bin"; op: string; a: Node; b: Node }
+    | { t: "neg"; a: Node }
+  interface Def {
+    name: string
+    params: string[]
+    body: Node
+  }
+  type Tok = { k: "id" | "num" | "op"; v: string }
+
+  class ParseError extends Error {}
+
+  function lex(src: string): Tok[] {
+    const out: Tok[] = []
+    let i = 0
+    while (i < src.length) {
+      const c = src[i]
+      if (/\s/.test(c)) {
+        i++
+      } else if (c === "#" || (c === "/" && src[i + 1] === "/")) {
+        while (i < src.length && src[i] !== "\n") i++ // comments never reach the hash
+      } else if (/[A-Za-z_]/.test(c)) {
+        const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(src.slice(i))!
+        out.push({ k: "id", v: m[0] })
+        i += m[0].length
+      } else if (/[0-9]/.test(c)) {
+        const m = /^[0-9]+(\.[0-9]+)?/.exec(src.slice(i))!
+        if (/[A-Za-z_(]/.test(src[i + m[0].length] ?? "")) {
+          throw new ParseError("write 2 * y, not 2y: the toy has no implicit multiplication")
+        }
+        out.push({ k: "num", v: m[0] })
+        i += m[0].length
+      } else if ("+-*/^(),={};".includes(c)) {
+        out.push({ k: "op", v: c })
+        i++
+      } else if (c === ":") {
+        throw new ParseError("the toy has no types: leave out the annotations")
+      } else {
+        throw new ParseError(`unexpected “${c}”`)
+      }
+    }
+    return out
+  }
+
+  function parse(src: string): Def {
+    const ts = lex(src)
+    let p = 0
+    const peek = () => ts[p]
+    const isOp = (v: string) => ts[p]?.k === "op" && ts[p].v === v
+    const isKw = (v: string) => ts[p]?.k === "id" && ts[p].v === v
+    const expectOp = (v: string) => {
+      if (!isOp(v)) throw new ParseError(`expected “${v}”${ts[p] ? ` before “${ts[p].v}”` : " at the end"}`)
+      p++
+    }
+    const ident = (what: string) => {
+      const t = peek()
+      if (t?.k !== "id") throw new ParseError(`expected ${what}`)
+      p++
+      return t.v
+    }
+
+    function expr(): Node {
+      let a = term()
+      while (isOp("+") || isOp("-")) {
+        const op = ts[p++].v
+        a = { t: "bin", op, a, b: term() }
+      }
+      return a
+    }
+    function term(): Node {
+      let a = unary()
+      while (isOp("*") || isOp("/")) {
+        const op = ts[p++].v
+        a = { t: "bin", op, a, b: unary() }
+      }
+      return a
+    }
+    function unary(): Node {
+      if (isOp("-")) {
+        p++
+        return { t: "neg", a: unary() }
+      }
+      return power()
+    }
+    function power(): Node {
+      const a = atom()
+      if (isOp("^")) {
+        p++
+        return { t: "bin", op: "^", a, b: unary() }
+      }
+      return a
+    }
+    function atom(): Node {
+      const t = peek()
+      if (!t) throw new ParseError("the expression ends too early")
+      if (t.k === "num") {
+        p++
+        return { t: "num", v: t.v, float: t.v.includes(".") }
+      }
+      if (t.k === "id") {
+        p++
+        if (isOp("(")) {
+          p++
+          const args: Node[] = []
+          if (!isOp(")")) {
+            args.push(expr())
+            while (isOp(",")) {
+              p++
+              args.push(expr())
+            }
+          }
+          expectOp(")")
+          return { t: "call", f: t.v, args }
+        }
+        return { t: "var", name: t.v }
+      }
+      if (isOp("(")) {
+        p++
+        const e = expr()
+        expectOp(")")
+        return e
+      }
+      throw new ParseError(`unexpected “${t.v}”`)
+    }
+    function params(): string[] {
+      expectOp("(")
+      const ps: string[] = []
+      if (!isOp(")")) {
+        ps.push(ident("a parameter name"))
+        while (isOp(",")) {
+          p++
+          ps.push(ident("a parameter name"))
+        }
+      }
+      expectOp(")")
+      if (new Set(ps).size !== ps.length) throw new ParseError("a parameter appears twice")
+      return ps
+    }
+
+    let def: Def
+    if (isKw("fn")) {
+      p++
+      const name = ident("a name after fn")
+      const ps = params()
+      expectOp("{")
+      if (isKw("return")) p++
+      const body = expr()
+      if (isOp(";")) p++
+      expectOp("}")
+      def = { name, params: ps, body }
+    } else if (isKw("function")) {
+      p++
+      const name = ident("a name after function")
+      const ps = params()
+      if (isKw("return")) p++
+      const body = expr()
+      if (!isKw("end")) throw new ParseError("expected “end”")
+      p++
+      def = { name, params: ps, body }
+    } else {
+      const name = ident("a definition: name(x, y) = …")
+      const ps = params()
+      expectOp("=")
+      def = { name, params: ps, body: expr() }
+    }
+    if (p < ts.length) throw new ParseError(`unexpected “${ts[p].v}” after the definition`)
+    return def
+  }
+
+  // ------------------------------------------------------------------ normalise and hash
+  // Parameters become positions (#0, #1, …), so their names do not matter; any other name is a
+  // reference to another definition. The definition's own name is left out: it is a label.
+  function canon(d: Def): string {
+    const idx = new Map(d.params.map((n, i) => [n, i]))
+    const go = (n: Node): string => {
+      switch (n.t) {
+        case "num":
+          return n.float ? `(float ${String(parseFloat(n.v))})` : `(int ${BigInt(n.v).toString()})`
+        case "var":
+          return idx.has(n.name) ? `#${idx.get(n.name)}` : `(ref ${n.name})`
+        case "call": {
+          const f = idx.has(n.f) ? `#${idx.get(n.f)}` : `(ref ${n.f})`
+          return `(call ${f}${n.args.map((a) => " " + go(a)).join("")})`
+        }
+        case "bin":
+          return `(${n.op} ${go(n.a)} ${go(n.b)})`
+        case "neg":
+          return `(neg ${go(n.a)})`
+      }
+    }
+    return `(λ${d.params.length} ${go(d.body)})`
+  }
+
+  function fnv(s: string): string {
+    // fallback when the page is not in a secure context (no crypto.subtle)
+    let h = 0xcbf29ce484222325n
+    for (const b of new TextEncoder().encode(s)) {
+      h ^= BigInt(b)
+      h = (h * 0x100000001b3n) & 0xffffffffffffffffn
+    }
+    return h.toString(16).padStart(16, "0")
+  }
+  async function hash(s: string): Promise<string> {
+    const bytes = new TextEncoder().encode("toy-content-id-v0\0" + s)
+    if (globalThis.crypto?.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", bytes)
+      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("")
+    }
+    return fnv("toy-content-id-v0\0" + s)
+  }
+  const short = (h: string) => "#" + h.slice(0, 12)
+
+  // ------------------------------------------------------------------ printing back
+  const PREC: Record<string, number> = { "+": 1, "-": 1, "*": 2, "/": 2, "^": 4 }
+  function prec(n: Node): number {
+    if (n.t === "bin") return PREC[n.op]
+    if (n.t === "neg") return 3
+    return 5
+  }
+  function show(n: Node): string {
+    switch (n.t) {
+      case "num":
+        return n.v
+      case "var":
+        return n.name
+      case "call":
+        return `${n.f}(${n.args.map(show).join(", ")})`
+      case "neg": {
+        const s = show(n.a)
+        return prec(n.a) < 3 ? `-(${s})` : `-${s}`
+      }
+      case "bin": {
+        const p = PREC[n.op]
+        const right = n.op === "^"
+        const la = right ? prec(n.a) <= p : prec(n.a) < p
+        const ra = right ? prec(n.b) < 3 : prec(n.b) <= p
+        const l = la ? `(${show(n.a)})` : show(n.a)
+        const r = ra ? `(${show(n.b)})` : show(n.b)
+        return `${l} ${n.op} ${r}`
+      }
+    }
+  }
+  const printJulia = (d: Def) => `function ${d.name}(${d.params.join(", ")})\n    ${show(d.body)}\nend`
+  const printRust = (d: Def) => `fn ${d.name}(${d.params.join(", ")}) {\n    ${show(d.body)}\n}`
+
+  async function analyse(src: string) {
+    try {
+      const d = parse(src)
+      const c = canon(d)
+      return { ok: true as const, def: d, canon: c, hash: await hash(c) }
+    } catch (e) {
+      if (e instanceof ParseError) return { ok: false as const, error: e.message }
+      throw e
+    }
+  }
+
+  // ------------------------------------------------------------------ presets
+  const BASE = "add2(x, y) = x + y * 2"
+  const PRESETS: Record<string, { b: string; title?: string; note: string }> = {
+    rename: {
+      b: "plus(a, b) = a + b * 2",
+      note: "Names do not reach the hash: not the definition's own name, not its parameters'. Renaming moves a label; the code, and everything that refers to it, stays as it was.",
+    },
+    syntax: {
+      b: "fn add2(x, y) {\n    x + y * 2\n}",
+      note: "The store does not record which syntax wrote a definition. Julia-flavoured and Rust-flavoured text are two printings of one stored term, and each reader can choose theirs.",
+    },
+    format: {
+      b: "function add2(x, y)\n    # doubles y first\n    x + (y*2)\nend",
+      note: "Layout, redundant parentheses and comments are gone by the time the structure is hashed. In Sophia a comment is kept beside the definition, as an annotation, not inside its id.",
+    },
+    commute: {
+      b: "add2(x, y) = y * 2 + x",
+      note: "The same value, but a different id, on purpose. The normaliser applies no algebraic laws: deciding in general when two programs are equal is impossible, and a normaliser that guessed wrong would merge different programs silently. Such sameness is stored as an equivalence edge instead, with its evidence.",
+    },
+    change: {
+      b: "add2(x, y) = x + y * 3",
+      note: "A different computation is a different definition. The old one stays in the store; the name add2 moves to the new one. Code that referred to the old id still means exactly what it meant.",
+    },
+  }
+
+  // ------------------------------------------------------------------ interactive mode
+  function initInteractive(root: HTMLElement) {
+    const srcA = root.querySelector<HTMLTextAreaElement>('[data-side="A"] .cid-src')!
+    const srcB = root.querySelector<HTMLTextAreaElement>('[data-side="B"] .cid-src')!
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>(".cid-p")]
+    const verdict = root.querySelector<HTMLElement>(".cid-verdict")!
+    const title = root.querySelector<HTMLElement>(".cid-title")!
+    const note = root.querySelector<HTMLElement>(".cid-note")!
+    const julia = root.querySelector<HTMLElement>(".cid-julia")!
+    const rust = root.querySelector<HTMLElement>(".cid-rust")!
+    let preset: string | null = "rename"
+    let run = 0
+
+    const fill = (side: string, r: Awaited<ReturnType<typeof analyse>>) => {
+      const card = root.querySelector<HTMLElement>(`[data-side="${side}"]`)!
+      const cn = card.querySelector<HTMLElement>(".cid-canon")!
+      const hs = card.querySelector<HTMLElement>(".cid-hash")!
+      card.classList.toggle("is-err", !r.ok)
+      if (r.ok) {
+        cn.textContent = r.canon
+        hs.textContent = short(r.hash)
+      } else {
+        cn.textContent = r.error
+        hs.textContent = "—"
+      }
+    }
+
+    async function update() {
+      const mine = ++run
+      const [a, b] = await Promise.all([analyse(srcA.value), analyse(srcB.value)])
+      if (mine !== run) return
+      fill("A", a)
+      fill("B", b)
+      if (a.ok) {
+        julia.textContent = printJulia(a.def)
+        rust.textContent = printRust(a.def)
+      }
+      verdict.classList.remove("is-same", "is-diff", "is-err")
+      if (!a.ok || !b.ok) {
+        verdict.classList.add("is-err")
+        title.textContent = "Not a definition the toy can read"
+        note.textContent =
+          "It reads one definition: name(x, y) = …, function name(x, y) … end, or fn name(x, y) { … }, with numbers, + − * / ^, parentheses and calls."
+        return
+      }
+      const same = a.hash === b.hash
+      verdict.classList.add(same ? "is-same" : "is-diff")
+      title.textContent = same ? "Same id: one definition in the store" : "Different ids: two definitions in the store"
+      note.textContent = preset
+        ? PRESETS[preset].note
+        : same
+          ? "Whatever you changed did not reach the structure: the store keeps one definition, under one id."
+          : "The structures differ, so the ids do. If the two compute the same thing, that is a claim for an equivalence edge, not for the hash."
+    }
+
+    function choose(id: string) {
+      preset = id
+      buttons.forEach((b) => b.classList.toggle("is-on", b.dataset.p === id))
+      srcA.value = BASE
+      srcB.value = PRESETS[id].b
+      update()
+    }
+    buttons.forEach((b) => b.addEventListener("click", () => choose(b.dataset.p!)))
+    const edited = () => {
+      preset = null
+      buttons.forEach((b) => b.classList.remove("is-on"))
+      update()
+    }
+    srcA.addEventListener("input", edited)
+    srcB.addEventListener("input", edited)
+    choose("rename")
+  }
+
+  // ------------------------------------------------------------------ cycle mode
+  const CYCLE = [
+    { src: "add2(x, y) = x + y * 2", what: "written" },
+    { src: "plus(a, b) = a + b * 2", what: "renamed" },
+    { src: "fn plus(a, b) {\n    a + b * 2\n}", what: "Rust-flavoured" },
+    { src: "function plus(a, b)\n    # doubles b first\n    a + (b*2)\nend", what: "reformatted, commented" },
+    { src: "plus(a, b) = a + b * 3", what: "changed: 2 → 3" },
+  ]
+  async function initCycle(root: HTMLElement) {
+    const code = root.querySelector<HTMLElement>(".cyc-src code")!
+    const src = root.querySelector<HTMLElement>(".cyc-src")!
+    const what = root.querySelector<HTMLElement>(".cyc-what")!
+    const id = root.querySelector<HTMLElement>(".cyc-v")!
+    const badge = root.querySelector<HTMLElement>(".cyc-badge")!
+    const card = root.querySelector<HTMLElement>(".cyc-id")!
+    const results = await Promise.all(CYCLE.map((c) => analyse(c.src)))
+    const hashes = results.map((r) => (r.ok ? r.hash : ""))
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+    let i = 0
+    const paint = () => {
+      const c = CYCLE[i]
+      code.textContent = c.src
+      what.textContent = c.what
+      id.textContent = short(hashes[i])
+      const same = hashes[i] === hashes[0]
+      badge.textContent = i === 0 ? "its id" : same ? "same id" : "new id"
+      card.classList.toggle("is-new", !same)
+    }
+    paint()
+    if (reduced) return
+    let visible = true
+    new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(root)
+    setInterval(() => {
+      if (!visible || document.hidden) return
+      src.classList.add("is-out")
+      setTimeout(() => {
+        i = (i + 1) % CYCLE.length
+        paint()
+        src.classList.remove("is-out")
+      }, 260)
+    }, 2600)
+  }
+
+  document.querySelectorAll<HTMLElement>(".cid").forEach((root) => {
+    if (root.dataset.mode === "cycle") initCycle(root)
+    else initInteractive(root)
+  })
+</script>
+
+<style>
+  /* ------------------------------------------------------------- cycle */
+  .cid--cycle {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+  }
+  .cyc-card,
+  .cyc-id {
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .cyc-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cyc-what {
+    color: var(--fg);
+  }
+  .cyc-src {
+    margin: 0;
+    padding: 20px 18px;
+    min-height: calc(4 * 1.7em + 40px);
+    font-family: var(--font-mono);
+    font-size: clamp(13px, 1.5vw, 15px);
+    line-height: 1.7;
+    white-space: pre;
+    overflow-x: auto;
+    transition:
+      opacity 0.26s var(--ease),
+      transform 0.26s var(--ease);
+  }
+  .cyc-src.is-out {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  .cyc-arrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .cyc-arrow svg {
+    width: 16px;
+    height: 32px;
+  }
+  .cyc-arrow path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .cyc-id {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    padding: 16px 18px;
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+    transition:
+      background-color 0.3s var(--ease),
+      color 0.3s var(--ease);
+  }
+  .cyc-id.is-new {
+    background: var(--bg-raised);
+    color: var(--fg);
+    border-color: var(--fg);
+    border-style: dashed;
+  }
+  .cyc-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .cyc-v {
+    font-size: clamp(16px, 2vw, 20px);
+    letter-spacing: 0.02em;
+  }
+  .cyc-badge {
+    margin-left: auto;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+  }
+
+  /* ------------------------------------------------------- interactive */
+  .cid--interactive {
+    display: grid;
+    gap: 20px;
+  }
+  .cid-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cid-p {
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition:
+      background-color 0.2s var(--ease),
+      border-color 0.2s var(--ease);
+  }
+  .cid-p:hover {
+    border-color: var(--fg);
+  }
+  .cid-p.is-on {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .cid-pair {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 820px) {
+    .cid-pair {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cid-card {
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .cid-label,
+  .cid-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cid-src {
+    width: 100%;
+    resize: vertical;
+    min-height: calc(4 * 1.7em + 24px);
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .cid-src:focus {
+    outline: none;
+    border-color: var(--fg);
+  }
+  .cid-row {
+    display: grid;
+    gap: 4px;
+  }
+  .cid-canon,
+  .cid-hash {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .cid-canon {
+    color: var(--fg-2);
+  }
+  .cid-hash {
+    font-size: 16px;
+    letter-spacing: 0.02em;
+  }
+  .cid-card.is-err .cid-canon {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .cid-verdict {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 20px 22px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line-strong);
+  }
+  .cid-verdict.is-same {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .cid-verdict.is-diff {
+    border-style: dashed;
+    border-color: var(--fg);
+  }
+  .cid-mark {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    margin-top: 6px;
+    transform: rotate(45deg);
+    border: 1.5px solid currentColor;
+  }
+  .cid-verdict.is-same .cid-mark {
+    background: currentColor;
+  }
+  .cid-title {
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .cid-note {
+    margin: 6px 0 0;
+    font-size: 15px;
+    max-width: 80ch;
+    opacity: 0.85;
+  }
+  .cid-prints {
+    display: grid;
+    gap: 10px;
+  }
+  .cid-print-grid {
+    display: grid;
+    gap: 12px;
+  }
+  @media (min-width: 820px) {
+    .cid-print-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cid-print-grid figure {
+    margin: 0;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cid-print-grid figcaption {
+    padding: 8px 14px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  .cid-print-grid pre {
+    margin: 0;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+</style>

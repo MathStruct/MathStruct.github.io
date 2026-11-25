@@ -1,0 +1,419 @@
+---
+// The four ideas behind Sophia, from its README and vault/Design (Design Overview, Hashing and
+// Identity, Naming and Change Propagation, Tests and Documentation as Nodes, Equivalence and
+// Witnesses), each with a small looping drawing. The drawings start when the step scrolls into
+// view (the page's .reveal → .in).
+---
+
+<ol class="hiw">
+  <li class="step reveal">
+    <div class="art" aria-hidden="true">
+      <svg viewBox="0 0 220 150">
+        <!-- a tree, hashed from the leaves up (a Merkle tree) -->
+        <line x1="110" y1="34" x2="60" y2="78"></line>
+        <line x1="110" y1="34" x2="160" y2="78"></line>
+        <line x1="160" y1="78" x2="132" y2="122"></line>
+        <line x1="160" y1="78" x2="188" y2="122"></line>
+        <circle class="leaf l1" cx="60" cy="84" r="11"></circle>
+        <text x="60" y="88" class="sym tiny">x</text>
+        <circle class="leaf l2" cx="132" cy="126" r="11"></circle>
+        <text x="132" y="130" class="sym tiny">y</text>
+        <circle class="leaf l3" cx="188" cy="126" r="11"></circle>
+        <text x="188" y="130" class="tagb">2</text>
+        <circle class="inner i1" cx="160" cy="82" r="11"></circle>
+        <text x="160" y="86" class="tagb">*</text>
+        <rect class="rootbox" x="80" y="14" width="60" height="26" rx="6"></rect>
+        <text x="110" y="31" class="tagb rootlbl">#6ac0…</text>
+        <text x="30" y="128" class="tag left">x + y * 2</text>
+      </svg>
+    </div>
+    <span class="num mono">01</span>
+    <h3>A definition's id is the hash of its structure</h3>
+    <p>
+      Every definition is parsed and normalised: bound names become positions, layout disappears.
+      What remains is hashed from the leaves up, each node folding in its children's hashes. Equal
+      structure, equal id: on any machine, at any time.
+    </p>
+  </li>
+
+  <li class="step reveal" style="--d:.06s">
+    <div class="art" aria-hidden="true">
+      <svg viewBox="0 0 220 150">
+        <rect class="node" x="120" y="54" width="78" height="40" rx="8"></rect>
+        <text x="159" y="79" class="tagb">#6ac0…</text>
+        <!-- the label that moves -->
+        <g class="label-old">
+          <rect class="lbl-box" x="22" y="30" width="58" height="24" rx="12"></rect>
+          <text x="51" y="46" class="tagb">add2</text>
+        </g>
+        <g class="label-new">
+          <rect class="lbl-box" x="22" y="30" width="58" height="24" rx="12"></rect>
+          <text x="51" y="46" class="tagb">double_add</text>
+        </g>
+        <path class="ptr" d="M80 42 C 100 42, 108 58, 120 66"></path>
+        <!-- a caller points at the id, not the name -->
+        <rect class="caller" x="22" y="98" width="58" height="24" rx="6"></rect>
+        <text x="51" y="114" class="tagb">caller</text>
+        <path class="ptr solid" d="M80 110 C 100 110, 108 92, 120 84"></path>
+        <text x="159" y="114" class="tag">untouched</text>
+      </svg>
+    </div>
+    <span class="num mono">02</span>
+    <h3>Names are labels on it</h3>
+    <p>
+      A name points at an id; code refers to other code by id. Renaming moves a label and touches
+      no code. Editing a definition makes a new id and moves the name; the old version stays, and
+      everything that used it still means what it meant.
+    </p>
+  </li>
+
+  <li class="step reveal" style="--d:.12s">
+    <div class="art" aria-hidden="true">
+      <svg viewBox="0 0 220 150">
+        <rect class="node" x="80" y="56" width="60" height="36" rx="8"></rect>
+        <text x="110" y="78" class="tagb">#6ac0…</text>
+        <g class="sat s1">
+          <line class="att" x1="80" y1="64" x2="46" y2="34"></line>
+          <rect x="10" y="18" width="52" height="22" rx="11"></rect>
+          <text x="36" y="33" class="tagb">test ✓</text>
+        </g>
+        <g class="sat s2">
+          <line class="att" x1="140" y1="64" x2="172" y2="34"></line>
+          <rect x="158" y="18" width="52" height="22" rx="11"></rect>
+          <text x="184" y="33" class="tagb">proof</text>
+        </g>
+        <g class="sat s3">
+          <line class="att" x1="140" y1="86" x2="172" y2="114"></line>
+          <rect x="158" y="108" width="52" height="22" rx="11"></rect>
+          <text x="184" y="123" class="tagb">type</text>
+        </g>
+        <g class="sat s4">
+          <line class="att" x1="80" y1="86" x2="46" y2="114"></line>
+          <rect x="10" y="108" width="52" height="22" rx="11"></rect>
+          <text x="36" y="123" class="tagb">doc</text>
+        </g>
+      </svg>
+    </div>
+    <span class="num mono">03</span>
+    <h3>Everything else is attached to it</h3>
+    <p>
+      Tests, test results, proofs, documentation and comments are not compiled; they are
+      annotations and derived facts on an id. A test result belongs to the id it ran on, so it
+      holds for exactly as long as that code exists, and never for a changed version.
+    </p>
+  </li>
+
+  <li class="step reveal" style="--d:.18s">
+    <div class="art" aria-hidden="true">
+      <svg viewBox="0 0 220 150">
+        <rect class="node" x="14" y="56" width="64" height="36" rx="8"></rect>
+        <text x="46" y="72" class="tagb">#6ac0…</text>
+        <text x="46" y="85" class="tag">Julia</text>
+        <rect class="node" x="142" y="56" width="64" height="36" rx="8"></rect>
+        <text x="174" y="72" class="tagb">#c41e…</text>
+        <text x="174" y="85" class="tag">Rust</text>
+        <path class="equiv" d="M78 74 L142 74"></path>
+        <text x="110" y="64" class="lbl small">≈</text>
+        <g class="rung">
+          <rect x="70" y="100" width="80" height="22" rx="11"></rect>
+          <text x="110" y="115" class="tagb rung-t r1">tested</text>
+          <text x="110" y="115" class="tagb rung-t r2">rewrite</text>
+          <text x="110" y="115" class="tagb rung-t r3">proved</text>
+        </g>
+        <text x="110" y="140" class="tag">how sure is the claim?</text>
+      </svg>
+    </div>
+    <span class="num mono">04</span>
+    <h3>Sameness is a claim, with evidence</h3>
+    <p>
+      Two definitions that do the same thing but differ in structure keep their two ids. The store
+      relates them by an equivalence edge that says how strong the claim is, from “a test agreed”
+      to “a proof was checked”, and what it ignores. That is meant to replace an FFI.
+    </p>
+  </li>
+</ol>
+
+<style>
+  .hiw {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 760px) {
+    .hiw {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1120px) {
+    .hiw {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .step {
+    background: var(--bg);
+    padding: 24px 24px 32px;
+    display: flex;
+    flex-direction: column;
+  }
+  .art {
+    height: 150px;
+    margin: 0 -8px 18px;
+    color: var(--fg);
+  }
+  .art svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .num {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .step h3 {
+    margin-top: 10px;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+  .step p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  /* shared drawing styles (zero specificity, so a class below can fill a shape) */
+  :where(svg) :where(path, line, rect, circle) {
+    fill: var(--bg);
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  :where(svg) :where(path, line) {
+    fill: none;
+  }
+  .sym,
+  .lbl {
+    font-family: var(--font-serif);
+    font-style: italic;
+    fill: currentColor;
+    stroke: none;
+    text-anchor: middle;
+  }
+  .sym.tiny {
+    font-size: 16px;
+  }
+  .lbl.small {
+    font-size: 20px;
+  }
+  .tag,
+  .tagb {
+    font-family: var(--font-mono);
+    stroke: none;
+    text-anchor: middle;
+  }
+  .tag {
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    fill: var(--muted);
+  }
+  .tag.left {
+    text-anchor: start;
+  }
+  .tagb {
+    font-size: 10.5px;
+    fill: currentColor;
+  }
+
+  /* every animation waits until the step is in view */
+  .step :is(path, line, rect, circle, text, g) {
+    animation-play-state: paused;
+  }
+  .step.in :is(path, line, rect, circle, text, g) {
+    animation-play-state: running;
+  }
+
+  /* 01: hashes light up from the leaves to the root */
+  .leaf,
+  .inner,
+  .rootbox {
+    animation: lit 4s var(--ease) infinite;
+  }
+  .l1,
+  .l2,
+  .l3 {
+    animation-delay: 0s;
+  }
+  .i1 {
+    animation-delay: 0.6s;
+  }
+  .rootbox {
+    animation-name: lit-root;
+    animation-delay: 1.2s;
+  }
+  .rootlbl {
+    animation: lit-text 4s var(--ease) 1.2s infinite;
+  }
+  @keyframes lit {
+    0%,
+    100% {
+      fill: var(--bg);
+    }
+    12%,
+    70% {
+      fill: var(--line-strong);
+    }
+  }
+  @keyframes lit-root {
+    0%,
+    100% {
+      fill: var(--bg);
+    }
+    12%,
+    55% {
+      fill: var(--fg);
+    }
+  }
+  @keyframes lit-text {
+    0%,
+    100% {
+      fill: var(--fg);
+    }
+    12%,
+    55% {
+      fill: var(--bg);
+    }
+  }
+
+  /* 02: the label is replaced; the id and its caller stay */
+  .ptr {
+    stroke-dasharray: 3 3;
+  }
+  .ptr.solid {
+    stroke-dasharray: none;
+  }
+  .lbl-box {
+    stroke-dasharray: 3 2;
+  }
+  .label-old {
+    animation: swap-out 5s var(--ease) infinite;
+  }
+  .label-new {
+    animation: swap-in 5s var(--ease) infinite;
+  }
+  .label-new text {
+    font-size: 8.5px;
+  }
+  @keyframes swap-out {
+    0%,
+    40% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    50%,
+    90% {
+      opacity: 0;
+      transform: translateY(-14px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes swap-in {
+    0%,
+    40% {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    50%,
+    90% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+
+  /* 03: annotations attach one after another */
+  .att {
+    stroke-dasharray: 3 3;
+  }
+  .sat {
+    animation: attach 5s var(--ease) infinite;
+  }
+  .s2 {
+    animation-delay: 0.4s;
+  }
+  .s3 {
+    animation-delay: 0.8s;
+  }
+  .s4 {
+    animation-delay: 1.2s;
+  }
+  @keyframes attach {
+    0% {
+      opacity: 0;
+    }
+    12%,
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* 04: the claim climbs the ladder of evidence */
+  .equiv {
+    stroke-dasharray: 5 4;
+    animation: flow 1.2s linear infinite;
+  }
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -18;
+    }
+  }
+  .rung-t {
+    opacity: 0;
+  }
+  .r1 {
+    animation: rung 6s steps(1) infinite;
+  }
+  .r2 {
+    animation: rung 6s steps(1) 2s infinite;
+  }
+  .r3 {
+    animation: rung 6s steps(1) 4s infinite;
+  }
+  @keyframes rung {
+    0% {
+      opacity: 1;
+    }
+    33.3%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step :is(path, line, rect, circle, text, g) {
+      animation: none !important;
+    }
+    .label-new,
+    .r2,
+    .r3 {
+      opacity: 0;
+    }
+    .r1 {
+      opacity: 1;
+    }
+  }
+</style>

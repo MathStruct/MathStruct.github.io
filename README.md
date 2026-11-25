@@ -1,7 +1,7 @@
 # MathStruct
 
 The organisation website for [MathStruct](https://github.com/MathStruct). The front page and
-a few promotional pages (`/projects/lenticulum-jl`) are a small [Astro](https://astro.build)
+a few promotional pages (`/projects/lenticulum-jl`, `/projects/sophia`) are a small [Astro](https://astro.build)
 site in `landing/`; everything else (blog, projects,
 people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
 same style as the project wikis.
@@ -68,6 +68,8 @@ address (plus `/assets/` and `/favicon.svg`):
 - `src/pages/projects/lenticulum-jl.astro`: Lenticulum.jl's page, with the interactive circle
   model (`src/components/lenticulum/`). Its demos are a list in `src/lib/lenticulum-demos.ts`:
   add an entry, with the image or video in `public/projects/lenticulum-jl-media/`.
+- `src/pages/projects/sophia.astro`: Sophia's page, with a toy content-id normaliser that runs in
+  the browser (`src/components/sophia/`). Its facts come from Sophia's README and vault.
 
 A page here keeps its Markdown note in `content/` for the site's search, graph and link
 previews; keep the two in step. A folder in `public/` must not have the name of a page
