@@ -113,13 +113,20 @@ const packages = [
     body: `The shared numerics: linear solves (dense, GMRES, MINRES), root finding (Picard, Broyden, ${L("newton", "Newton")}, trust region) and the linear systems that give gradients through the implicit function theorem. Every solve returns a report on how it converged.` },
 ]
 const unreviewed = [
-  { name: "ImplicitLayers", slug: "implicitlayers",
+  { name: "ImplicitLayers", role: "equilibrium layers", slug: "implicitlayers", deps: ["MyceliumLearning", "ImplicitSolvers"],
     body: `${L("deq", "Deep equilibrium networks")} and ${L("diffeqflux", "neural ODEs")} from ${L("sciml", "SciML")}, wrapped as factors. Given the inner network rather than the finished layer, they can be queried in more than one direction.` },
-  { name: "AlgebraicFactors", slug: "algebraicfactors",
+  { name: "AlgebraicFactors", role: "discrete algebra", slug: "algebraicfactors", deps: ["Mycelium"],
     body: `Exact log-linear models of discrete data (toric models, in algebraic statistics), with optional multi-branch answers through ${L("homotopy", "homotopy continuation")}.` },
-  { name: "AdversarialFactors", slug: "adversarialfactors",
+  { name: "AdversarialFactors", role: "generative models", slug: "adversarialfactors", deps: ["Mycelium"],
     body: `Implicit generative models, with the ${L("gan", "GAN")} read as a factor graph. A generator is a function with no residual behind it, so these factors run one way only.` },
 ]
+
+// The tabs of the sublibraries section: the six core packages, then the three unreviewed ones.
+const pkgTabs = [
+  ...packages.map((k) => ({ ...k, reviewed: true })),
+  ...unreviewed.map((k) => ({ ...k, reviewed: false })),
+]
+const pkgNames = new Set(pkgTabs.map((k) => k.name))
 
 const works = [
   "Exact inference on linear-Gaussian graphs, checked on random trees against solving the whole joint Gaussian at once",
@@ -362,8 +369,8 @@ const bibtex = `@software{lenticulum,
             <h2 class="reveal" style="--d:.05s">Nine packages, <span class="serif">one stack.</span></h2>
           </div>
           <p class="lede reveal" style="--d:.1s">
-            Lenticulum is split into small packages under <code>lib/</code>, each built on the ones
-            above it in this list. All of them depend only on <a href={ext.luxcore}>LuxCore</a>, the
+            Lenticulum is split into small packages under <code>lib/</code>, each built on others;
+            pick one to see what it does and what it builds on. All of them depend only on <a href={ext.luxcore}>LuxCore</a>, the
             small interface package of <a href={ext.lux}>Lux</a>, and not on Lux itself or on
             training libraries like <a href={ext.zygote}>Zygote</a> and
             <a href={ext.optimisers}>Optimisers</a>. Automatic differentiation and
@@ -371,31 +378,64 @@ const bibtex = `@software{lenticulum,
             switched on by package extensions, when you load them.
           </p>
         </div>
-        <ol class="pkg-list">
-          {packages.map((k, i) => (
-            <li class="reveal" style={`--d:${0.04 * i}s`}>
-              <div class="pkg-row">
-                <a class="pkg-name mono" href={apiPkg(k.slug)}>{k.name}</a>
-                <span class="pkg-role">{k.role}</span>
-                <span class="pkg-body" set:html={k.body} />
-                <span class="pkg-deps mono">builds on {k.deps.join(" · ")}</span>
-                <a class="pkg-api mono" href={apiPkg(k.slug)} aria-label={`${k.name} API documentation`}>API →</a>
+        <div class="pkg-tabs reveal" data-pkg-tabs>
+          <div class="pkg-tablist" role="tablist" aria-label="Lenticulum packages" aria-orientation="vertical">
+            {pkgTabs.map((k, i) => (
+              <>
+                {i === packages.length && (
+                  <span class="pkg-group mono" role="presentation">Off the paths · not yet reviewed</span>
+                )}
+                <button
+                  type="button"
+                  role="tab"
+                  id={`pkg-tab-${k.slug}`}
+                  aria-controls={`pkg-panel-${k.slug}`}
+                  aria-selected={i === 0 ? "true" : "false"}
+                  tabindex={i === 0 ? 0 : -1}
+                  data-name={k.name}
+                  class:list={["pkg-tab", { "pkg-tab--off": !k.reviewed }]}
+                >
+                  <span class="pkg-tab-name mono">{k.name}</span>
+                  <span class="pkg-tab-role">{k.role}</span>
+                </button>
+              </>
+            ))}
+          </div>
+          <div class="pkg-panels">
+            {pkgTabs.map((k, i) => (
+              <div
+                class="pkg-panel"
+                role="tabpanel"
+                id={`pkg-panel-${k.slug}`}
+                aria-labelledby={`pkg-tab-${k.slug}`}
+                tabindex="0"
+                hidden={i !== 0}
+              >
+                <div class="pkg-panel-head">
+                  <h3 class="mono">{k.name}</h3>
+                  <span class="pkg-role">{k.role}</span>
+                  {!k.reviewed && <span class="pkg-tag mono">not yet reviewed · tested weekly</span>}
+                </div>
+                <p class="pkg-body" set:html={k.body} />
+                <div class="pkg-deps">
+                  <span class="mono">builds on</span>
+                  <ul class="pkgs mono">
+                    {k.deps.map((d) => (
+                      <li>
+                        {pkgNames.has(d) ? (
+                          <button type="button" class="pkg-dep" data-goto={d}>{d}</button>
+                        ) : (
+                          d
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <a class="more" href={apiPkg(k.slug)}>{k.name} API documentation <span aria-hidden="true">→</span></a>
               </div>
-            </li>
-          ))}
-        </ol>
-        <h3 class="sub reveal">Off the paths <span class="pkg-tag mono">not yet reviewed · tested weekly</span></h3>
-        <ul class="pkg-list pkg-list--off">
-          {unreviewed.map((k, i) => (
-            <li class="reveal" style={`--d:${0.04 * i}s`}>
-              <div class="pkg-row">
-                <a class="pkg-name mono" href={apiPkg(k.slug)}>{k.name}</a>
-                <span class="pkg-body" set:html={k.body} />
-                <a class="pkg-api mono" href={apiPkg(k.slug)} aria-label={`${k.name} API documentation`}>API →</a>
-              </div>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
 
@@ -537,6 +577,46 @@ const bibtex = `@software{lenticulum,
 
   <Footer />
 </Layout>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>("[data-pkg-tabs]")) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    const select = (tab: HTMLButtonElement, focus = false) => {
+      for (const t of tabs) {
+        const on = t === tab
+        t.setAttribute("aria-selected", String(on))
+        t.tabIndex = on ? 0 : -1
+        document.getElementById(t.getAttribute("aria-controls")!)!.hidden = !on
+      }
+      tab.scrollIntoView({ block: "nearest", inline: "nearest" })
+      if (focus) tab.focus()
+    }
+    root.addEventListener("click", (e) => {
+      const el = e.target as HTMLElement
+      const tab = el.closest<HTMLButtonElement>('[role="tab"]')
+      if (tab) return select(tab)
+      const dep = el.closest<HTMLElement>("[data-goto]")
+      if (dep) {
+        const t = tabs.find((t) => t.dataset.name === dep.dataset.goto)
+        if (t) select(t, true)
+      }
+    })
+    root.addEventListener("keydown", (e) => {
+      const i = tabs.indexOf(document.activeElement as HTMLButtonElement)
+      if (i < 0) return
+      const n = tabs.length
+      const j =
+        e.key === "ArrowDown" || e.key === "ArrowRight" ? (i + 1) % n
+        : e.key === "ArrowUp" || e.key === "ArrowLeft" ? (i - 1 + n) % n
+        : e.key === "Home" ? 0
+        : e.key === "End" ? n - 1
+        : -1
+      if (j < 0) return
+      e.preventDefault()
+      select(tabs[j], true)
+    })
+  }
+</script>
 
 <style>
   /* ---------------------------------------------------------------- hero */
@@ -837,99 +917,168 @@ const bibtex = `@software{lenticulum,
   }
 
   /* ------------------------------------------------------------ packages */
-  .pkg-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--line);
-  }
-  .pkg-list li {
-    border-bottom: 1px solid var(--line);
-  }
-  .pkg-row {
+  .pkg-tabs {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 6px 24px;
-    padding: 22px 8px;
-    transition: background-color 0.3s var(--ease);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
-  .pkg-row:hover {
-    background: var(--bg-raised);
+  .pkg-tablist {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
   }
-  .pkg-name {
-    font-size: 16px;
+  .pkg-tablist::-webkit-scrollbar {
+    display: none;
+  }
+  .pkg-group {
+    display: none;
+  }
+  .pkg-tab {
+    flex: none;
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    padding: 14px 18px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+    transition:
+      color 0.2s var(--ease),
+      background-color 0.2s var(--ease),
+      border-color 0.2s var(--ease);
+  }
+  .pkg-tab:hover {
+    color: var(--fg);
+  }
+  .pkg-tab[aria-selected="true"] {
+    color: var(--fg);
+    background: var(--bg);
+    border-bottom-color: var(--fg);
+  }
+  .pkg-tab:focus-visible {
+    outline: 2px solid var(--fg);
+    outline-offset: -2px;
+  }
+  .pkg-tab-name {
+    font-size: 13.5px;
     font-weight: 500;
   }
-  .pkg-name:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  .pkg-tab-role {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 15px;
+  }
+  .pkg-tab--off .pkg-tab-name {
+    font-weight: 400;
+  }
+  .pkg-panel {
+    display: flex;
+    flex-direction: column;
+    padding: clamp(24px, 4vw, 44px);
+    min-height: 100%;
+  }
+  .pkg-panel[hidden] {
+    display: none;
+  }
+  .pkg-panel:focus-visible {
+    outline: 2px solid var(--fg);
+    outline-offset: -2px;
+  }
+  .pkg-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+  }
+  .pkg-panel h3 {
+    font-size: clamp(22px, 2.6vw, 30px);
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
   .pkg-role {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 19px;
+    font-size: 22px;
     color: var(--muted);
   }
   .pkg-body {
-    grid-column: 1 / -1;
-    color: var(--muted);
-    font-size: 15px;
-    max-width: 68ch;
+    margin: 20px 0 0;
+    color: var(--fg-2);
+    font-size: 17px;
+    max-width: 62ch;
+    text-wrap: pretty;
   }
   .pkg-deps {
-    grid-column: 1 / -1;
-    font-size: 11.5px;
-    color: var(--faint);
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
   }
-  .pkg-api {
-    grid-column: 1 / -1;
-    justify-self: start;
-    font-size: 12px;
+  .pkg-deps > span {
+    font-size: 11.5px;
     color: var(--muted);
   }
-  .pkg-api:hover {
-    color: var(--fg);
+  .pkg-deps .pkgs {
+    margin: 0;
   }
-  @media (min-width: 900px) {
-    .pkg-row {
-      grid-template-columns: 200px 150px 1fr 56px;
-      align-items: baseline;
-    }
-    .pkg-role {
-      font-size: 18px;
-    }
-    .pkg-body {
-      grid-column: 3;
-      grid-row: 1;
-    }
-    .pkg-deps {
-      grid-column: 3;
-      grid-row: 2;
-    }
-    .pkg-api {
-      grid-column: 4;
-      grid-row: 1;
-      justify-self: end;
-    }
-    .pkg-list--off .pkg-row {
-      grid-template-columns: 200px 1fr 56px;
-    }
-    .pkg-list--off .pkg-body {
-      grid-column: 2;
-    }
-    .pkg-list--off .pkg-api {
-      grid-column: 3;
-    }
+  .pkg-panel .more {
+    margin-top: 0;
+    padding-top: 28px;
   }
-  .pkg-list--off {
-    border-top: 0;
+  .pkg-dep {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .pkg-deps .pkgs li:has(.pkg-dep):hover {
+    border-color: var(--fg);
   }
   .pkg-tag {
-    margin-left: 10px;
     font-size: 11.5px;
-    font-weight: 400;
     color: var(--muted);
-    vertical-align: middle;
+    padding: 3px 10px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 999px;
+  }
+  @media (min-width: 900px) {
+    .pkg-tabs {
+      grid-template-columns: 280px 1fr;
+    }
+    .pkg-tablist {
+      flex-direction: column;
+      overflow: visible;
+      border-bottom: 0;
+      border-right: 1px solid var(--line);
+      padding: 10px 0;
+    }
+    .pkg-group {
+      display: block;
+      margin: 18px 22px 6px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .pkg-tab {
+      padding: 9px 22px;
+      border-bottom: 0;
+      border-left: 2px solid transparent;
+    }
+    .pkg-tab[aria-selected="true"] {
+      border-left-color: var(--fg);
+    }
   }
 
   /* --------------------------------------------------------------- demos */
