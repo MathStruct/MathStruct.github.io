@@ -273,3 +273,12 @@ h3 {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* An inline link inside running text (also inside set:html strings, which scoped styles miss). */
+.il {
+  border-bottom: 1px solid var(--line-strong);
+  transition: border-color 0.2s var(--ease);
+}
+.il:hover {
+  border-bottom-color: var(--fg);
+}

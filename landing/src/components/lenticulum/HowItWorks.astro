@@ -16,9 +16,12 @@
     <span class="num mono">01</span>
     <h3>A relation is the zero set of a learned residual</h3>
     <p>
-      Instead of a function <em>f</em>, the model learns a residual <em>r</em><sub>θ</sub> on the
-      joint space of all its coordinates. The relation is where it vanishes:
-      <em>R</em><sub>θ</sub> = {"{"} z : <em>r</em><sub>θ</sub>(z) = 0 {"}"}.
+      Instead of a function <em>y</em> = <em>f</em>(<em>x</em>), the model learns a residual
+      <em>r</em><sub>θ</sub>(<em>z</em>): one function of all the coordinates together,
+      <em>z</em> = (<em>x</em>, <em>y</em>, …), that is zero on the data and nonzero away from
+      it. The relation is where it vanishes:
+      <em>R</em><sub>θ</sub> = {"{"} z : <em>r</em><sub>θ</sub>(z) = 0 {"}"}. The circle
+      <em>x</em>² + <em>y</em>² − 1 = 0 is the simplest example.
     </p>
   </li>
 
@@ -47,9 +50,10 @@
     <span class="num mono">02</span>
     <h3>A query chooses a polarity</h3>
     <p>
-      Each query splits the coordinates into inputs, outputs and latents, with a precision per
-      coordinate: ∞ is a hard input, 0 a free output, anything in between soft evidence. The same
-      model, asked the other way round, swaps them.
+      Each query sorts the coordinates into inputs (known), outputs (wanted) and latents (neither);
+      this choice is called a polarity. Each coordinate gets a precision, one over its variance:
+      ∞ holds it fixed, 0 leaves it free, anything in between is a noisy measurement. Asked the
+      other way round, the same model swaps inputs and outputs.
     </p>
   </li>
 
@@ -70,8 +74,9 @@
     <span class="num mono">03</span>
     <h3>Inference is root finding</h3>
     <p>
-      With the inputs clamped, the free coordinates are solved for until the residual vanishes,
-      the way a deep equilibrium model is evaluated. Several roots mean several answers.
+      With the inputs held fixed, a solver such as Newton's method adjusts the free coordinates
+      until the residual is zero, the way a deep equilibrium model is evaluated. Several roots
+      mean several answers: one <em>x</em> on the circle has two <em>y</em>.
     </p>
   </li>
 
@@ -102,8 +107,10 @@
     <span class="num mono">04</span>
     <h3>Backpropagation is the implicit function theorem</h3>
     <p>
-      One adjoint linear solve at the answer gives the gradients for the parameters, the inputs and
-      the precisions. Nothing is unrolled, however many steps the solver took.
+      Training needs the gradient of the answer. The implicit function theorem gives it from one
+      linear solve at the answer, for the parameters, the inputs and the precisions alike. The
+      solver's steps are not unrolled (stored and differentiated through), so memory does not
+      grow with them.
     </p>
   </li>
 </ol>
