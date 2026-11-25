@@ -1,0 +1,498 @@
+---
+// "Change one thing: what has to be rebuilt?" A toy program of seven definitions and five tests,
+// drawn twice. Left, a build keyed by files and packages: any change to the package invalidates
+// everything compiled from it, and the suite re-runs. Right, the rules of SPEC-002 §2, §4 and §8
+// for sophialang: ids are Merkle hashes of normalised terms, so a change reaches exactly the
+// definitions whose terms refer to it, directly or transitively; names, docs and proofs are not
+// hashed; a generic function is nominal, and a new method reaches only the call sites whose
+// recorded argument types it overlaps. The "Change Nat" case is the dependency test of
+// sophialang-core (tests/identity.rs): changing Nat changes add and its test, not double.
+// Nothing here runs sophialang: it is a picture of the rules, computed in the browser.
+type N = { id: string; label: string; x: number; y: number; test?: boolean; generic?: boolean }
+const nodes: N[] = [
+  { id: "nat", label: "Nat", x: 52, y: 92 },
+  { id: "plus", label: "+", x: 52, y: 232, generic: true },
+  { id: "add", label: "add", x: 176, y: 44 },
+  { id: "even", label: "even", x: 176, y: 128 },
+  { id: "double", label: "double", x: 176, y: 204 },
+  { id: "mean", label: "mean", x: 176, y: 272 },
+  { id: "fib", label: "fib", x: 290, y: 44 },
+  { id: "t_fib", label: "test fib", x: 404, y: 30, test: true },
+  { id: "t_add", label: "test add", x: 404, y: 92, test: true },
+  { id: "t_even", label: "test even", x: 404, y: 150, test: true },
+  { id: "t_double", label: "test double", x: 404, y: 210, test: true },
+  { id: "t_mean", label: "test mean", x: 404, y: 270, test: true },
+]
+// user → what it refers to
+const deps: [string, string, string?][] = [
+  ["add", "nat"],
+  ["even", "nat"],
+  ["fib", "add"],
+  ["double", "plus", "(Int64, Int64)"],
+  ["mean", "plus", "(Float64, Float64)"],
+  ["t_fib", "fib"],
+  ["t_add", "add"],
+  ["t_even", "even"],
+  ["t_double", "double"],
+  ["t_mean", "mean"],
+]
+const at = Object.fromEntries(nodes.map((n) => [n.id, n]))
+const w = (n: N) => Math.max(44, n.label.length * 7.6 + 22)
+
+const scenarios = [
+  {
+    key: "rename",
+    label: "Rename add → plus",
+    target: "add",
+    hit: [] as string[],
+    why: "A name is a label on a definition, not part of it. The id of add does not change, so nothing that refers to add changes either.",
+  },
+  {
+    key: "proof",
+    label: "Prove a fact about double",
+    target: "double",
+    hit: [],
+    why: "Proofs, docs and test results are annotations attached to an id. They never enter it, so a new proof rebuilds nothing.",
+  },
+  {
+    key: "body",
+    label: "Change add’s body",
+    target: "add",
+    hit: ["add", "fib", "t_add", "t_fib"],
+    why: "add gets a new id; so does fib, whose term points at it, and so do the tests of the two. Everything else keeps its id and its cached results.",
+  },
+  {
+    key: "nat",
+    label: "Change the type Nat",
+    target: "nat",
+    hit: ["nat", "add", "even", "fib", "t_add", "t_even", "t_fib"],
+    why: "Everything that mentions Nat, directly or through another definition, gets a new id. double and mean never mention it, so they stay.",
+  },
+  {
+    key: "method",
+    label: "Add a method +(Int32, Int32)",
+    target: "plus",
+    hit: [],
+    why: "+ is a generic function with its own fixed identity. The recorded dispatch facts say double called +(Int64, Int64) and mean +(Float64, Float64); the new signature overlaps neither, so no compiled code and no test result is invalidated.",
+  },
+]
+const nDefs = nodes.filter((n) => !n.test).length
+const nTests = nodes.filter((n) => n.test).length
+
+const panels = [
+  { key: "today", title: "Keyed by files and packages", sub: "a typical build cache" },
+  { key: "sophia", title: "Keyed by structure", sub: "sophialang’s rules" },
+]
+---
+
+<div class="rb" data-rb data-defs={nDefs} data-tests={nTests}>
+  <div class="rb-top">
+    <span class="rb-ask mono">Change one thing:</span>
+    <div class="rb-chips" role="group" aria-label="Changes to make">
+      {scenarios.map((s, i) => (
+        <button type="button" class="rb-chip" data-s={i} aria-pressed={i === 0 ? "true" : "false"}>{s.label}</button>
+      ))}
+    </div>
+  </div>
+
+  <div class="rb-panels">
+    {panels.map((p) => (
+      <figure class="rb-panel" data-panel={p.key}>
+        <figcaption>
+          <span class="rb-title">{p.title}</span>
+          <span class="rb-sub mono">{p.sub}</span>
+        </figcaption>
+        <svg viewBox="0 0 460 300" role="img" aria-label={`${p.title}: a program of seven definitions and five tests; the ones that must be rebuilt or re-run are filled`}>
+          <g class="rb-edges">
+            {deps.map(([a, b, sig]) => {
+              const A = at[a]
+              const B = at[b]
+              return (
+                <g>
+                  <line data-from={a} data-to={b} x1={A.x - w(A) / 2} y1={A.y} x2={B.x + w(B) / 2} y2={B.y} />
+                  {sig && p.key === "sophia" && (
+                    <text class="rb-sig" x="92" y={a === "mean" ? 268 : 205}>{sig}</text>
+                  )}
+                </g>
+              )
+            })}
+          </g>
+          <g class="rb-nodes">
+            {nodes.map((n) => (
+              <g class:list={["rb-node", { test: n.test, generic: n.generic }]} data-n={n.id}>
+                <rect class="rb-ring" x={n.x - w(n) / 2 - 5} y={n.y - 16} width={w(n) + 10} height="32" rx="11" />
+                <rect class="rb-box" x={n.x - w(n) / 2} y={n.y - 11} width={w(n)} height="22" rx={n.test ? 11 : 6} />
+                <text x={n.x} y={n.y + 4}>{n.label}</text>
+              </g>
+            ))}
+          </g>
+          <g class="rb-badge" data-badge>
+            <rect x="0" y="0" width="0" height="20" rx="10" />
+            <text x="0" y="14"></text>
+          </g>
+        </svg>
+        <div class="rb-count">
+          <div><span class="rb-n" data-c="defs">0</span><span class="rb-k mono">of {nDefs} definitions recompiled</span></div>
+          <div><span class="rb-n" data-c="tests">0</span><span class="rb-k mono">of {nTests} tests re-run</span></div>
+        </div>
+      </figure>
+    ))}
+  </div>
+  <p class="rb-why" data-why aria-live="polite"></p>
+  <script type="application/json" data-data set:html={JSON.stringify({ scenarios, nodes, deps })} />
+</div>
+
+<script>
+  type S = { key: string; label: string; target: string; hit: string[]; why: string }
+  type N = { id: string; label: string; x: number; y: number; test?: boolean; generic?: boolean }
+  for (const root of document.querySelectorAll<HTMLElement>("[data-rb]")) {
+    const { scenarios, nodes, deps } = JSON.parse(root.querySelector("[data-data]")!.textContent!) as {
+      scenarios: S[]
+      nodes: N[]
+      deps: [string, string, string?][]
+    }
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const chips = [...root.querySelectorAll<HTMLButtonElement>(".rb-chip")]
+    const why = root.querySelector<HTMLElement>("[data-why]")!
+    const isTest = Object.fromEntries(nodes.map((n) => [n.id, !!n.test]))
+    // users of each node, for the wave's order
+    const users: Record<string, string[]> = {}
+    for (const [a, b] of deps) (users[b] ??= []).push(a)
+    const depth = (from: string) => {
+      const d: Record<string, number> = { [from]: 0 }
+      const q = [from]
+      while (q.length) {
+        const x = q.shift()!
+        for (const u of users[x] ?? []) if (d[u] === undefined) (d[u] = d[x] + 1), q.push(u)
+      }
+      return d
+    }
+    const STEP = reduce ? 0 : 0.32
+    const timers: number[] = []
+    let cur = 0
+    let auto = !reduce
+    let visible = false
+
+    function count(panel: HTMLElement, hit: string[], delayMs: number) {
+      const defs = hit.filter((h) => !isTest[h]).length
+      const tests = hit.filter((h) => isTest[h]).length
+      const out = (k: string) => panel.querySelector<HTMLElement>(`[data-c=${k}]`)!
+      out("defs").textContent = "0"
+      out("tests").textContent = "0"
+      timers.push(
+        window.setTimeout(() => {
+          out("defs").textContent = String(defs)
+          out("tests").textContent = String(tests)
+        }, delayMs),
+      )
+    }
+    function badge(panel: HTMLElement, s: S) {
+      const g = panel.querySelector<SVGGElement>("[data-badge]")!
+      const n = nodes.find((x) => x.id === s.target)!
+      const txt = { rename: "renamed", proof: "+ proof", body: "edited", nat: "edited", method: "+ method" }[s.key] ?? ""
+      const t = g.querySelector("text")!
+      const r = g.querySelector("rect")!
+      const bw = txt.length * 7 + 18
+      const bx = Math.min(460 - bw - 2, Math.max(2, n.x - bw / 2))
+      const by = n.y < 60 ? n.y + 18 : n.y - 38
+      r.setAttribute("x", String(bx))
+      r.setAttribute("y", String(by))
+      r.setAttribute("width", String(bw))
+      t.setAttribute("x", String(bx + bw / 2))
+      t.setAttribute("y", String(by + 14))
+      t.textContent = txt
+      g.classList.remove("on")
+      void g.getBoundingClientRect()
+      g.classList.add("on")
+    }
+    function show(i: number) {
+      cur = i
+      timers.splice(0).forEach(clearTimeout)
+      const s = scenarios[i]
+      chips.forEach((c, k) => c.setAttribute("aria-pressed", String(k === i)))
+      why.textContent = s.why
+      for (const panel of root.querySelectorAll<HTMLElement>("[data-panel]")) {
+        const today = panel.dataset.panel === "today"
+        // the file-keyed build: the whole package, in a wave from the edit outwards by column
+        const tgt = nodes.find((n) => n.id === s.target)!
+        const hit = today ? nodes.map((n) => n.id) : s.hit
+        const d = today
+          ? Object.fromEntries(nodes.map((n) => [n.id, Math.round(Math.abs(n.x - tgt.x) / 114 + Math.abs(n.y - tgt.y) / 260)]))
+          : depth(s.target)
+        const gs = [...panel.querySelectorAll<SVGGElement>(".rb-node")]
+        for (const g of gs) {
+          g.classList.remove("hit", "src")
+          g.style.removeProperty("--t")
+        }
+        for (const l of panel.querySelectorAll<SVGLineElement>(".rb-edges line")) l.classList.remove("hit")
+        void panel.getBoundingClientRect()
+        for (const g of gs) {
+          const id = g.dataset.n!
+          if (id === s.target) g.classList.add("src")
+          if (hit.includes(id)) {
+            g.style.setProperty("--t", `${(d[id] ?? 0) * STEP + (reduce ? 0 : 0.25)}s`)
+            g.classList.add("hit")
+          }
+        }
+        for (const l of panel.querySelectorAll<SVGLineElement>(".rb-edges line")) {
+          const a = l.dataset.from!
+          const b = l.dataset.to!
+          if (hit.includes(a) && hit.includes(b)) {
+            l.style.setProperty("--t", `${(d[a] ?? 0) * STEP + 0.1}s`)
+            l.classList.add("hit")
+          }
+        }
+        badge(panel, s)
+        const last = Math.max(0, ...hit.map((h) => d[h] ?? 0))
+        count(panel, hit, reduce ? 0 : 450 + last * STEP * 1000)
+      }
+    }
+    chips.forEach((c, k) =>
+      c.addEventListener("click", () => {
+        auto = false
+        show(k)
+      }),
+    )
+    new IntersectionObserver(([e]) => {
+      const was = visible
+      visible = e.isIntersecting
+      if (visible && !was && auto) show(cur)
+    }).observe(root)
+    setInterval(() => {
+      if (auto && visible && !document.hidden) show((cur + 1) % scenarios.length)
+    }, 5600)
+    show(0)
+  }
+</script>
+
+<style>
+  .rb {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    padding: clamp(16px, 3vw, 28px);
+  }
+  .rb-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+  }
+  .rb-ask {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .rb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .rb-chip {
+    font: inherit;
+    font-size: 13.5px;
+    min-height: 34px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+  }
+  .rb-chip:hover {
+    border-color: var(--fg);
+  }
+  .rb-chip[aria-pressed="true"] {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .rb-panels {
+    display: grid;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  @media (min-width: 900px) {
+    .rb-panels {
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+  }
+  .rb-panel {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: calc(var(--radius) - 4px);
+    background: var(--bg);
+    padding: 16px 16px 14px;
+  }
+  .rb-panel[data-panel="sophia"] {
+    border-color: var(--fg);
+  }
+  .rb-panel figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
+  }
+  .rb-title {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .rb-sub {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .rb-panel svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 10px;
+    overflow: visible;
+  }
+  .rb-edges line {
+    stroke: var(--line-strong);
+    stroke-width: 1.2;
+    transition: stroke 0.3s var(--ease);
+  }
+  .rb-edges line.hit {
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-dasharray: 4 4;
+    animation: rb-flow 1.2s linear infinite;
+    animation-delay: var(--t, 0s);
+  }
+  @keyframes rb-flow {
+    to {
+      stroke-dashoffset: 16;
+    }
+  }
+  .rb-sig {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    fill: var(--muted);
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 4px;
+  }
+  .rb-box {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.3;
+    transition: fill 0.35s var(--ease) var(--t, 0s);
+  }
+  .rb-node.test .rb-box {
+    stroke-dasharray: 3 2;
+  }
+  .rb-node.generic .rb-box {
+    stroke-width: 2.2;
+  }
+  .rb-node text {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    text-anchor: middle;
+    fill: var(--fg);
+    transition: fill 0.35s var(--ease) var(--t, 0s);
+  }
+  .rb-node.hit .rb-box {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+    stroke-dasharray: none;
+  }
+  .rb-node.hit text {
+    fill: var(--invert-fg);
+  }
+  .rb-ring {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.2;
+    opacity: 0;
+  }
+  .rb-node.src .rb-ring {
+    opacity: 1;
+    animation: rb-ping 1.6s var(--ease) 1;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @keyframes rb-ping {
+    0% {
+      opacity: 0;
+      transform: scale(1.35);
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .rb-badge {
+    opacity: 0;
+  }
+  .rb-badge.on {
+    animation: rb-badge 0.5s var(--ease) forwards;
+  }
+  @keyframes rb-badge {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .rb-badge rect {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1;
+  }
+  .rb-badge text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .rb-count {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .rb-count div {
+    display: grid;
+    gap: 2px;
+  }
+  .rb-n {
+    font-size: clamp(24px, 3.4vw, 34px);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-k {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .rb-why {
+    margin: 18px 0 0;
+    max-width: 80ch;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    min-height: 3.2em;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rb-edges line.hit {
+      animation: none;
+    }
+    .rb-node.src .rb-ring,
+    .rb-badge.on {
+      animation: none;
+      opacity: 1;
+    }
+  }
+</style>

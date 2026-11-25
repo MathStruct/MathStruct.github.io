@@ -18,7 +18,7 @@ documentation are annotations and derived facts attached to it. Code from differ
 is meant to interoperate not through a foreign-function interface but through stored
 **equivalence edges** that carry machine-checkable evidence.
 
-**sophialang** is the store's own language: Julia-flavoured, with multiple dispatch, dependent
+**[[projects/sophialang|sophialang]]** is the store's own language: Julia-flavoured, with multiple dispatch, dependent
 types as an exchangeable checker, and a path from *autoresolve* through *unsafe* to *safe*.
 
 Sophia is part research question and is treated as one: its vault says what is known, what is

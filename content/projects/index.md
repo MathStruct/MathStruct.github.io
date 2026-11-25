@@ -44,3 +44,4 @@ inference and programming.
 
 - [LenticulumLM](/projects/lenticulumLM): a diffusion language model assembled
   from Lenticulum's relations.
+- [sophialang](/projects/sophialang): Sophia's own language, planned as an experiment.
