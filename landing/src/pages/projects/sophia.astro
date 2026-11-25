@@ -1,0 +1,1092 @@
+---
+// /projects/sophia: the promotional page of Sophia, in the style of /projects/lenticulum-jl. It
+// replaces the Quartz page built from content/projects/sophia.md (which stays, for the site's
+// search and link previews). Its facts come from Sophia's README and vault, as of 2026-11-21
+// (MathStruct/Sophia@ec58583, tag v0.1.12); update them from there, not from memory.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+import ContentId from "../../components/sophia/ContentId.astro"
+import HowItWorks from "../../components/sophia/HowItWorks.astro"
+
+const vault = "https://mathstruct.org/Sophia/"
+const note = (path: string) => vault + path
+const links = {
+  vault,
+  source: "https://github.com/MathStruct/Sophia",
+  status: note("vault/Status"),
+  milestones: note("vault/Plans/Milestones"),
+  risks: note("vault/Design/Open-Problems-and-Risks"),
+  equivalence: note("vault/Design/Equivalence-and-Witnesses"),
+  hashing: note("vault/Design/Hashing-and-Identity"),
+  languages: note("vault/Languages/Languages"),
+  query: note("vault/Specifications/SPEC-007-Sophia-Query-Language"),
+  metamath: note("vault/Languages/Metamath/Metamath-Overview"),
+  contributing: "https://github.com/MathStruct/Sophia/blob/master/CONTRIBUTING.md",
+}
+
+// vault/Design/Equivalence and Witnesses.md, "The ladder of strength"
+const ladder = [
+  ["alpha", "identical after normalisation", "comparing hashes", true],
+  ["defeq", "equal by definition, as a type checker decides", "the kernel, by normalisation", true],
+  ["rewrite", "connected by a chain of trusted rewrite rules", "proof extraction from an e-graph", true],
+  ["observational", "no context can tell them apart, for a stated observation", "a proof term", true],
+  ["tested", "agree on a test suite or on property fuzzing", "running the tests", false],
+  ["asserted", "a person said so", "a signature", false],
+] as const
+
+// README "Languages" and vault/Languages/Languages.md: ● yes · ◐ partly · ○ no
+const levels = ["parsed", "normalised", "resolved", "lowered", "runs", "verified"]
+const support: { lang: string; cells: string[]; note: string }[] = [
+  { lang: "sophialang", cells: ["●", "●", "●", "●", "○", "○"], note: "the store's own language; it is the core" },
+  { lang: "Sophia queries", cells: ["●", "●", "●", "●", "●", "○"], note: "runs on four backends; checked by differential tests" },
+  { lang: "Metamath", cells: ["●", "●", "●", "◐", "○", "◐"], note: "dependency analysis checked against metamath.exe" },
+  { lang: "Julia", cells: ["●", "●", "◐", "○", "○", "○"], note: "module scope; 95.1 % agreement with Julia's own method table" },
+  { lang: "Python", cells: ["●", "●", "◐", "○", "○", "○"], note: "names resolved within one file" },
+  { lang: "Rust", cells: ["●", "◐", "◐", "○", "○", "○"], note: "for, match, closures, while let and let-else are refused" },
+]
+
+const milestones = [
+  { id: "M0", title: "Identity", state: "done" },
+  { id: "M1", title: "The store", state: "done" },
+  { id: "M2", title: "Moonkale interface", state: "done" },
+  { id: "M3a", title: "Query language", state: "first form" },
+  { id: "M3b", title: "Tools for agents (MCP)", state: "" },
+  { id: "M4", title: "Running code", state: "" },
+  { id: "M5", title: "Compiling to LLVM", state: "" },
+  { id: "M6", title: "Self-hosting starts", state: "" },
+  { id: "M7", title: "More languages", state: "" },
+]
+
+const works = [
+  "Content ids on four database backends (SQLite, redb, LMDB, DuckDB) behind one interface, with one conformance suite and benchmarks",
+  "sophialang printed and parsed back Julia-flavoured or Rust-flavoured, round-trip tested on 20 000 random definitions",
+  "A Datalog query language with its own content ids, run natively on every backend and translated to SQL on SQLite",
+  "The code store of the Moonkale editor: replaying 130 commits of Lenticulum.jl and 471 of Moonkale gives 0 differences from a fresh build",
+  "Julia, Rust and Python read through the normaliser shared with Moonkale, so a definition has the same id in both tools",
+]
+const limits = [
+  "Nothing runs or compiles yet: no interpreter, no lowering through MLIR or LLVM",
+  "Equivalence edges are designed, not built",
+  "Sophia stores proofs and walks their references; it does not check them",
+  "A store is about ten times the size of its source, most of it derivable",
+  "Open risks, written down: reading a compiler's state back from a database may cost more than recomputing it; a normaliser that is too coarse would merge different programs silently; Julia has no formal semantics for cross-language claims to rest on",
+]
+const next = [
+  { text: "An MCP server, so agents can query the store (M3b)", href: links.milestones },
+  { text: "Running code: an interpreter, dispatch facts, cached test results (M4)", href: links.milestones },
+  { text: "Compiling through LLVM to minimal binaries (M5)", href: links.milestones },
+  { text: "Lenticulum models stored, and compiled, in Sophia", href: "/projects/lenticulum-jl" },
+]
+
+const audiences = [
+  { who: "New to the idea", start: "The Original Idea → Design Overview", href: note("vault/The-Original-Idea") },
+  { who: "From programming languages", start: "Hashing and Identity → Core Calculus → Naming and Change Propagation", href: links.hashing },
+  { who: "From databases", start: "The query language (SPEC-007) → Database Comparison", href: links.query },
+  { who: "From proofs and formal methods", start: "Equivalence and Witnesses → Metamath in Sophia", href: links.equivalence },
+  { who: "From category theory", start: "Track F of the CT-ML wiki: categorical semantics, e-graphs, Datalog", href: "https://mathstruct.org/CategoryTheory-ML-Wiki/Start-Here" },
+  { who: "Sceptical", start: "Open Problems and Risks: what could sink this", href: links.risks },
+]
+
+const build = `git clone https://github.com/MathStruct/Sophia && cd Sophia
+nix develop                                     # Rust, sqlite3, metamath, Julia
+cargo test --workspace
+cargo run -p sophia-cli -- sample               # a sample program into .sophia/store.sqlite
+cargo run -p sophia-cli -- text sample.add      # printed Julia-flavoured
+cargo run -p sophia-cli -- profile rust         # the same code, Rust-flavoured`
+
+const query = `query transitive_dependants(target::Id)
+    # direct and transitive users of \`target\`
+    dep(a, b) = refs(a, b)
+    dep(a, c) = refs(a, b) && dep(b, c)
+    select a where dep(a, target)
+end
+
+select k, count(d) where def(d, k)
+
+# names under core. that nothing refers to
+select p where name(p, d) && startswith(p, "core.") && !refs(_, d)`
+
+const axioms = ["ax-mp", "ax-1", "ax-2", "ax-3", "ax-4", "ax-5", "ax-6", "ax-7", "ax-8", "ax-9", "ax-gen", "ax-ext", "ax-1cn", "ax-addcl", "ax-addass"]
+---
+
+<Layout
+  title="Sophia: code, keyed by its structure · MathStruct"
+  description="Sophia stores code by its structure: every definition under the hash of its normalised form, names as labels, tests and proofs as facts attached to it, and a query language over all of it. An open research project, in Rust."
+  path="/projects/sophia"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/#projects">← Projects · Code</a>
+          <h1 class="reveal popover-hint" style="--d:.05s">
+            Code, keyed<br /><span class="serif">by its structure.</span>
+          </h1>
+          <p class="lede reveal popover-hint" style="--d:.1s">
+            A file system knows code as text at a path. <strong>Sophia</strong> stores every
+            definition under the hash of its normalised structure: rename it, reformat it, print it in
+            another syntax, and it keeps its id; change what it computes, and it gets a new one. Names
+            become labels, tests and proofs become facts attached to the code, and every question
+            about the code is a query.
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#try">Try the idea <span class="arrow">→</span></a>
+            <a class="btn" href={links.vault}>Read the vault</a>
+            <a class="btn" href={links.source}>Source on GitHub</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Rust</li>
+            <li>MIT licence</li>
+            <li>Early research</li>
+            <li>v0.1.12</li>
+            <li><a href="/projects/moonkale">Moonkale's code store</a></li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <ContentId mode="cycle" />
+          <figcaption class="mono">
+            one definition, rewritten · the id changes only when the computation does
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- try it -->
+    <section class="section" id="try">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Try it</span>
+            <h2 class="reveal" style="--d:.05s">Same code, <span class="serif">same id.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Two definitions, each normalised and hashed in your browser. Pick an example or edit
+            either side, and watch what reaches the id and what does not. Swapping the operands is
+            the instructive one.
+          </p>
+        </div>
+        <div class="try reveal">
+          <ContentId mode="interactive" />
+        </div>
+        <p class="fineprint mono">
+          A toy, written for this page: one-line arithmetic definitions, normalised the way Sophia
+          normalises (names out, parameters as positions, layout and comments gone, structure and
+          operand order kept) and hashed with SHA-256. Sophia's normalisers read full languages,
+          refer to other definitions by their ids rather than their names, and hash with BLAKE3.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- how it works -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">How it works</span>
+            <h2 class="reveal" style="--d:.05s">Four ideas, <span class="serif">one store.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            The first two are borrowed from <a href="https://www.unison-lang.org/">Unison</a>, which
+            content-addresses code by its syntax tree, and are known to work. The last is new, and
+            is the part most likely to fail.
+          </p>
+        </div>
+        <HowItWorks />
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ ladder -->
+    <section class="section" id="ladder">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">The novel part</span>
+            <h2 class="reveal" style="--d:.05s">Same, <span class="serif">but how sure?</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Code from different languages is meant to work together not through a foreign-function
+            interface, but through stored claims that two definitions are equivalent. A claim is only
+            as good as its evidence, so every equivalence edge carries a level, and only the top four
+            let the compiler substitute one definition for the other.
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare">
+            <thead>
+              <tr><th>level</th><th>means</th><th>decided by</th><th>substitutable</th></tr>
+            </thead>
+            <tbody>
+              {ladder.map(([k, means, by, sub]) => (
+                <tr class:list={{ weak: !sub }}>
+                  <th scope="row">{k}</th>
+                  <td>{means}</td>
+                  <td>{by}</td>
+                  <td class="mono">{sub ? "yes" : "only by explicit policy"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div class="aside-grid">
+          <p class="reveal">
+            <strong>Most equivalence is free.</strong> Two definitions that normalise to the same term
+            get the same hash: one node, no edge, nothing to prove.
+          </p>
+          <p class="reveal" style="--d:.06s">
+            <strong>No claim is absolute.</strong> Each edge names what it ignores: allocations,
+            timing, floating-point reassociation, which exception is thrown. Chaining claims unions
+            these, so chains are kept short.
+          </p>
+          <p class="reveal" style="--d:.12s">
+            <strong>Designed, not built.</strong> This is the riskiest of Sophia's claims, and the
+            vault <a href={links.risks}>says why</a>: few people will write proofs, so most edges in
+            practice would be tested or asserted.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ layers -->
+    <section class="section layers" id="layers">
+      <div class="wrap layers-grid">
+        <div>
+          <span class="eyebrow reveal">Where it is going</span>
+          <h2 class="reveal" style="--d:.05s">Many languages, <span class="serif">one core.</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            Source languages are to be elaborated into one small core calculus, and the core lowered
+            through MLIR to LLVM IR. Every arrow in the picture is a stored relation, not a step
+            inside a compiler process: run it twice on the same input and nothing new is written.
+            A compiler becomes a set of queries over the store.
+          </p>
+          <p class="lede reveal" style="--d:.14s">
+            Today languages are read up to their content ids; support is stated
+            <a href={links.languages}>by level, per language</a>, each level with the tests behind
+            it, never as a percentage of code that got an id.
+          </p>
+        </div>
+        <figure class="layers-art reveal" style="--d:.1s" aria-label="Julia, Rust, Python and sophialang flow into the sophialang core, which lowers to MLIR, then LLVM IR, then machine code; sophialang's arrow is solid, the others are planned">
+          <svg viewBox="0 0 400 330">
+            <g class="lang">
+              <rect x="6" y="8" width="88" height="34" rx="8"></rect><text x="50" y="30">Julia</text>
+              <rect x="106" y="8" width="88" height="34" rx="8"></rect><text x="150" y="30">Rust</text>
+              <rect x="206" y="8" width="88" height="34" rx="8"></rect><text x="250" y="30">Python</text>
+              <rect class="solid-box" x="306" y="8" width="88" height="34" rx="8"></rect><text x="350" y="30">sophialang</text>
+            </g>
+            <path class="plan" d="M50 42 C 50 80, 170 74, 186 100"></path>
+            <path class="plan" d="M150 42 C 150 70, 190 78, 196 100"></path>
+            <path class="plan" d="M250 42 C 250 70, 210 78, 204 100"></path>
+            <path class="done" d="M350 42 C 350 80, 230 74, 214 100"></path>
+            <rect class="core" x="120" y="100" width="160" height="40" rx="10"></rect>
+            <text class="core-t" x="200" y="125">sophialang core</text>
+            <path class="plan" d="M200 140 V178"></path>
+            <rect class="later" x="140" y="178" width="120" height="34" rx="8"></rect><text x="200" y="200">MLIR</text>
+            <path class="plan" d="M200 212 V240"></path>
+            <rect class="later" x="140" y="240" width="120" height="34" rx="8"></rect><text x="200" y="262">LLVM IR</text>
+            <path class="plan" d="M200 274 V296"></path>
+            <text class="mc" x="200" y="316">machine code</text>
+            <g class="legend">
+              <path class="done" d="M6 296 H34"></path><text x="40" y="300">works</text>
+              <path class="plan" d="M6 316 H34"></path><text x="40" y="320">planned</text>
+            </g>
+          </svg>
+        </figure>
+      </div>
+      <div class="wrap">
+        <div class="table-wrap reveal">
+          <table class="compare levels">
+            <thead>
+              <tr>
+                <th>language</th>
+                {levels.map((l, i) => <th class="lv">L{i + 1} {l}</th>)}
+                <th class="lv-note"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {support.map((s) => (
+                <tr>
+                  <th scope="row">{s.lang}</th>
+                  {s.cells.map((c) => {
+                    const v = c === "●" ? "yes" : c === "◐" ? "partly" : "no"
+                    return <td class="dot"><span class={`lv-dot lv-dot--${v}`} role="img" aria-label={v}></span></td>
+                  })}
+                  <td class="lv-note">{s.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="fineprint mono"><span class="lv-dot lv-dot--yes"></span> yes · <span class="lv-dot lv-dot--partly"></span> partly · <span class="lv-dot lv-dot--no"></span> no. From Sophia's README and Languages note, 2026-11-21.</p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- query -->
+    <section class="section" id="query">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Ask the store</span>
+            <h2 class="reveal" style="--d:.05s">Questions <span class="serif">as queries.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Sophia has its own query language: Datalog, with a Julia-flavoured syntax. A query is
+            itself stored as a definition with a content id, and a result is identified by the query,
+            a snapshot of the store and its parameters. It runs natively on every backend, and as
+            translated SQL on SQLite.
+          </p>
+        </div>
+        <div class="query-grid">
+          <figure class="code reveal">
+            <figcaption class="mono">Sophia's query language · examples from its specification</figcaption>
+            <pre><code>{query}</code></pre>
+          </figure>
+          <article class="result reveal" style="--d:.08s">
+            <span class="eyebrow">On a real corpus</span>
+            <h3>
+              What does <span class="serif">2 + 2 = 4</span> rest on?
+            </h3>
+            <p>
+              Metamath's set.mm proves arithmetic from axioms. Read into Sophia, the question is a
+              closure over the proof's references. The answer: 15 axioms and 29 definitions.
+            </p>
+            <ul class="pkgs mono">{axioms.map((a) => <li>{a}</li>)}</ul>
+            <p class="small">
+              Asked for every theorem of set.mm and iset.mm, 64 566 of them, Sophia's answer agrees
+              with metamath.exe's on every one.
+            </p>
+            <a class="more" href={links.metamath}>Metamath in Sophia <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Where it stands</span>
+            <h2 class="reveal" style="--d:.05s">An experiment, <span class="serif">said so.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            The store runs, with tests and benchmarks, and an editor depends on it. Everything past
+            the query language is design. Whether sophialang can meet all of its specifications is
+            still to be found out.
+          </p>
+        </div>
+        <ol class="road reveal">
+          {milestones.map((m) => (
+            <li class:list={["mile", { done: m.state === "done", partial: m.state === "first form" }]}>
+              <span class="mile-dot" aria-hidden="true"></span>
+              <span class="mile-id mono">{m.id}</span>
+              <span class="mile-t">{m.title}</span>
+              <span class="mile-s mono">{m.state || "open"}</span>
+            </li>
+          ))}
+        </ol>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">Works today</h3>
+            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">Known limits</h3>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">Next, planned</h3>
+            <ul class="ticks ticks--next">{next.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- get started -->
+    <section class="section" id="get-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Get started</span>
+            <h2 class="reveal" style="--d:.05s">Read first, <span class="serif">then build.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            The repository is an Obsidian vault: every Rust file has a note of the same name
+            explaining it, next to the requirements, specifications, decisions and benchmarks. The
+            <a href={links.vault}>whole vault is online</a>.
+          </p>
+        </div>
+        <div class="code-grid">
+          <figure class="code reveal">
+            <figcaption class="mono">Build and try the CLI · tools from flake.nix</figcaption>
+            <pre><code>{build}</code></pre>
+          </figure>
+        </div>
+
+        <h3 class="sub reveal">Where to start, by background</h3>
+        <ul class="audiences">
+          {audiences.map((a, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={a.href}>
+                <span class="who">{a.who}</span>
+                <span class="start">{a.start}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- together -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">Feedback welcome</span>
+          <h2 class="reveal" style="--d:.05s">Disagree, <span class="serif">and migrate.</span></h2>
+          <p class="reveal" style="--d:.1s">
+            The store is content-addressed, so it does not have to be trusted: any node can be checked
+            again by hashing it again. And if you dislike the schema, write a different normaliser and
+            migrate the store to it: a supported operation, not a fork. If you have thoughts on an
+            undertaking like this one, send a message, or read
+            <a href={links.contributing}>CONTRIBUTING.md</a>.
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.status}>Current status <span class="arrow">→</span></a>
+            <a class="btn" href={links.source}>Source on GitHub</a>
+          </div>
+          <p class="sister reveal" style="--d:.18s">
+            Please don't train any AI on this project's material.
+          </p>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href="/projects/moonkale" style="--d:.06s">
+            <span class="mono sib-k">Interface · uses Sophia today</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">The graph-native editor. Sophia is its code-graph store, one store per folder, with the same content ids in both tools.</span>
+          </a>
+          <a class="sib reveal" href="/projects/lenticulum-jl" style="--d:.12s">
+            <span class="mono sib-k">Models · later</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">Relations learned on factor graphs. Sophia is to store its models, and later compile them.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.1fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7.4vw, 96px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .facts a:hover {
+    color: var(--fg);
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    max-width: 480px;
+    justify-self: center;
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- try it */
+  .try {
+    max-width: 1100px;
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    width: 18%;
+  }
+  .compare td {
+    color: var(--fg-2);
+  }
+  .compare tr.weak :is(th, td) {
+    color: var(--muted);
+  }
+  .compare tr.weak th {
+    font-style: italic;
+  }
+  .compare td.mono {
+    font-size: 13px;
+  }
+  .aside-grid {
+    display: grid;
+    gap: 24px;
+    margin-top: 36px;
+  }
+  @media (min-width: 900px) {
+    .aside-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+    }
+  }
+  .aside-grid p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .aside-grid strong {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .aside-grid a,
+  .cite-band p a,
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .aside-grid a:hover,
+  .cite-band p a:hover,
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+
+  /* -------------------------------------------------------------- layers */
+  .layers-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+    margin-bottom: 48px;
+  }
+  @media (min-width: 960px) {
+    .layers-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .layers h2 {
+    margin: 20px 0 24px;
+  }
+  .layers .lede + .lede {
+    margin-top: 16px;
+  }
+  .layers-art {
+    margin: 0;
+    max-width: 460px;
+    width: 100%;
+    justify-self: center;
+    color: var(--fg);
+  }
+  .layers-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .layers-art :is(rect, path) {
+    fill: var(--bg);
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+  }
+  .layers-art path {
+    fill: none;
+  }
+  .layers-art text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: currentColor;
+    text-anchor: middle;
+  }
+  .layers-art .plan {
+    stroke-dasharray: 4 5;
+    stroke-opacity: 0.6;
+  }
+  .layers-art .done {
+    stroke-width: 2;
+  }
+  .layers-art .later {
+    stroke-dasharray: 4 4;
+    stroke-opacity: 0.6;
+  }
+  .layers-art .solid-box {
+    fill: var(--invert-bg);
+  }
+  .layers-art .solid-box + text {
+    fill: var(--invert-fg);
+  }
+  .layers-art .core {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+  }
+  .layers-art .core-t {
+    fill: var(--invert-fg);
+    font-size: 13px;
+  }
+  .layers-art .mc {
+    fill: var(--muted);
+  }
+  .layers-art .legend text {
+    text-anchor: start;
+    font-size: 10.5px;
+    fill: var(--muted);
+  }
+  .layers-art > svg > path.plan {
+    animation: march 1.6s linear infinite;
+  }
+  @keyframes march {
+    to {
+      stroke-dashoffset: -18;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .layers-art .plan {
+      animation: none !important;
+    }
+  }
+  .levels {
+    min-width: 820px;
+  }
+  .levels th.lv {
+    width: auto;
+    white-space: nowrap;
+    padding-right: 14px;
+  }
+  .levels td.dot {
+    vertical-align: middle;
+  }
+  .lv-dot {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid var(--fg);
+    vertical-align: -1px;
+  }
+  .lv-dot--yes {
+    background: var(--fg);
+  }
+  .lv-dot--partly {
+    background: linear-gradient(90deg, var(--fg) 50%, transparent 50%);
+  }
+  .levels .lv-note {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* --------------------------------------------------------------- query */
+  .query-grid {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 960px) {
+    .query-grid {
+      grid-template-columns: 1.15fr 1fr;
+    }
+  }
+  .result {
+    display: flex;
+    flex-direction: column;
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .result h3 {
+    margin-top: 16px;
+    font-size: 28px;
+  }
+  .result h3 .serif {
+    font-size: 1.1em;
+  }
+  .result p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .result p.small {
+    margin-top: 18px;
+    color: var(--fg-2);
+  }
+  .pkgs {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pkgs li {
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+  }
+  .more {
+    margin-top: auto;
+    padding-top: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    align-self: flex-start;
+  }
+  .more:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .road {
+    list-style: none;
+    margin: 0 0 56px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    border-top: 1px solid var(--line-strong);
+  }
+  .mile {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    padding: 22px 12px 0 0;
+  }
+  .mile-dot {
+    position: absolute;
+    top: -6px;
+    left: 0;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--fg);
+    background: var(--bg);
+  }
+  .mile.done .mile-dot {
+    border-style: solid;
+    background: var(--fg);
+  }
+  .mile.partial .mile-dot {
+    border-style: solid;
+    background: linear-gradient(90deg, var(--fg) 50%, var(--bg) 50%);
+  }
+  .mile-id {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .mile-t {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+  .mile:not(.done, .partial) .mile-t {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .mile-s {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .ticks {
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* --------------------------------------------------------- get started */
+  .code-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .code figcaption {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .code pre {
+    margin: 0;
+    padding: 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--fg);
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .audiences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audiences a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.3s var(--ease);
+  }
+  @media (min-width: 760px) {
+    .audiences a {
+      grid-template-columns: 300px 1fr auto;
+      align-items: baseline;
+    }
+  }
+  .audiences a:hover {
+    padding-left: 10px;
+  }
+  .who {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .start {
+    color: var(--muted);
+    font-size: 15px;
+    grid-column: 1;
+  }
+  @media (min-width: 760px) {
+    .start {
+      grid-column: 2;
+    }
+  }
+  .audiences .arrow {
+    grid-column: -2;
+    grid-row: 1;
+    transition: transform 0.3s var(--ease);
+  }
+  .audiences a:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* ------------------------------------------------------------ together */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .sister {
+    margin-top: 32px;
+    font-size: 13px;
+    color: var(--muted) !important;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>
