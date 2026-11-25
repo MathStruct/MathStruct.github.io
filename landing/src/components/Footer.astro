@@ -1,0 +1,166 @@
+---
+const columns = [
+  {
+    title: "Projects",
+    links: [
+      { label: "Lenticulum.jl", href: "https://mathstruct.org/Lenticulum.jl/" },
+      { label: "LenticulumLM", href: "https://mathstruct.org/LenticulumLM/" },
+      { label: "Sophia", href: "https://mathstruct.org/Sophia/" },
+      { label: "Moonkale", href: "https://mathstruct.org/Moonkale/" },
+      { label: "Category Theory & ML Wiki", href: "https://mathstruct.org/CategoryTheory-ML-Wiki/" },
+    ],
+  },
+  {
+    title: "Organisation",
+    links: [
+      { label: "About", href: "/about" },
+      { label: "People", href: "/people/" },
+      { label: "Blog", href: "/blog/" },
+      { label: "Notes", href: "/notes/" },
+      { label: "Authoring guide", href: "/guides/authoring" },
+    ],
+  },
+  {
+    title: "Elsewhere",
+    links: [
+      { label: "GitHub", href: "https://github.com/MathStruct" },
+      { label: "Discussions", href: "https://github.com/MathStruct/MathStruct.github.io/discussions" },
+      { label: "Zenodo", href: "https://doi.org/10.5281/zenodo.23314723" },
+      { label: "RSS", href: "/index.xml" },
+    ],
+  },
+]
+const year = new Date().getFullYear()
+---
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <a href="/" class="name">
+          <img src="/mark.png" alt="" width="24" height="34" />
+          MathStruct
+        </a>
+        <p>
+          Open-source tooling for mathematics, scientific computing and AI/ML, built from parts
+          that <span class="serif">compose</span>.
+        </p>
+      </div>
+      {
+        columns.map((c) => (
+          <nav aria-label={c.title}>
+            <h4 class="mono">{c.title}</h4>
+            <ul>
+              {c.links.map((l) => (
+                <li>
+                  <a href={l.href}>{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
+    </div>
+    <div class="bottom mono">
+      <span>© {year} MathStruct</span>
+      <span>Software MIT-licensed</span>
+    </div>
+    <div class="wordmark" aria-hidden="true">MathStruct</div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    border-top: 1px solid var(--line);
+    padding: 72px 0 0;
+    overflow: hidden;
+  }
+  .top {
+    display: grid;
+    gap: 40px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .brand {
+    grid-column: 1 / -1;
+  }
+  @media (min-width: 860px) {
+    .top {
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+    }
+    .brand {
+      grid-column: auto;
+    }
+  }
+  .name {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  .name img {
+    height: 30px;
+    width: auto;
+    filter: var(--mark-filter);
+  }
+  .brand p {
+    margin: 16px 0 0;
+    max-width: 34ch;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .brand .serif {
+    color: var(--fg);
+    font-size: 1.12em;
+  }
+  h4 {
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+    font-size: 15px;
+  }
+  ul a {
+    color: var(--fg-2);
+    transition: color 0.2s var(--ease);
+  }
+  ul a:hover {
+    color: var(--fg);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .wordmark {
+    margin-top: 24px;
+    font-size: clamp(64px, 17.5vw, 232px);
+    font-weight: 600;
+    letter-spacing: -0.06em;
+    line-height: 0.78;
+    text-align: center;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--line-strong);
+    user-select: none;
+    white-space: nowrap;
+    transform: translateY(12%);
+  }
+</style>
