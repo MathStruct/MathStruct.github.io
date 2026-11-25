@@ -61,7 +61,7 @@ math: typst               # optional; omit for LaTeX/KaTeX
 
 `landing/` is an Astro project with one page, `src/pages/index.astro`. `site/build.sh` builds
 it after Quartz and copies `landing/dist/` over Quartz's output, so it replaces only
-`/index.html` (plus `/assets/` and `/mark.png`). It is black and white, with a light and a dark
+`/index.html` (plus `/assets/` and `/favicon.svg`). It is black and white, with a light and a dark
 theme that share Quartz's `theme` setting, so a choice made on one page holds on all of them.
 
 - The project list is `landing/src/lib/projects.ts`; keep it in step with `content/projects/`.

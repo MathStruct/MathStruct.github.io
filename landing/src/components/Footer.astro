@@ -1,4 +1,6 @@
 ---
+import Logo from "./Logo.astro"
+
 const columns = [
   {
     title: "Projects",
@@ -38,7 +40,7 @@ const year = new Date().getFullYear()
     <div class="top">
       <div class="brand">
         <a href="/" class="name">
-          <img src="/mark.png" alt="" width="24" height="34" />
+          <Logo height={30} />
           MathStruct
         </a>
         <p>
@@ -98,11 +100,6 @@ const year = new Date().getFullYear()
     font-weight: 600;
     font-size: 18px;
     letter-spacing: -0.02em;
-  }
-  .name img {
-    height: 30px;
-    width: auto;
-    filter: var(--mark-filter);
   }
   .brand p {
     margin: 16px 0 0;
