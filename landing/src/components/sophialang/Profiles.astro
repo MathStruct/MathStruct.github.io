@@ -1,0 +1,255 @@
+---
+// The hero of /projects/sophialang: one definition shown four ways. The first three texts are what
+// sophialang-syntax prints and parses today (the Julia and Rust profiles, then the Julia profile
+// with every name changed); all three normalise to the same content id. The fourth changes the
+// body, and the id changes with it. The texts and ids were produced by MathStruct/Sophia@ec58583
+// (sophialang-syntax's printer and parser, sophialang-core's normaliser), not written by hand:
+// regenerate them there if the core's encoding changes.
+const ADD = "8bcfc885631dfc75a61dafd537f94c8acaab807e304641914cbb891aeee82c76"
+const EDITED = "8806a207045dc0d35e6eb9ffbe7a29274a452db9ca71fbb06bf6c142d913b8c0"
+const frames = [
+  {
+    tag: "Julia profile",
+    note: "as the editor shows it by default",
+    id: ADD,
+    text: `function add(a::Nat, b::Nat)::Nat
+    match a :: Nat
+        zero => b
+        succ(k) => Nat.succ(add(k, b))
+    end
+end`,
+  },
+  {
+    tag: "Rust profile",
+    note: "another view of the same definition",
+    id: ADD,
+    text: `fn add(a: Nat, b: Nat) -> Nat {
+    match a: Nat {
+        zero => b
+        succ(k) => Nat.succ(add(k, b))
+    }
+}`,
+  },
+  {
+    tag: "Renamed",
+    note: "add → plus, a, b → m, n",
+    id: ADD,
+    text: `function plus(m::Nat, n::Nat)::Nat
+    match m :: Nat
+        zero => n
+        succ(k) => Nat.succ(plus(k, n))
+    end
+end`,
+  },
+  {
+    tag: "Body changed",
+    note: "succ applied twice: a different function",
+    id: EDITED,
+    text: `function add(a::Nat, b::Nat)::Nat
+    match a :: Nat
+        zero => b
+        succ(k) => Nat.succ(Nat.succ(add(k, b)))
+    end
+end`,
+  },
+]
+const short = (id: string) => `${id.slice(0, 8)} ${id.slice(8, 16)} ${id.slice(16, 24)}…`
+---
+
+<div class="pf" data-pf>
+  <div class="pf-tabs mono" role="tablist" aria-label="Four texts of one definition">
+    {frames.map((f, i) => (
+      <button type="button" role="tab" aria-selected={i === 0 ? "true" : "false"} data-i={i}>
+        {f.tag}
+      </button>
+    ))}
+  </div>
+  <div class="pf-card">
+    <div class="pf-stage">
+      {frames.map((f, i) => (
+        <pre class:list={["pf-code", { on: i === 0 }]} data-frame={i} aria-hidden={i === 0 ? "false" : "true"}><code>{f.text}</code></pre>
+      ))}
+    </div>
+    <div class="pf-id">
+      <span class="pf-k mono">content id</span>
+      {frames.map((f, i) => (
+        <span class:list={["pf-hash mono", { on: i === 0, changed: f.id !== ADD }]} data-hash={i}>
+          {short(f.id)}
+        </span>
+      ))}
+      <span class="pf-verdict mono" data-verdict aria-live="polite">same id</span>
+    </div>
+  </div>
+  <p class="pf-note mono" data-note>{frames[0].note}</p>
+  <script type="application/json" data-notes set:html={JSON.stringify(frames.map((f) => ({ note: f.note, same: f.id === ADD })))} />
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>("[data-pf]")) {
+    const notes = JSON.parse(root.querySelector("[data-notes]")!.textContent!) as { note: string; same: boolean }[]
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>("[role=tab]")]
+    const codes = [...root.querySelectorAll<HTMLElement>("[data-frame]")]
+    const hashes = [...root.querySelectorAll<HTMLElement>("[data-hash]")]
+    const verdict = root.querySelector<HTMLElement>("[data-verdict]")!
+    const note = root.querySelector<HTMLElement>("[data-note]")!
+    let cur = 0
+    let auto = !matchMedia("(prefers-reduced-motion: reduce)").matches
+    let visible = true
+    function show(i: number) {
+      cur = i
+      tabs.forEach((t, k) => t.setAttribute("aria-selected", String(k === i)))
+      codes.forEach((c, k) => {
+        c.classList.toggle("on", k === i)
+        c.setAttribute("aria-hidden", String(k !== i))
+      })
+      hashes.forEach((h, k) => h.classList.toggle("on", k === i))
+      verdict.textContent = notes[i].same ? (i === 0 ? "the definition's id" : "same id") : "new id"
+      verdict.classList.toggle("changed", !notes[i].same)
+      note.textContent = notes[i].note
+    }
+    tabs.forEach((t, k) =>
+      t.addEventListener("click", () => {
+        auto = false
+        show(k)
+      }),
+    )
+    new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(root)
+    setInterval(() => {
+      if (auto && visible && !document.hidden) show((cur + 1) % tabs.length)
+    }, 3200)
+    show(0)
+  }
+</script>
+
+<style>
+  .pf {
+    width: 100%;
+  }
+  .pf-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .pf-tabs button {
+    font: inherit;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.25s var(--ease);
+  }
+  .pf-tabs button:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+  }
+  .pf-tabs button[aria-selected="true"] {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .pf-card {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .pf-stage {
+    display: grid;
+  }
+  .pf-code {
+    grid-area: 1 / 1;
+    margin: 0;
+    padding: 22px 22px 20px;
+    font-family: var(--font-mono);
+    font-size: clamp(12px, 1.35vw, 14.5px);
+    line-height: 1.7;
+    overflow-x: auto;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
+    pointer-events: none;
+  }
+  .pf-code.on {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .pf-id {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .pf-k {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .pf-hash {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pf-hash.on {
+    opacity: 1;
+  }
+  .pf-hash.changed.on {
+    text-decoration: line-through;
+    text-decoration-color: transparent;
+    animation: pf-flip 0.6s var(--ease);
+  }
+  @keyframes pf-flip {
+    0% {
+      letter-spacing: 0.3em;
+      filter: blur(3px);
+    }
+    100% {
+      letter-spacing: 0;
+      filter: none;
+    }
+  }
+  .pf-verdict {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .pf-verdict.changed {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .pf-note {
+    margin: 12px 0 0;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pf-code,
+    .pf-hash {
+      transition: none;
+    }
+    .pf-hash.changed.on {
+      animation: none;
+    }
+  }
+</style>

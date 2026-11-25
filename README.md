@@ -1,7 +1,7 @@
 # MathStruct
 
 The organisation website for [MathStruct](https://github.com/MathStruct). The front page and
-a few promotional pages (`/projects/lenticulum-jl`, `/projects/lenticulumLM`, `/projects/sophia`, `/projects/moonkale`) are a small [Astro](https://astro.build)
+a few promotional pages (`/projects/lenticulum-jl`, `/projects/lenticulumLM`, `/projects/sophia`, `/projects/sophialang`, `/projects/moonkale`) are a small [Astro](https://astro.build)
 site in `landing/`; everything else (blog, projects,
 people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
 same style as the project wikis.
@@ -74,6 +74,10 @@ address (plus `/assets/` and `/favicon.svg`):
   part of a store a query reaches.
 - `src/pages/projects/sophia.astro`: Sophia's page, with a toy content-id normaliser that runs in
   the browser (`src/components/sophia/`). Its facts come from Sophia's README and vault.
+- `src/pages/projects/sophialang.astro`: sophialang's page. sophialang is planned and an
+  experiment (its syntax and core exist, nothing runs), and the page says so; its toys
+  (`src/components/sophialang/`) show one definition in two profiles under one content id, the
+  levels autoresolve → unsafe → safe chosen per section, and what an edit forces to be rebuilt.
 - `src/pages/projects/moonkale.astro`: Moonkale's page, with the README's screenshots
   (`public/projects/moonkale-media/`) and a mock workspace where every editor is a view on one
   graph (`src/components/moonkale/`). Its facts come from Moonkale's README and vault.

@@ -1,0 +1,881 @@
+---
+// /projects/sophialang: the promotional page of sophialang, Sophia's own language, in the style of
+// /projects/lenticulumLM. sophialang is planned and an experiment: its surface syntax, core
+// calculus and name resolution exist (levels L1–L3) but nothing runs yet, and the page says so.
+// Its facts come from Sophia's vault as of 2026-11-25 (MathStruct/Sophia@ec58583): SPEC-002
+// Sophialang Principles, SPEC-003 Sophialang Core v0, the SophiaLang Overview, Backlog Sophialang
+// and Milestones. Update them from there, not from memory.
+// The Markdown note content/projects/sophialang.md stays, for the site's search and previews.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+import Profiles from "../../components/sophialang/Profiles.astro"
+import Levels from "../../components/sophialang/Levels.astro"
+import Rebuild from "../../components/sophialang/Rebuild.astro"
+
+const vault = "https://mathstruct.org/Sophia/"
+const note = (path: string) => vault + path
+const links = {
+  vault,
+  source: "https://github.com/MathStruct/Sophia",
+  discussions: "https://github.com/MathStruct/MathStruct.github.io/discussions",
+  overview: note("vault/Languages/SophiaLang/SophiaLang-Overview"),
+  principles: note("vault/Specifications/SPEC-002-Sophialang-Principles"),
+  core: note("vault/Specifications/SPEC-003-Sophialang-Core-v0"),
+  precompile: note("vault/Design/Content-Addressed-Precompilation"),
+  sp006: note("vault/Problems/SP-006-Open-method-tables-versus-content-addressing"),
+  milestones: note("vault/Plans/Milestones"),
+  risks: note("vault/Design/Open-Problems-and-Risks"),
+  sophia: "/projects/sophia",
+  moonkale: "/projects/moonkale",
+  lenticulum: "/projects/lenticulum-jl",
+}
+
+// ---------------------------------------------------------------- the pitch
+const compare: [string, string, string][] = [
+  ["Getting started", "Pick the language by the hardest part of the program: dynamic and garbage-collected, or explicit and checked", "Write nothing about memory, threads or compilation; the system chooses, as Julia does"],
+  ["Low-level control", "All or nothing per language: a borrow checker everywhere, or none anywhere", "Per section and per aspect: explicit memory in the hot loop, defaults everywhere else"],
+  ["Guarantees", "What the language's one fixed checker can see", "Proofs where you write them, in a DSL per aspect, checked by a versioned checker"],
+  ["The type system", "Fixed by the language", "Exchangeable: a dependent, refinement or other checker is something a build may require, never something the code generator needs"],
+  ["Cost of types and proofs", "Zero in some languages, boxes and checks in others", "Erased: no run-time representation unless the program asks for one"],
+  ["Runtime", "Always there (GC, JIT), or never", "Linked only for the aspects some section leaves to the system"],
+  ["What a function is", "Text in a file, at a line", "A definition keyed by the hash of its normalised structure; names are labels on it"],
+  ["After an edit", "Rebuild and re-test by file, crate or package", "Exactly the changed ids and what depends on them"],
+]
+
+const exists = [
+  { text: "A surface syntax with two editable profiles, Julia-flavoured and Rust-flavoured", href: links.overview },
+  { text: "Round trip print → parse → same content id, tested on 20 000 random definitions", href: links.overview },
+  { text: "The core calculus sophialang-core@0: de Bruijn binders, usages, holes, Unsafe marks, canonical encoding, SCC hashing", href: links.core },
+  { text: "Name resolution against the store, and edits through Sophia's interface from Moonkale", href: links.sophia },
+]
+const missing = [
+  "An interpreter over core terms: nothing runs yet (milestone M4)",
+  "A type checker, dispatch resolution as stored facts, tests as cached facts (M4)",
+  "Lowering to LLVM, minimal binaries, a JIT cache keyed by content id and argument types (M5)",
+  "The proof DSLs for memory, concurrency and compilation",
+  "A language for defining type systems: the third part of sophialang, not yet specified",
+  "Self-hosting: sophialang written in sophialang (M6)",
+]
+const open = [
+  "Open method tables against content addressing: generic functions must be nominal, and invalidation must be precise (SP-006)",
+  "Relations need an identity of their own: two with the same signature and no rules would otherwise be one",
+  "Whether the proof DSLs are something working programmers will write",
+  "Whether Julia's semantics, zero overhead and optional dependent types fit in one language at all",
+]
+
+const levels: [string, string, boolean | null][] = [
+  ["L1 · Parsed", "Two rendering profiles; a parser with limits and diagnostics", true],
+  ["L2 · Normalised", "Core terms, canonical encoding, hashing; names never change ids", true],
+  ["L3 · Resolved", "Locals, the store's names, built-ins and constructors", true],
+  ["L4 · Lowered", "The target IR: other languages would lower into it", null],
+  ["L5 · Executable", "No evaluator and no type checker yet", false],
+  ["L6 · Verified", "Not yet", false],
+]
+
+const roadmap = [
+  { n: "M4", t: "It runs", d: "An interpreter over core terms, a simple checker, dispatch resolution recorded as facts, and tests cached as facts." },
+  { n: "M5", t: "It compiles", d: "Lowering through MLIR to LLVM, minimal binaries, and a JIT cache keyed by content id and argument types." },
+  { n: "M6", t: "It hosts itself", d: "The printer in sophialang, then the compile DSL and the dependent checker; the Rust code becomes a small bootstrap kernel." },
+  { n: "B-037", t: "Type systems as data", d: "A language for defining type systems, so a checker is a stored, versioned thing a build can ask for." },
+  { n: "B-045", t: "In the browser", d: "sophialang compiled to WebAssembly, and Sophia's crates opened and queried in a browser." },
+  { n: "P0 · 3", t: "Reproducible dispatch", d: "A method table changes, and an earlier world still reproduces the original calls. It passes in the store; end to end it needs M4's interpreter." },
+]
+---
+
+<Layout
+  title="sophialang: one language, from prototype to proof · MathStruct"
+  description="sophialang is the planned language of the Sophia code store: Julia-flavoured, with multiple dispatch, erased dependent types as an exchangeable checker, and a principle of autoresolve → unsafe → safe for memory, concurrency and compilation, chosen per section of code. Its definitions are keyed by their structure, so an edit rebuilds and re-tests only what it can affect. An experiment: the syntax and core exist, nothing runs yet."
+  path="/projects/sophialang"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/#projects">← Projects · Code</a>
+          <h1 class="reveal" style="--d:.05s">
+            Write it like Julia.<br /><span class="serif">Prove it where it matters.</span>
+          </h1>
+          <p class="lede reveal" style="--d:.1s">
+            <strong>sophialang</strong> is the planned language of the <a href={links.sophia}>Sophia</a>
+            code store. You start with nothing specified, and the system chooses: garbage collection,
+            a scheduler, compilation on demand. Where it matters, you take control of one aspect of one
+            section, and it is marked <em>unsafe</em>. Add a proof, and it becomes <em>safe</em>. And
+            because every definition is keyed by its structure, not its file, an edit rebuilds and
+            re-tests only what it can affect.
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#levels">See why <span class="arrow">→</span></a>
+            <a class="btn" href="#status">What exists today</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Rust today, sophialang later</li>
+            <li>Part of Sophia</li>
+            <li class="fact-flag">Planned · an experiment</li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <Profiles />
+          <figcaption class="mono">
+            Printed and parsed by sophialang-syntax today; ids from sophialang-core
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- banner -->
+    <section class="band">
+      <div class="wrap">
+        <p class="band-text reveal">
+          <span class="mono band-k">Status</span>
+          sophialang is a plan with a first core. It can be written, printed, parsed and stored;
+          it cannot run. Whether it can meet all of its specifications is what the experiment is for.
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- levels -->
+    <section class="section" id="levels">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">autoresolve → unsafe → safe</span>
+            <h2 class="reveal" style="--d:.05s">Pay for control <span class="serif">only where you need it.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Today the hardest part of a program picks the language for all of it. One hot loop that
+            needs manual memory, and the whole codebase lives under a borrow checker; one prototype
+            that needs to move fast, and nothing can ever be proved about it. sophialang makes the
+            choice per <em>section</em> of code and per aspect (memory, concurrency, compilation),
+            each on three levels.
+          </p>
+        </div>
+        <div class="reveal">
+          <Levels />
+        </div>
+        <p class="fineprint mono">
+          An illustration of the rules in <a class="il" href={links.principles}>SPEC-002</a> §2–§3,
+          drawn in your browser; nothing is compiled. A runtime library is linked only when some
+          section leaves its aspect to the system; the audit is the query Rust's <code>unsafe</code>
+          keyword makes possible, extended to memory, concurrency and compilation. “Mostly safe”, a
+          proof with named assumptions, is recorded as such and never rounded up.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- rebuild -->
+    <section class="section" id="rebuild">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Keyed by structure</span>
+            <h2 class="reveal" style="--d:.05s">Change one thing. <span class="serif">Rebuild one thing.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            In Sophia a definition's identity is the hash of its normalised structure, and so is
+            every compiled specialisation and every test result. A rename changes no hash. A proof
+            changes no hash. A real edit changes the hashes of exactly the definitions that refer
+            to it. So the question “what must be recompiled, which tests must re-run?” has a
+            precise answer, instead of “the package”.
+          </p>
+        </div>
+        <div class="reveal">
+          <Rebuild />
+        </div>
+        <p class="fineprint mono">
+          A toy program; the rules are those of SPEC-002 §4 and §8. The Nat case is sophialang-core's
+          own dependency test: changing Nat changes add and its test, but not double. Tools differ in
+          how coarse they are today (Julia's package images, a crate, a file), and a precise cache is
+          what <a class="il" href={links.precompile}>content-addressed precompilation</a> is about: the
+          win is not caching, it is precision of invalidation. A test with effects that escape the
+          store (files, network, clocks) is never cached.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ compare -->
+    <section class="section" id="difference">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Why another language</span>
+            <h2 class="reveal" style="--d:.05s">One language, <span class="serif">from prototype to proof.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Julia showed that dynamism and performance can be reconciled by design. Rust showed
+            that safety can be checked without a garbage collector. Lean and Idris showed that
+            proofs and programs can be one thing, and Idris 2 that types can cost nothing at run
+            time. sophialang is the bet that these do not have to be four different languages.
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare vs">
+            <thead>
+              <tr><th></th><th>choosing a language today</th><th>sophialang, the goal</th></tr>
+            </thead>
+            <tbody>
+              {compare.map(([k, a, b]) => (
+                <tr><th scope="row">{k}</th><td class="them">{a}</td><td>{b}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- erased -->
+    <section class="section north" id="erased">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">Zero inherent overhead</span>
+          <h2 class="reveal" style="--d:.05s">Types and proofs <span class="serif">cost nothing at run time.</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            sophialang may contain nothing that makes compiled code inherently slower than C++,
+            Rust or Julia. When in doubt about behaviour, it does what Julia does: machine integers,
+            IEEE floats, multiple dispatch, promotion as ordinary methods.
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li><span><strong>Erased.</strong> Every binder carries a usage; usage-0 binders (types, proofs) have no run-time representation. The quantitative type theory of Atkey and Idris 2.</span></li>
+            <li><span><strong>Exchangeable.</strong> The code generator needs only representation types and the types dispatch sees. A dependent or refinement checker changes what a build accepts, never what it generates.</span></li>
+            <li><span><strong>Visible costs.</strong> Concrete types are unboxed. An abstract type is boxed because you asked for it, and the store records the fact.</span></li>
+            <li><span><strong>No store in the hot path.</strong> Every identity is resolved at build time; the compiled program never queries the store.</span></li>
+          </ul>
+        </div>
+        <figure class="code reveal" style="--d:.08s">
+          <figcaption class="mono">A sketch of the intended surface · none of this runs yet</figcaption>
+          <pre><code><span class="c"># autoresolve: GC, JIT, dynamic dispatch,</span>
+<span class="c"># chosen for you and recorded as facts</span>
+function mean(xs::Vector{"{"}Float64{"}"})::Float64
+    sum(xs) / length(xs)
+end
+
+<span class="c"># unsafe: explicit memory, shown in every view</span>
+function step!(w::World)
+    unsafe(:memory) do
+        buf = alloc(w.arena, Float64, w.n)
+        <span class="c"># …</span>
+    end
+end
+
+<span class="c"># safe: the same code, plus a checked proof;</span>
+<span class="c"># step!'s content id does not change</span>
+proves(:memory, step!, Ownership(w.arena))</code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Where it stands</span>
+            <h2 class="reveal" style="--d:.05s">An experiment, <span class="serif">with a first core.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            sophialang exists as specifications and two Rust crates, sophialang-core and
+            sophialang-syntax. They are already what Moonkale edits through Sophia. Everything that
+            makes it a language you can run is planned. We do not know yet whether all of it can
+            be had at once; finding out is the point.
+          </p>
+        </div>
+
+        <div class="table-wrap reveal">
+          <table class="compare lvl">
+            <thead>
+              <tr><th>level</th><th>state</th><th></th></tr>
+            </thead>
+            <tbody>
+              {levels.map(([k, d, ok]) => (
+                <tr>
+                  <th scope="row">{k}</th>
+                  <td>{d}</td>
+                  <td class="lvl-s mono"><span class:list={["pill", { yes: ok === true, no: ok === false }]}>{ok === true ? "exists" : ok === false ? "planned" : "by design"}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">Exists today</h3>
+            <ul class="ticks">{exists.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">Not built yet</h3>
+            <ul class="ticks ticks--next">{missing.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">Open questions</h3>
+            <ul class="ticks ticks--limit">{open.map((w) => <li>{w}</li>)}</ul>
+          </div>
+        </div>
+        <p class="fineprint mono">
+          From Sophia's vault: the <a class="il" href={links.overview}>SophiaLang overview</a>, the
+          <a class="il" href={links.principles}>principles</a>, the
+          <a class="il" href={links.core}>core calculus</a>,
+          <a class="il" href={links.sp006}>SP-006</a> and the
+          <a class="il" href={links.risks}>open problems and risks</a>.
+        </p>
+
+        <h3 class="sub reveal">The road</h3>
+        <ol class="road">
+          {roadmap.map((r, i) => (
+            <li class="reveal" style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="road-n mono">{r.n}</span>
+              <h4>{r.t}</h4>
+              <p>{r.d}</p>
+            </li>
+          ))}
+        </ol>
+        <p class="fineprint mono">
+          Milestones and backlog rows as in <a class="il" href={links.milestones}>Milestones</a>;
+          none has a date.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ contact -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">Get involved</span>
+          <h2 class="reveal" style="--d:.05s">Tell us <span class="serif">where it breaks.</span></h2>
+          <p class="reveal" style="--d:.1s">
+            sophialang is an experiment, and we are learning as we go. If you work on Julia's
+            compiler, Rust's ownership model, quantitative or dependent type theory, separation
+            logic or build systems, and you see why this cannot work, or how it could, we would
+            like to hear from you.
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.discussions}>Start a conversation <span class="arrow">→</span></a>
+            <a class="btn" href={links.overview}>Design notes</a>
+          </div>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href={links.sophia} style="--d:.06s">
+            <span class="mono sib-k">Code · the store</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">The content-addressed store sophialang lives in, next to Julia, Rust, Python and Metamath, each with its own normal form.</span>
+          </a>
+          <a class="sib reveal" href={links.moonkale} style="--d:.1s">
+            <span class="mono sib-k">Interface · the editor</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">The graph editor that edits sophialang through Sophia's profiles, today.</span>
+          </a>
+          <a class="sib reveal" href={links.lenticulum} style="--d:.14s">
+            <span class="mono sib-k">Models · a first user</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">For which Sophia is considered as a model compiler: Lenticulum running in Sophia needs sophialang to run.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .fact-flag {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+    margin-top: -2px;
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    color: var(--fg);
+  }
+  .hero-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 38%;
+  }
+  .compare td {
+    color: var(--fg);
+    font-size: 15px;
+  }
+  .vs {
+    min-width: 720px;
+  }
+  .vs tbody th {
+    width: 20%;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .vs td {
+    width: 40%;
+  }
+  .vs td.them {
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- verify */
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .code figcaption {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .code pre {
+    margin: 0;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .code .c {
+    color: var(--muted);
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .road {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 700px) {
+    .road {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .road {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .road li {
+    background: var(--bg);
+    padding: 24px 24px 28px 0;
+  }
+  @media (min-width: 700px) {
+    .road li {
+      padding: 24px 28px 28px 0;
+    }
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  @media (min-width: 1000px) {
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 0;
+    }
+    .road li:not(:nth-child(3n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  .road-n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .road h4 {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .road p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ------------------------------------------------------------- contact */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  /* -------------------------------------------------------------- banner */
+  .band {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+    padding: 22px 0;
+  }
+  .band-text {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    max-width: 96ch;
+  }
+  .band-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+  }
+  .fineprint code {
+    font-family: var(--font-mono);
+  }
+  .north {
+    border-top: 1px solid var(--line);
+  }
+
+  /* -------------------------------------------------------------- levels */
+  .lvl {
+    min-width: 560px;
+    margin-bottom: clamp(40px, 6vw, 64px);
+  }
+  .lvl tbody th {
+    width: 22%;
+    color: var(--fg);
+  }
+  .lvl-s {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right !important;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+  }
+  .pill.yes {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .pill.no {
+    border: 1px dashed var(--fg);
+    color: var(--fg);
+  }
+</style>

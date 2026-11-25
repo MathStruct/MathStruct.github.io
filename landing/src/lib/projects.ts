@@ -58,6 +58,11 @@ export const projects: Project[] = [
       { label: "Vault", href: "https://mathstruct.org/Sophia/" },
       { label: "Source", href: "https://github.com/MathStruct/Sophia" },
     ],
+    related: {
+      label: "sophialang",
+      href: "/projects/sophialang",
+      note: "the store's own language, planned as an experiment",
+    },
   },
   {
     layer: "interface",

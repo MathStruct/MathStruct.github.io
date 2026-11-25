@@ -1,0 +1,495 @@
+---
+// autoresolve → unsafe → safe (SPEC-002 §2, §3), chosen per section of a program and per aspect.
+// A toy program of five definitions, all reachable from main; each cell is one section's level
+// for one aspect. What the page derives from the grid follows the specification:
+// - a runtime library is linked only if some section autoresolves that aspect (§3.4: the GC, the
+//   scheduler and the JIT are libraries, linked only when used);
+// - the audit lists every `unsafe` section in main's closure whose proof is missing (§2);
+// - adding a proof never changes a definition's content id (§2, SR-53).
+// The story steps are an illustration; nothing here compiles or measures anything.
+const rows = [
+  { name: "main", note: "the entry point" },
+  { name: "load", note: "reads the configuration" },
+  { name: "simulate!", note: "runs the steps" },
+  { name: "step!", note: "the hot loop" },
+  { name: "save", note: "writes the results" },
+]
+const aspects = [
+  { key: "memory", label: "memory", auto: "GC", unsafe: "alloc / free", safe: "ownership proof" },
+  { key: "concurrency", label: "threads", auto: "scheduler", unsafe: "threads, locks", safe: "race-freedom proof" },
+  { key: "compilation", label: "compile", auto: "JIT", unsafe: "AOT list", safe: "no-JIT proof" },
+]
+// 0 autoresolve, 1 unsafe, 2 safe; rows × aspects
+const story = [
+  {
+    t: "A prototype",
+    d: "Nothing is specified. The system picks garbage collection, a work-stealing scheduler and compilation on demand, and records what it picked. Like Julia.",
+    g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  },
+  {
+    t: "The hot loop",
+    d: "The profiler points at step!. Its memory goes into an explicit arena and it is compiled ahead of time. That is exactly what was asked, foot-guns included, and the section is now marked unsafe in every view.",
+    g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 1], [0, 0, 0]],
+  },
+  {
+    t: "Explicit threads",
+    d: "simulate! spreads the steps over threads it starts itself, with locks. Another unsafe section, and the audit lists it.",
+    g: [[0, 0, 0], [0, 0, 0], [0, 1, 0], [1, 0, 1], [0, 0, 0]],
+  },
+  {
+    t: "Proofs arrive",
+    d: "An ownership proof for step!’s arena, a race-freedom proof for simulate!. The checker accepts them and the unsafe marks are discharged. The code is the same, and so is its content id.",
+    g: [[0, 0, 0], [0, 0, 0], [0, 2, 0], [2, 0, 1], [0, 0, 0]],
+  },
+  {
+    t: "No surprise compilation",
+    d: "A proof from main down: every call site resolves to code compiled ahead of time. The JIT is no longer linked, and the program can run under real-time constraints.",
+    g: [[0, 0, 2], [0, 0, 2], [0, 2, 2], [2, 0, 2], [0, 0, 2]],
+  },
+  {
+    t: "A small target",
+    d: "Every aspect explicit, everywhere. No GC, no scheduler, no JIT: no runtime beyond what C would need. The audit still finds the one section nobody has proved yet.",
+    g: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+  },
+]
+const LEVEL = ["auto", "unsafe", "safe"]
+---
+
+<div class="lv" data-lv>
+  <ol class="lv-steps" aria-label="A program, step by step">
+    {story.map((s, i) => (
+      <li>
+        <button type="button" data-step={i} aria-pressed={i === 0 ? "true" : "false"}>
+          <span class="mono">{String(i + 1).padStart(2, "0")}</span> {s.t}
+        </button>
+      </li>
+    ))}
+  </ol>
+  <p class="lv-cap" data-cap aria-live="polite">{story[0].d}</p>
+
+  <div class="lv-body">
+    <div class="lv-grid" role="grid" aria-label="Each section's level for each aspect; click a cell to change it">
+      <div class="lv-row lv-head mono" role="row">
+        <span role="columnheader">section</span>
+        {aspects.map((a) => <span role="columnheader">{a.label}</span>)}
+      </div>
+      {rows.map((r, i) => (
+        <div class="lv-row" role="row">
+          <span class="lv-name" role="rowheader">
+            <span class="mono">{r.name}</span>
+            <span class="lv-note">{r.note}</span>
+          </span>
+          {aspects.map((a, j) => (
+            <button type="button" role="gridcell" class="lv-cell l0" data-r={i} data-a={j} aria-label={`${r.name}, ${a.label}`}>
+              <span class="lv-lvl mono">auto</span>
+              <span class="lv-how">{a.auto}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+      <p class="lv-legend mono">
+        <span><i class="sw l0"></i>autoresolve: the system chooses</span>
+        <span><i class="sw l1"></i>unsafe: explicit, marked</span>
+        <span><i class="sw l2"></i>safe: explicit, proved</span>
+      </p>
+    </div>
+
+    <div class="lv-side">
+      <div class="lv-box">
+        <h4 class="mono">Runtime linked into the binary</h4>
+        <ul class="lv-rt">
+          {aspects.map((a, j) => (
+            <li data-rt={j}><span class="lv-rt-n">{a.auto}</span><span class="lv-rt-s mono" data-rts>linked</span></li>
+          ))}
+        </ul>
+        <p class="lv-none mono" data-none>nothing beyond what C needs</p>
+      </div>
+      <div class="lv-box">
+        <h4 class="mono">Audit: unproved unsafe sections reachable from main</h4>
+        <ul class="lv-audit mono" data-audit></ul>
+        <p class="lv-clean mono" data-clean>none</p>
+      </div>
+      <div class="lv-box lv-ids">
+        <h4 class="mono">Content ids changed by proofs</h4>
+        <span class="lv-big">0</span>
+        <p class="mono">proofs are annotations, never part of the id</p>
+      </div>
+    </div>
+  </div>
+  <script type="application/json" data-data set:html={JSON.stringify({ story: story.map((s) => ({ d: s.d, g: s.g })), aspects, rows: rows.map((r) => r.name), LEVEL })} />
+</div>
+
+<script>
+  type A = { key: string; label: string; auto: string; unsafe: string; safe: string }
+  for (const root of document.querySelectorAll<HTMLElement>("[data-lv]")) {
+    const { story, aspects, rows, LEVEL } = JSON.parse(root.querySelector("[data-data]")!.textContent!) as {
+      story: { d: string; g: number[][] }[]
+      aspects: A[]
+      rows: string[]
+      LEVEL: string[]
+    }
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const steps = [...root.querySelectorAll<HTMLButtonElement>("[data-step]")]
+    const cells = [...root.querySelectorAll<HTMLButtonElement>(".lv-cell")]
+    const cap = root.querySelector<HTMLElement>("[data-cap]")!
+    const audit = root.querySelector<HTMLElement>("[data-audit]")!
+    const clean = root.querySelector<HTMLElement>("[data-clean]")!
+    const none = root.querySelector<HTMLElement>("[data-none]")!
+    const rts = [...root.querySelectorAll<HTMLElement>("[data-rt]")]
+    let grid = story[0].g.map((r) => [...r])
+    let cur = 0
+    let auto = !reduce
+    let visible = false
+
+    function render() {
+      for (const c of cells) {
+        const i = Number(c.dataset.r)
+        const j = Number(c.dataset.a)
+        const l = grid[i][j]
+        const was = [0, 1, 2].find((k) => c.classList.contains(`l${k}`))
+        if (was !== l) {
+          c.classList.remove("l0", "l1", "l2", "flash")
+          void c.offsetWidth
+          c.classList.add(`l${l}`, "flash")
+        }
+        c.querySelector(".lv-lvl")!.textContent = LEVEL[l]
+        const a = aspects[j]
+        c.querySelector(".lv-how")!.textContent = [a.auto, a.unsafe, a.safe][l]
+        c.setAttribute("aria-label", `${rows[i]}, ${a.label}: ${LEVEL[l]} (${[a.auto, a.unsafe, a.safe][l]})`)
+      }
+      let any = false
+      rts.forEach((li, j) => {
+        const on = grid.some((r) => r[j] === 0)
+        any ||= on
+        li.classList.toggle("off", !on)
+        li.querySelector("[data-rts]")!.textContent = on ? "linked" : "not linked"
+      })
+      none.classList.toggle("on", !any)
+      const open: string[] = []
+      grid.forEach((r, i) => r.forEach((l, j) => l === 1 && open.push(`unsafe:${aspects[j].key}  ${rows[i]}`)))
+      audit.replaceChildren(...open.map((t) => Object.assign(document.createElement("li"), { textContent: t })))
+      clean.classList.toggle("on", open.length === 0)
+    }
+    function go(i: number) {
+      cur = i
+      grid = story[i].g.map((r) => [...r])
+      steps.forEach((s, k) => s.setAttribute("aria-pressed", String(k === i)))
+      cap.textContent = story[i].d
+      render()
+    }
+    steps.forEach((s, k) =>
+      s.addEventListener("click", () => {
+        auto = false
+        go(k)
+      }),
+    )
+    cells.forEach((c) =>
+      c.addEventListener("click", () => {
+        auto = false
+        const i = Number(c.dataset.r)
+        const j = Number(c.dataset.a)
+        grid[i][j] = (grid[i][j] + 1) % 3
+        steps.forEach((s) => s.setAttribute("aria-pressed", "false"))
+        cap.textContent = "Your own program: click any cell to cycle it through autoresolve, unsafe and safe."
+        render()
+      }),
+    )
+    new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(root)
+    setInterval(() => {
+      if (auto && visible && !document.hidden) go((cur + 1) % story.length)
+    }, 5200)
+    go(0)
+  }
+</script>
+
+<style>
+  .lv {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    padding: clamp(16px, 3vw, 28px);
+  }
+  .lv-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .lv-steps button {
+    font: inherit;
+    font-size: 13.5px;
+    min-height: 34px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+  }
+  .lv-steps button .mono {
+    font-size: 11px;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+  .lv-steps button:hover {
+    border-color: var(--fg);
+  }
+  .lv-steps button[aria-pressed="true"] {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .lv-steps button[aria-pressed="true"] .mono {
+    color: inherit;
+    opacity: 0.7;
+  }
+  .lv-cap {
+    margin: 18px 0 0;
+    max-width: 80ch;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    min-height: 3.2em;
+  }
+  .lv-body {
+    display: grid;
+    gap: 20px;
+    margin-top: 18px;
+  }
+  @media (min-width: 960px) {
+    .lv-body {
+      grid-template-columns: 1.6fr 1fr;
+      gap: 28px;
+    }
+  }
+  .lv-grid {
+    display: grid;
+    gap: 6px;
+  }
+  .lv-row {
+    display: grid;
+    grid-template-columns: minmax(76px, 1.1fr) repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    align-items: stretch;
+  }
+  .lv-head span {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 2px 4px;
+  }
+  .lv-name {
+    display: grid;
+    align-content: center;
+    gap: 1px;
+    min-width: 0;
+  }
+  .lv-name .mono {
+    font-size: 13.5px;
+  }
+  .lv-note {
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lv-cell {
+    font: inherit;
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    padding: 8px 10px;
+    min-height: 52px;
+    border-radius: 8px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--fg);
+    cursor: pointer;
+    min-width: 0;
+    transition: background-color 0.35s var(--ease), border-color 0.35s var(--ease), color 0.35s var(--ease);
+  }
+  .lv-cell:hover {
+    border-color: var(--fg);
+  }
+  .lv-lvl {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lv-how {
+    font-size: 12.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lv-cell.l1 {
+    border: 1.5px dashed var(--fg);
+  }
+  .lv-cell.l1 .lv-lvl {
+    color: var(--fg);
+  }
+  .lv-cell.l2 {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .lv-cell.l2 .lv-lvl {
+    color: var(--invert-fg);
+    opacity: 0.75;
+  }
+  .lv-cell.l2 .lv-lvl::after {
+    content: " ✓";
+  }
+  .lv-cell.flash {
+    animation: lv-flash 0.6s var(--ease);
+  }
+  @keyframes lv-flash {
+    0% {
+      transform: scale(0.94);
+    }
+    60% {
+      transform: scale(1.03);
+    }
+    100% {
+      transform: none;
+    }
+  }
+  .lv-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 10px 0 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .lv-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sw {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+  }
+  .sw.l1 {
+    border: 1.5px dashed var(--fg);
+  }
+  .sw.l2 {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+  }
+  .lv-side {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+  .lv-box {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    padding: 14px 16px;
+  }
+  .lv-box h4 {
+    margin: 0 0 10px;
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lv-rt {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .lv-rt li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 15px;
+    transition: opacity 0.4s var(--ease);
+  }
+  .lv-rt-s {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .lv-rt li.off {
+    opacity: 0.4;
+  }
+  .lv-rt li.off .lv-rt-n {
+    text-decoration: line-through;
+  }
+  .lv-none,
+  .lv-clean {
+    display: none;
+    margin: 10px 0 0;
+    font-size: 12px;
+  }
+  .lv-none.on,
+  .lv-clean.on {
+    display: block;
+  }
+  .lv-clean.on {
+    margin: 0;
+    color: var(--muted);
+  }
+  .lv-audit {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+    font-size: 12.5px;
+    white-space: pre;
+  }
+  .lv-audit li::before {
+    content: "▲ ";
+  }
+  .lv-ids {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 14px;
+  }
+  .lv-ids h4 {
+    grid-column: 1 / -1;
+  }
+  .lv-big {
+    font-size: 34px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .lv-ids p {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  @media (max-width: 520px) {
+    .lv-note {
+      display: none;
+    }
+    .lv-cell {
+      padding: 6px 7px;
+    }
+    .lv-how {
+      font-size: 11px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lv-cell.flash {
+      animation: none;
+    }
+  }
+</style>
