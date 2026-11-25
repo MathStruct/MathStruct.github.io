@@ -19,7 +19,6 @@
   --invert-bg: #0b0b0b;
   --invert-fg: #fafaf9;
   --glow: rgba(0, 0, 0, 0.05);
-  --mark-filter: none;
   color-scheme: light;
 
   --font-sans: "Inter Tight Variable", "Inter Tight", ui-sans-serif, system-ui, sans-serif;
@@ -46,7 +45,6 @@
   --invert-bg: #f4f4f3;
   --invert-fg: #0a0a0a;
   --glow: rgba(255, 255, 255, 0.06);
-  --mark-filter: invert(1);
   color-scheme: dark;
 }
 
