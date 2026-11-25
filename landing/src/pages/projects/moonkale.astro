@@ -1,0 +1,921 @@
+---
+// /projects/moonkale: the promotional page of Moonkale, in the style of /projects/lenticulum-jl
+// and /projects/sophia. It replaces the Quartz page built from content/projects/moonkale.md
+// (which stays, for the site's search and link previews). Its facts come from Moonkale's README
+// and vault (Getting Started, Status, North Star, Julia and Lenticulum), as of 2026-11-18
+// (MathStruct/Moonkale@d0e784c); update them from there, not from memory. The screenshots are
+// the README's (assets/UILinux.png, assets/UIAndroid.jpg), as WebP in public/projects/moonkale-media/.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+import GraphWorkspace from "../../components/moonkale/GraphWorkspace.astro"
+import HowItWorks from "../../components/moonkale/HowItWorks.astro"
+
+const vault = "https://mathstruct.org/Moonkale/"
+const note = (path: string) => vault + path
+const links = {
+  vault,
+  source: "https://github.com/MathStruct/Moonkale",
+  download: "https://github.com/MathStruct/Moonkale/releases/latest",
+  releases: "https://github.com/MathStruct/Moonkale/releases",
+  issues: "https://github.com/MathStruct/Moonkale/issues/new/choose",
+  start: note("Getting-Started"),
+  install: note("packaging/Install"),
+  status: note("Status"),
+  feedback: note("Feedback"),
+  catalogue: note("extensions/Extension-Catalogue"),
+  remote: note("architecture/Remote-and-Server-Modes"),
+  overview: note("architecture/Overview"),
+  northStar: note("architecture/North-Star"),
+  lenticulum: note("architecture/Julia-and-Lenticulum"),
+  licensing: note("platform/Licensing"),
+  development: "https://github.com/MathStruct/Moonkale/blob/master/markdown/Development.md",
+}
+
+// Getting Started: "Coming from VS Code" and "Coming from Obsidian"
+const fromVSCode = [
+  ["Ctrl+Shift+P, Ctrl+P", "the same keys, the same idea; or pick the VS Code layout outright"],
+  ["the editor", "CodeMirror with your language servers (rust-analyzer, pyright, clangd…), or a Rust-built editor"],
+  ["Source Control", "Git: stage, commit, diffs, and the history as a graph"],
+  ["Remote-SSH", "Open Remote Folder: terminal, git and language servers run on the other machine"],
+  ["the integrated terminal", "the same, and a path:line in its output opens the file"],
+]
+const fromObsidian = [
+  ["live preview", "Rich mode (WYSIWYG) or Source mode, one click apart"],
+  ["[[links]] and backlinks", "the same links; unresolved ones are dashed, and a click creates the note"],
+  ["the graph view", "the Graph panel, with the code and the databases in it too"],
+  ["front matter", "a Properties bar above the note; the source stays untouched"],
+  ["MathJax", "KaTeX, inline and block, with your own macros; a Typst preview"],
+]
+
+// README "What works today" and Status
+const features = [
+  { k: "Sources", t: "Folders, local or over SSH", d: "A Sources panel that follows changes on disk, quick open, a command palette, find and replace across files." },
+  { k: "Code", t: "Two code editors", d: "CodeMirror with language servers (diagnostics, hover, go to definition, completion, rename), and a pure-Rust editor." },
+  { k: "Notes", t: "Rich Markdown", d: "WYSIWYG, with wiki-links, backlinks, KaTeX formulas and front matter, plus a Typst preview." },
+  { k: "Graph", t: "2D and 3D, on the GPU", d: "A folder's files, links and symbols, usable at 100 000 nodes; in 3D, one plane per kind of thing." },
+  { k: "Data", t: "Databases as tables and graphs", d: "SQLite, DuckDB (folders of CSV and Parquet too), Turso, redb, RocksDB, HelixDB, LadybugDB. SQL tables can be edited, with conflicts checked, and plotted." },
+  { k: "Terminal", t: "Stack traces become graphs", d: "A terminal in the folder, on the remote machine for a remote folder; traces in it turn into clickable graphs." },
+  { k: "Git", t: "History as a graph", d: "Changes, diffs, staging, commits, and the history drawn as a graph." },
+  { k: "History", t: "Every edit, restorable", d: "A record of every edit, yours, an agent's or git's, with restore." },
+  { k: "Search", t: "By keyword and by meaning", d: "Keyword search always; search by meaning when an embedding model is configured." },
+  { k: "Agents", t: "LLM agents behind an approval gate", d: "Claude Code on a subscription, Anthropic, OpenAI-compatible or Ollama; they read, search, query, and edit only when you allow it. An MCP endpoint for outside agents." },
+  { k: "Extensions", t: "WebAssembly extensions", d: "Built-in editors are extensions too; a node-based flow editor with a Lux.jl block library (off by default)." },
+  { k: "Platforms", t: "Desktop, browser, phone", d: "One Rust codebase with Dioxus; moonkale-server serves the same app to a browser or an Android phone." },
+]
+
+const works = [
+  "Opening folders and databases, the graph, the rich editor with wiki-links and KaTeX",
+  "CodeMirror with language servers, git, the change history, remote folders over SSH",
+  "The agent, with several agents and sessions at once, their history kept in the folder",
+  "Tested on Linux, desktop and browser, and on one Android phone; used daily by its author",
+]
+const limits = [
+  "A prototype: settings, file formats, the extension API and the package layout will change, without migration paths",
+  "Windows and macOS builds are produced, but unsigned and untested",
+  "Server mode still has security flaws: use it on a local network only",
+  "No debugger, no extension marketplace, no sync of its own; language-server features only in the CodeMirror editor",
+  "Graph and key-value databases are read-only",
+]
+const next = [
+  { text: "A library with a small core: extensions, sources and server routes added without editing the shell", href: links.status },
+  { text: "Postgres, TypeDB, FalkorDB and Redis as sources; projects that combine sources and link across them", href: links.status },
+  { text: "Shared editing on one server: accounts, presence, merged edits; comments anchored to files, rows and nodes", href: links.status },
+  { text: "The factor-graph editor for Lenticulum.jl, and a ModelingToolkit editor", href: "/projects/lenticulum-jl" },
+]
+
+// README "Install"
+const install = [
+  ["Arch Linux", "moonkale-<release>-arch-x86_64.pkg.tar.zst", "sudo pacman -U <file>"],
+  ["Debian 12+ / Ubuntu 22.04+", "moonkale-<release>-debian-amd64.deb", "sudo apt install ./<file>"],
+  ["Nix / NixOS", "from source", "nix profile install github:MathStruct/Moonkale"],
+  ["Linux, any (tarball)", "moonkale-<release>-linux-x86_64.tar.gz", "unpack, then ./bin/moonkale"],
+  ["Android (arm64)", "moonkale-<release>-android-arm64.apk", "sideload, or adb install -r <file>"],
+  ["Windows / macOS", ".msi / .exe / .dmg", "unsigned and untested: see the install page"],
+]
+
+const audiences = [
+  { who: "Coming from VS Code or Obsidian", start: "Getting Started: the four ideas, and a first session in ten minutes", href: links.start },
+  { who: "Ready to install", start: "Install: every platform, with troubleshooting", href: links.install },
+  { who: "Working on another machine", start: "Remote and Server Modes: SSH folders, the server, the phone", href: links.remote },
+  { who: "Curious what each part does", start: "The Extension Catalogue: what each extension does, and where it runs", href: links.catalogue },
+  { who: "Want the internals", start: "Architecture Overview → the Graph-Native Model", href: links.overview },
+  { who: "Want the long view", start: "North Star: the code graph, and why Lenticulum is the reason", href: links.northStar },
+]
+---
+
+<Layout
+  title="Moonkale: one graph, every editor a view · MathStruct"
+  description="Moonkale is a graph-native editor for code and knowledge: folders and databases open as one graph, and every editor (code, notes, tables, graph, terminal) is a view on it, for people and AI agents alike. Open source, in Rust, for Linux, the web and Android."
+  path="/projects/moonkale"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/#projects">← Projects · Interface</a>
+          <h1 class="reveal popover-hint" style="--d:.05s">
+            One graph,<br /><span class="serif">every editor<br />a view.</span>
+          </h1>
+          <p class="lede reveal popover-hint" style="--d:.1s">
+            Code editors, note apps and database tools are separate worlds. <strong>Moonkale</strong>
+            opens folders <em>and</em> databases and shows everything as one graph: files, functions,
+            wiki-links, tables and relations are nodes and edges. The code editor, the rich-text editor,
+            the table, the terminal and the graph are views on it, and so are the language servers and
+            the AI agents.
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href={links.download}>Download <span class="arrow">→</span></a>
+            <a class="btn" href={links.start}>Getting started</a>
+            <a class="btn" href={links.source}>Source on GitHub</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Rust · Dioxus</li>
+            <li>Linux, web, Android</li>
+            <li>MIT licence</li>
+            <li>Working prototype</li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <div class="shots">
+            <img
+              class="shot-desk"
+              src="/projects/moonkale-media/desktop.webp"
+              width="1920"
+              height="1080"
+              alt="Moonkale on the Linux desktop: the activity bar and Explorer on the left, a terminal below them, the whole repository as a graph of files and symbols in the middle, and a Julia file open in the code editor on the right"
+            />
+            <img
+              class="shot-phone"
+              src="/projects/moonkale-media/android.webp"
+              width="606"
+              height="1158"
+              alt="Moonkale on an Android phone: a rich note above a Rust file, and the bottom bar"
+            />
+          </div>
+          <figcaption class="mono">
+            Moonkale on Linux, with its own repository as a graph · and on a phone
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- try it -->
+    <section class="section" id="try">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Try it</span>
+            <h2 class="reveal" style="--d:.05s">Click anything, <span class="serif">it opens.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            A folder and a database, indexed into one graph. Click a node and it opens in the editor
+            that fits it; click a name or a link inside an editor and the graph follows. Then ask the
+            agent: it queries the same graph, and edits only when you allow it.
+          </p>
+        </div>
+        <div class="reveal">
+          <GraphWorkspace />
+        </div>
+        <p class="fineprint mono">
+          A mock, drawn in your browser: seven nodes and one scripted agent exchange. The app indexes
+          real folders with tree-sitter and language servers, draws the graph on the GPU, and talks to
+          a real model.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- how it works -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">How it works</span>
+            <h2 class="reveal" style="--d:.05s">Four ideas, <span class="serif">one editor.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            What makes Moonkale different from the editors you already use, in the words of the
+            vault's <a href={links.start}>Getting Started</a>.
+          </p>
+        </div>
+        <HowItWorks />
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- familiar -->
+    <section class="section" id="familiar">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Feels familiar</span>
+            <h2 class="reveal" style="--d:.05s">Your habits, <span class="serif">kept.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            If you use VS Code for code and Obsidian for notes, most of what you know carries over.
+            Settings → Keybindings has a VS Code and an Obsidian layout, and your own overrides stay on
+            top.
+          </p>
+        </div>
+        <div class="familiar">
+          {[
+            { from: "VS Code", rows: fromVSCode },
+            { from: "Obsidian", rows: fromObsidian },
+          ].map((t, i) => (
+            <div class="table-wrap reveal" style={`--d:${0.06 * i}s`}>
+              <table class="compare">
+                <thead>
+                  <tr><th>in {t.from}</th><th>in Moonkale</th></tr>
+                </thead>
+                <tbody>
+                  {t.rows.map(([a, b]) => (
+                    <tr><th scope="row">{a}</th><td>{b}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- features -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">What works today</span>
+            <h2 class="reveal" style="--d:.05s">Twelve things <span class="serif">it does now.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Tested on Linux, on the desktop and in the browser, and on an Android phone. Area by
+            area, with what is still missing: the <a href={links.status}>Status</a> page.
+          </p>
+        </div>
+        <ul class="features">
+          {features.map((f, i) => (
+            <li class="feature reveal" style={`--d:${0.03 * (i % 4)}s`}>
+              <span class="feature-k mono">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- north -->
+    <section class="section north" id="north">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">Why it exists</span>
+          <h2 class="reveal" style="--d:.05s">A diagram <span class="serif">stays a diagram.</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            Moonkale exists for <a href="/projects/lenticulum-jl">Lenticulum.jl</a>, whose models are
+            factor graphs: undirected, cyclic, with channels whose direction is chosen at query time. A
+            page of <code>connect(…)</code> calls is to such a model what raw RDF is to a graph. The file
+            on disk is for git, diffs and agents; the editor is the interface.
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li><span>
+              The long view is code as a graph in a database: many languages parsed side by side, proofs
+              as annotations, the code graph meeting the knowledge graph (<a href={links.northStar}>North Star</a>)
+            </span></li>
+            <li><span>
+              <a href="/projects/sophia">Sophia</a> is already Moonkale's code-graph cache: the files stay
+              the truth, and a definition has the same content id in both tools
+            </span></li>
+            <li><span>
+              Julia lives outside the core, in its own repository: flow libraries for Lux,
+              ModelingToolkit and RxInfer, off by default
+            </span></li>
+          </ul>
+        </div>
+        <figure class="north-art reveal" style="--d:.1s" aria-label="Moonkale, Sophia and Lenticulum.jl: Moonkale edits, Sophia stores code as a graph, Lenticulum's factor graphs are what Moonkale is meant to draw">
+          <svg viewBox="0 0 400 300">
+            <path class="link" d="M200 70 L95 220"></path>
+            <path class="link" d="M200 70 L305 220"></path>
+            <path class="link plan" d="M120 236 H280"></path>
+            <text class="lab" x="128" y="140">code graph</text>
+            <text class="lab" x="272" y="140">factor graphs</text>
+            <text class="lab" x="200" y="290">models stored, later</text>
+            <g class="node main">
+              <rect x="135" y="40" width="130" height="56" rx="12"></rect>
+              <text x="200" y="66">Moonkale</text>
+              <text class="sub" x="200" y="83">the editor</text>
+            </g>
+            <g class="node">
+              <rect x="30" y="208" width="130" height="56" rx="12"></rect>
+              <text x="95" y="234">Sophia</text>
+              <text class="sub" x="95" y="251">the store</text>
+            </g>
+            <g class="node">
+              <rect x="240" y="208" width="130" height="56" rx="12"></rect>
+              <text x="305" y="234">Lenticulum.jl</text>
+              <text class="sub" x="305" y="251">the models</text>
+            </g>
+          </svg>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Where it stands</span>
+            <h2 class="reveal" style="--d:.05s">A prototype, <span class="serif">used daily.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Version 0.1: its author uses it every day, and it is rough at the edges. Try it, and
+            please don't rely on it yet.
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">Solid today</h3>
+            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">Known limits</h3>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">Planned</h3>
+            <ul class="ticks ticks--next">{next.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- get started -->
+    <section class="section" id="get-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Get started</span>
+            <h2 class="reveal" style="--d:.05s">Install <span class="serif">and open a folder.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Releases are named by date (<code>YYMMDD-proto</code>) on the
+            <a href={links.releases}>releases page</a>; <code>&lt;release&gt;</code> below stands for
+            that name. To build it yourself: <a href={links.development}>Development</a>.
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare install">
+            <thead>
+              <tr><th>platform</th><th>file</th><th>install</th></tr>
+            </thead>
+            <tbody>
+              {install.map(([p, f, c]) => (
+                <tr><th scope="row">{p}</th><td class="mono">{f}</td><td class="mono">{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub reveal">Where to start</h3>
+        <ul class="audiences">
+          {audiences.map((a, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={a.href}>
+                <span class="who">{a.who}</span>
+                <span class="start">{a.start}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- feedback -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">Feedback</span>
+          <h2 class="reveal" style="--d:.05s">Tell us <span class="serif">what breaks.</span></h2>
+          <p class="reveal" style="--d:.1s">
+            Bugs, ideas and “I cannot get it to work” are all welcome. Reports from Windows and macOS
+            are especially useful: they are the only testing those builds get. Every reported problem
+            ends up in the vault's problem log, with its fix.
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.issues}>Open an issue <span class="arrow">→</span></a>
+            <a class="btn" href={links.vault}>Read the vault</a>
+          </div>
+          <p class="sister reveal" style="--d:.18s">
+            MIT licence. Binaries also contain third-party software under its own permissive licences;
+            no GPL-only dependency. <a href={links.licensing}>The full list</a>.
+          </p>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href="/projects/sophia" style="--d:.06s">
+            <span class="mono sib-k">Code · the store</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">Code keyed by its structure. Moonkale's code-graph cache today, with the same content ids in both tools.</span>
+          </a>
+          <a class="sib reveal" href="/projects/lenticulum-jl" style="--d:.12s">
+            <span class="mono sib-k">Models · the reason</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">Relations learned on factor graphs, the diagrams Moonkale is built to edit.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1fr 1.1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .lede code,
+  .cite-band code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+  }
+  .shots {
+    position: relative;
+    padding: 0 7% 9% 0;
+  }
+  .shots img {
+    display: block;
+    height: auto;
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.45);
+  }
+  .shot-desk {
+    width: 100%;
+    border-radius: 10px;
+  }
+  .shot-phone {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22%;
+    border-radius: 14px;
+    outline: 5px solid var(--bg);
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 38%;
+  }
+  .compare td {
+    color: var(--fg);
+    font-size: 15px;
+  }
+  .familiar {
+    display: grid;
+    gap: 32px;
+  }
+  @media (min-width: 960px) {
+    .familiar {
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+  }
+  .install {
+    min-width: 760px;
+  }
+  .install tbody th {
+    width: 22%;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+  }
+  .install td.mono {
+    font-size: 12.5px;
+    color: var(--fg-2);
+  }
+  .lede a,
+  .cite-band p a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover,
+  .cite-band p a:hover {
+    border-bottom-color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* --------------------------------------------------------------- north */
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .north .lede code {
+    font-size: 0.85em;
+  }
+  .north-art {
+    margin: 0;
+    max-width: 480px;
+    width: 100%;
+    justify-self: center;
+    color: var(--fg);
+  }
+  .north-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .north-art .link {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+  .north-art .link.plan {
+    stroke-dasharray: 4 5;
+    stroke-opacity: 0.6;
+  }
+  .north-art .node rect {
+    fill: var(--bg);
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+  .north-art .node.main rect {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+  }
+  .north-art text {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 500;
+    fill: currentColor;
+    text-anchor: middle;
+  }
+  .north-art .main text {
+    fill: var(--invert-fg);
+  }
+  .north-art text.sub {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+  }
+  .north-art .lab {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 400;
+    fill: var(--muted);
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+
+  /* --------------------------------------------------------- get started */
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .audiences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audiences a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.3s var(--ease);
+  }
+  @media (min-width: 760px) {
+    .audiences a {
+      grid-template-columns: 340px 1fr auto;
+      align-items: baseline;
+    }
+  }
+  .audiences a:hover {
+    padding-left: 10px;
+  }
+  .who {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .start {
+    color: var(--muted);
+    font-size: 15px;
+    grid-column: 1;
+  }
+  @media (min-width: 760px) {
+    .start {
+      grid-column: 2;
+    }
+  }
+  .audiences .arrow {
+    grid-column: -2;
+    grid-row: 1;
+    transition: transform 0.3s var(--ease);
+  }
+  .audiences a:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* ------------------------------------------------------------ feedback */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .sister {
+    margin-top: 32px;
+    font-size: 13px;
+    color: var(--muted) !important;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>

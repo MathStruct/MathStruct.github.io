@@ -1,0 +1,772 @@
+---
+// Moonkale's idea in miniature: a folder and a database, indexed into one graph, and every
+// editor a view on it. Click a node and it opens in the editor that fits its kind (code, rich
+// note, table); click a link or a name inside an editor and the graph follows. The agent strip
+// replays one scripted exchange: the agent queries the same graph, proposes an edit, and changes
+// nothing until "Allow" is clicked. Everything here is a mock drawn in the browser; the app
+// indexes real folders with tree-sitter and language servers.
+---
+
+<div class="gw">
+  <div class="gw-graph">
+    <div class="gw-sources mono" aria-label="Sources">
+      <span><i class="src-folder" aria-hidden="true"></i>solver/ · folder</span>
+      <span><i class="src-db" aria-hidden="true"></i>runs.sqlite · database</span>
+    </div>
+    <svg class="gw-svg" viewBox="0 0 420 300" role="group" aria-label="The workspace as one graph: files, symbols, notes and a table">
+      <defs>
+        <marker id="gw-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0 0 L8 4 L0 8 z" class="gw-arrowhead"></path>
+        </marker>
+      </defs>
+      <g class="gw-edges"></g>
+      <g class="gw-nodes"></g>
+    </svg>
+    <div class="gw-status mono">
+      <span>index: 3 files · 3 links · 3 symbols · 1 table</span>
+      <span class="gw-legend">
+        <i class="lg lg-file"></i>file <i class="lg lg-sym"></i>symbol <i class="lg lg-note"></i>note <i class="lg lg-table"></i>table
+      </span>
+    </div>
+  </div>
+
+  <div class="gw-view">
+    <div class="gw-tabbar mono">
+      <span class="gw-tab"></span>
+      <span class="gw-kind"></span>
+      <span class="gw-modes" hidden>
+        <button type="button" class="gw-mode is-on" data-mode="rich">Rich</button>
+        <button type="button" class="gw-mode" data-mode="source">Source</button>
+      </span>
+    </div>
+    <div class="gw-body" aria-live="polite"></div>
+  </div>
+
+  <div class="gw-agent">
+    <div class="gw-agent-head">
+      <span class="mono gw-agent-k">Agent</span>
+      <button type="button" class="gw-ask">Ask: what calls <code>step</code>?</button>
+      <button type="button" class="gw-reset" hidden>Start over</button>
+    </div>
+    <ol class="gw-chat" aria-live="polite"></ol>
+  </div>
+</div>
+
+<script>
+  type Kind = "file" | "symbol" | "note" | "table"
+  interface N {
+    id: string
+    kind: Kind
+    label: string
+    x: number
+    y: number
+  }
+  const NODES: N[] = [
+    { id: "lib", kind: "file", label: "src/lib.rs", x: 120, y: 52 },
+    { id: "grid", kind: "symbol", label: "struct Grid", x: 46, y: 150 },
+    { id: "step", kind: "symbol", label: "fn step", x: 124, y: 214 },
+    { id: "solve", kind: "symbol", label: "fn solve", x: 200, y: 140 },
+    { id: "design", kind: "note", label: "Design.md", x: 330, y: 52 },
+    { id: "bench", kind: "note", label: "Benchmarks.md", x: 352, y: 168 },
+    { id: "runs", kind: "table", label: "runs", x: 268, y: 254 },
+  ]
+  const EDGES: [string, string, string][] = [
+    ["lib", "grid", "contains"],
+    ["lib", "step", "contains"],
+    ["lib", "solve", "contains"],
+    ["solve", "step", "calls"],
+    ["solve", "grid", "uses"],
+    ["design", "lib", "links"],
+    ["design", "bench", "links"],
+    ["bench", "runs", "links"],
+    ["runs", "solve", "mentions"],
+  ]
+  const byId = new Map(NODES.map((n) => [n.id, n]))
+  const SVGNS = "http://www.w3.org/2000/svg"
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+  function init(root: HTMLElement) {
+    const gEdges = root.querySelector<SVGGElement>(".gw-edges")!
+    const gNodes = root.querySelector<SVGGElement>(".gw-nodes")!
+    const tab = root.querySelector<HTMLElement>(".gw-tab")!
+    const kindEl = root.querySelector<HTMLElement>(".gw-kind")!
+    const modes = root.querySelector<HTMLElement>(".gw-modes")!
+    const body = root.querySelector<HTMLElement>(".gw-body")!
+    const chat = root.querySelector<HTMLOListElement>(".gw-chat")!
+    const ask = root.querySelector<HTMLButtonElement>(".gw-ask")!
+    const reset = root.querySelector<HTMLButtonElement>(".gw-reset")!
+
+    let selected = "solve"
+    let noteMode: "rich" | "source" = "rich"
+    let stepName = "step" // the agent may rename it
+    let agentHit: string | null = null
+
+    // ------------------------------------------------------------------ the graph
+    const edgeEls: { a: string; b: string; el: SVGLineElement }[] = []
+    for (const [a, b, kind] of EDGES) {
+      const A = byId.get(a)!
+      const B = byId.get(b)!
+      const l = document.createElementNS(SVGNS, "line")
+      // stop short of the target so the arrowhead sits outside the node
+      const dx = B.x - A.x
+      const dy = B.y - A.y
+      const len = Math.hypot(dx, dy)
+      const r = 20
+      l.setAttribute("x1", String(A.x + (dx / len) * r))
+      l.setAttribute("y1", String(A.y + (dy / len) * r))
+      l.setAttribute("x2", String(B.x - (dx / len) * r))
+      l.setAttribute("y2", String(B.y - (dy / len) * r))
+      l.setAttribute("class", `gw-edge gw-edge--${kind}`)
+      if (kind !== "contains") l.setAttribute("marker-end", "url(#gw-arrow)")
+      gEdges.appendChild(l)
+      edgeEls.push({ a, b, el: l })
+    }
+    const nodeEls = new Map<string, SVGGElement>()
+    for (const n of NODES) {
+      const g = document.createElementNS(SVGNS, "g")
+      g.setAttribute("class", `gw-node gw-node--${n.kind}`)
+      g.setAttribute("transform", `translate(${n.x} ${n.y})`)
+      g.setAttribute("tabindex", "0")
+      g.setAttribute("role", "button")
+      let shape: SVGElement
+      if (n.kind === "file") {
+        shape = document.createElementNS(SVGNS, "rect")
+        Object.entries({ x: -15, y: -12, width: 30, height: 24, rx: 4 }).forEach(([k, v]) => shape.setAttribute(k, String(v)))
+      } else if (n.kind === "symbol") {
+        shape = document.createElementNS(SVGNS, "circle")
+        shape.setAttribute("r", "9")
+      } else if (n.kind === "note") {
+        shape = document.createElementNS(SVGNS, "circle")
+        shape.setAttribute("r", "13")
+      } else {
+        shape = document.createElementNS(SVGNS, "path")
+        shape.setAttribute("d", "M-16 -12 H16 V12 H-16 Z M-16 -4 H16 M-16 4 H16 M-5 -12 V12")
+      }
+      shape.setAttribute("class", "gw-shape")
+      const t = document.createElementNS(SVGNS, "text")
+      t.setAttribute("y", n.kind === "symbol" ? "24" : "28")
+      t.setAttribute("class", "gw-label")
+      // an invisible target over the shape and its label, so the whole node is easy to hit
+      const hit = document.createElementNS(SVGNS, "rect")
+      Object.entries({ x: -38, y: -18, width: 76, height: 52, class: "gw-hit" }).forEach(([k, v]) => hit.setAttribute(k, String(v)))
+      g.append(hit, shape, t)
+      g.addEventListener("click", () => select(n.id))
+      g.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          select(n.id)
+        }
+      })
+      gNodes.appendChild(g)
+      nodeEls.set(n.id, g)
+    }
+
+    const label = (id: string) => (id === "step" ? `fn ${stepName}` : byId.get(id)!.label)
+
+    function paintGraph() {
+      const near = new Set([selected])
+      for (const { a, b } of edgeEls) {
+        if (a === selected) near.add(b)
+        if (b === selected) near.add(a)
+      }
+      for (const [id, g] of nodeEls) {
+        g.querySelector("text")!.textContent = label(id)
+        g.setAttribute("aria-label", `${label(id)}, ${byId.get(id)!.kind}`)
+        g.classList.toggle("is-sel", id === selected)
+        g.classList.toggle("is-near", near.has(id) && id !== selected)
+        g.classList.toggle("is-far", !near.has(id))
+        g.classList.toggle("is-hit", id === agentHit)
+      }
+      for (const { a, b, el } of edgeEls) {
+        el.classList.toggle("is-near", a === selected || b === selected)
+      }
+    }
+
+    // ------------------------------------------------------------------ the views
+    const SYMBOL_LINES: Record<string, [number, number]> = { grid: [1, 1], step: [3, 5], solve: [7, 10] }
+    const codeText = () =>
+      [
+        "pub struct Grid { pub cells: Vec<f64> }",
+        "",
+        `pub fn ${stepName}(g: &mut Grid) {`,
+        "    for c in g.cells.iter_mut() { *c *= 0.5; }",
+        "}",
+        "",
+        "pub fn solve(mut g: Grid, n: usize) -> Grid {",
+        `    for _ in 0..n { ${stepName}(&mut g); }`,
+        "    g",
+        "}",
+      ]
+    function codeView() {
+      const range = SYMBOL_LINES[selected]
+      const names: Record<string, string> = { Grid: "grid", solve: "solve", [stepName]: "step" }
+      const re = new RegExp(`\\b(${Object.keys(names).join("|")})\\b|\\b(pub|fn|struct|for|in|mut)\\b`, "g")
+      const lines = codeText().map((line, i) => {
+        const html = esc(line).replace(re, (m, name, kw) =>
+          name ? `<button type="button" class="gw-ref" data-n="${names[name]}">${m}</button>` : `<span class="gw-kw">${kw}</span>`,
+        )
+        const hl = range && i + 1 >= range[0] && i + 1 <= range[1]
+        return `<span class="gw-line${hl ? " is-hl" : ""}"><span class="gw-ln">${i + 1}</span>${html || " "}</span>`
+      })
+      return `<pre class="gw-code">${lines.join("")}</pre>`
+    }
+
+    const NOTES: Record<string, string> = {
+      design: "## Design\nThe solver repeats `step` n times; it is `solve` in [[src/lib.rs]].\nTimings are kept in [[Benchmarks]].",
+      bench: "## Benchmarks\nEvery run of `solve` is a row of the [[runs]] table in runs.sqlite.\nThe largest so far: n = 1000, in 12.4 ms.",
+    }
+    const LINKS: Record<string, string> = { "src/lib.rs": "lib", Benchmarks: "bench", runs: "runs" }
+    function noteView() {
+      const src = NOTES[selected].replace("`step`", "`" + stepName + "`")
+      if (noteMode === "source") return `<pre class="gw-code gw-md">${esc(src)}</pre>`
+      const html = src
+        .split("\n")
+        .map((l) => {
+          let s = esc(l)
+            .replace(/\[\[([^\]]+)\]\]/g, (_m, t) => `<button type="button" class="gw-wiki" data-n="${LINKS[t]}">${t}</button>`)
+            .replace(/`([^`]+)`/g, (_m, t) => `<code>${t}</code>`)
+          return l.startsWith("## ") ? `<h4>${s.slice(3)}</h4>` : `<p>${s}</p>`
+        })
+        .join("")
+      return `<div class="gw-rich">${html}</div>`
+    }
+
+    function tableView() {
+      const rows = [
+        [1, "solve", 10, 0.2],
+        [2, "solve", 100, 1.3],
+        [3, "solve", 1000, 12.4],
+      ]
+      return `<table class="gw-table mono"><thead><tr><th>id</th><th>fn</th><th>n</th><th>ms</th></tr></thead><tbody>${rows
+        .map(
+          ([id, fn, n, ms]) =>
+            `<tr><td>${id}</td><td><button type="button" class="gw-ref" data-n="solve">${fn}</button></td><td>${n}</td><td>${ms}</td></tr>`,
+        )
+        .join("")}</tbody></table>`
+    }
+
+    function paintView() {
+      const n = byId.get(selected)!
+      const isCode = n.kind === "file" || n.kind === "symbol"
+      tab.textContent = isCode ? "src/lib.rs" : n.kind === "note" ? `notes/${n.label}` : "runs.sqlite · runs"
+      kindEl.textContent = isCode ? "code editor" : n.kind === "note" ? "" : "table editor"
+      modes.hidden = n.kind !== "note"
+      modes.querySelectorAll<HTMLButtonElement>(".gw-mode").forEach((b) => b.classList.toggle("is-on", b.dataset.mode === noteMode))
+      body.innerHTML = isCode ? codeView() : n.kind === "note" ? noteView() : tableView()
+      body.querySelectorAll<HTMLElement>("[data-n]").forEach((el) => el.addEventListener("click", () => select(el.dataset.n!)))
+    }
+
+    function select(id: string) {
+      selected = id
+      paintGraph()
+      paintView()
+    }
+    modes.querySelectorAll<HTMLButtonElement>(".gw-mode").forEach((b) =>
+      b.addEventListener("click", () => {
+        noteMode = b.dataset.mode as "rich" | "source"
+        paintView()
+      }),
+    )
+
+    // ------------------------------------------------------------------ the agent
+    const say = (who: "you" | "agent" | "tool", html: string) => {
+      const li = document.createElement("li")
+      li.className = `gw-msg gw-msg--${who}`
+      li.innerHTML = html
+      chat.appendChild(li)
+      return li
+    }
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+    ask.addEventListener("click", async () => {
+      ask.disabled = true
+      chat.innerHTML = ""
+      say("you", "What calls <code>step</code>?")
+      await wait(500)
+      say("tool", "graph.query · callers of <code>fn step</code> → 1 node")
+      agentHit = "solve"
+      select("solve")
+      await wait(600)
+      const li = say(
+        "agent",
+        `Only <code>solve</code>, in src/lib.rs. Rename <code>step</code> to <code>halve</code>? It is changed in 2 places:
+        <span class="gw-diff mono"><span class="del">- pub fn step(g: &amp;mut Grid) {</span><span class="add">+ pub fn halve(g: &amp;mut Grid) {</span><span class="del">-     for _ in 0..n { step(&amp;mut g); }</span><span class="add">+     for _ in 0..n { halve(&amp;mut g); }</span></span>
+        <span class="gw-gate"><button type="button" class="gw-allow">Allow</button><button type="button" class="gw-deny">Deny</button><span class="mono">nothing changes until you allow it</span></span>`,
+      )
+      const done = (allowed: boolean) => {
+        li.querySelector(".gw-gate")!.remove()
+        if (allowed) {
+          stepName = "halve"
+          agentHit = "step"
+          select("step")
+          say("agent", "Done. The file, the graph and every open view show the new name; the edit is in the change history, with restore.")
+        } else {
+          agentHit = null
+          paintGraph()
+          say("agent", "Nothing was changed.")
+        }
+        reset.hidden = false
+      }
+      li.querySelector<HTMLButtonElement>(".gw-allow")!.addEventListener("click", () => done(true))
+      li.querySelector<HTMLButtonElement>(".gw-deny")!.addEventListener("click", () => done(false))
+    })
+    reset.addEventListener("click", () => {
+      stepName = "step"
+      agentHit = null
+      chat.innerHTML = ""
+      ask.disabled = false
+      reset.hidden = true
+      select("solve")
+    })
+
+    select("solve")
+  }
+
+  document.querySelectorAll<HTMLElement>(".gw").forEach(init)
+</script>
+
+<style is:global>
+  /* global: the graph and the views are built by the script, so they carry no Astro scope;
+     every class here starts with gw- */
+  .gw {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 900px) {
+    .gw {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .gw-agent {
+      grid-column: 1 / -1;
+    }
+  }
+  .gw-graph,
+  .gw-view,
+  .gw-agent {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+
+  /* -------------------------------------------------------------- graph */
+  .gw-graph {
+    display: flex;
+    flex-direction: column;
+  }
+  .gw-sources,
+  .gw-status {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px 16px;
+    padding: 10px 16px;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+  }
+  .gw-sources {
+    border-bottom: 1px solid var(--line);
+  }
+  .gw-status {
+    border-top: 1px solid var(--line);
+  }
+  .gw-sources i,
+  .lg {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    border: 1.3px solid var(--fg);
+    vertical-align: -1px;
+  }
+  .src-folder {
+    border-radius: 2px;
+  }
+  .src-db {
+    border-radius: 50% / 30%;
+  }
+  .gw-legend {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  .lg {
+    margin-left: 6px;
+    margin-right: 3px;
+  }
+  .lg-file {
+    border-radius: 2px;
+  }
+  .lg-sym {
+    border-radius: 50%;
+    width: 7px;
+    height: 7px;
+    background: var(--fg);
+  }
+  .lg-note {
+    border-radius: 50%;
+  }
+  .lg-table {
+    background: linear-gradient(var(--fg), var(--fg)) center / 100% 1px no-repeat;
+  }
+  .gw-svg {
+    width: 100%;
+    height: auto;
+    flex: 1;
+    padding: 8px 4px;
+    color: var(--fg);
+  }
+  .gw-edge {
+    stroke: var(--line-strong);
+    stroke-width: 1.3;
+    transition: stroke 0.25s var(--ease);
+  }
+  .gw-edge--uses {
+    stroke-dasharray: 4 3;
+  }
+  .gw-edge--links {
+    stroke-dasharray: 1 3;
+    stroke-linecap: round;
+  }
+  .gw-edge--mentions {
+    stroke-dasharray: 6 3 1 3;
+  }
+  .gw-edge.is-near {
+    stroke: var(--fg);
+  }
+  .gw-arrowhead {
+    fill: var(--muted);
+  }
+  .gw-node {
+    cursor: pointer;
+    outline: none;
+    transition: opacity 0.25s var(--ease);
+  }
+  .gw-node .gw-hit {
+    fill: transparent;
+    stroke: none;
+  }
+  .gw-shape {
+    fill: var(--bg-raised);
+    stroke: currentColor;
+    stroke-width: 1.4;
+    transition: fill 0.25s var(--ease);
+  }
+  .gw-node--symbol .gw-shape {
+    fill: currentColor;
+  }
+  .gw-node--table .gw-shape {
+    stroke-linejoin: round;
+  }
+  .gw-label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    fill: var(--fg-2);
+    text-anchor: middle;
+    /* a halo in the card's colour, so edges never cross a label */
+    paint-order: stroke;
+    stroke: var(--bg-raised);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+  .gw-node.is-far {
+    opacity: 0.38;
+  }
+  .gw-node.is-sel .gw-shape {
+    fill: var(--fg);
+    stroke-width: 2;
+  }
+  .gw-node.is-sel .gw-label {
+    fill: var(--fg);
+    font-weight: 600;
+  }
+  .gw-node:focus-visible .gw-shape,
+  .gw-node:hover .gw-shape {
+    stroke-width: 2.4;
+  }
+  .gw-node.is-hit .gw-shape {
+    stroke-dasharray: 3 2;
+    animation: gw-spin 1.2s linear infinite;
+  }
+  @keyframes gw-spin {
+    to {
+      stroke-dashoffset: -10;
+    }
+  }
+
+  /* --------------------------------------------------------------- view */
+  .gw-view {
+    display: flex;
+    flex-direction: column;
+  }
+  .gw-tabbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 0 0 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11.5px;
+    min-height: 40px;
+  }
+  .gw-tab {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    padding-right: 14px;
+    border-right: 1px solid var(--line);
+    box-shadow: inset 0 -2px 0 var(--fg);
+  }
+  .gw-kind {
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .gw-modes {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    padding-right: 8px;
+  }
+  .gw-modes[hidden] {
+    display: none;
+  }
+  .gw-mode {
+    font: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .gw-mode.is-on {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .gw-body {
+    flex: 1;
+    min-height: 260px;
+  }
+  .gw-body .gw-code {
+    margin: 0;
+    padding: 14px 0;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    overflow-x: auto;
+  }
+  .gw-body .gw-line {
+    display: block;
+    padding: 0 16px 0 0;
+  }
+  .gw-body .gw-line.is-hl {
+    background: var(--bg-sunken);
+    box-shadow: inset 2px 0 0 var(--fg);
+  }
+  .gw-body .gw-ln {
+    display: inline-block;
+    width: 3.2em;
+    padding-right: 1.2em;
+    text-align: right;
+    color: var(--faint);
+    user-select: none;
+  }
+  .gw-body .gw-kw {
+    color: var(--muted);
+  }
+  .gw-body .gw-md {
+    padding: 14px 16px;
+    white-space: pre-wrap;
+  }
+  .gw-body :is(.gw-ref, .gw-wiki) {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+  }
+  .gw-body :is(.gw-ref, .gw-wiki):hover {
+    text-decoration-color: var(--fg);
+  }
+  .gw-body .gw-rich {
+    padding: 18px 20px;
+    font-size: 15px;
+  }
+  .gw-body .gw-rich h4 {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .gw-body .gw-rich p {
+    margin: 0 0 6px;
+    color: var(--fg-2);
+  }
+  .gw-body .gw-rich code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--bg-sunken);
+  }
+  .gw-body .gw-wiki {
+    font-weight: 500;
+  }
+  .gw-body .gw-wiki::before {
+    content: "[[";
+    color: var(--faint);
+  }
+  .gw-body .gw-wiki::after {
+    content: "]]";
+    color: var(--faint);
+  }
+  .gw-body .gw-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .gw-body .gw-table th,
+  .gw-body .gw-table td {
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .gw-body .gw-table th {
+    font-weight: 400;
+    color: var(--muted);
+    background: var(--bg-sunken);
+  }
+
+  /* -------------------------------------------------------------- agent */
+  .gw-agent-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 12px 16px;
+  }
+  .gw-agent-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .gw-ask,
+  .gw-reset,
+  .gw-agent .gw-allow,
+  .gw-agent .gw-deny {
+    font: inherit;
+    font-size: 14px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .gw-ask:hover:not(:disabled),
+  .gw-reset:hover {
+    border-color: var(--fg);
+  }
+  .gw-ask:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .gw-reset[hidden] {
+    display: none;
+  }
+  .gw-agent code,
+  .gw-agent code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+  .gw-chat {
+    list-style: none;
+    margin: 0;
+    padding: 0 16px;
+    display: grid;
+    gap: 10px;
+  }
+  .gw-chat:not(:empty) {
+    padding-bottom: 16px;
+  }
+  .gw-agent .gw-msg {
+    font-size: 14.5px;
+    max-width: 78ch;
+    animation: gw-in 0.3s var(--ease);
+  }
+  @keyframes gw-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  .gw-agent .gw-msg--you {
+    justify-self: end;
+    padding: 8px 14px;
+    border-radius: 14px;
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .gw-agent .gw-msg--tool {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding-left: 12px;
+    border-left: 2px solid var(--line-strong);
+  }
+  .gw-agent .gw-msg--agent {
+    color: var(--fg-2);
+  }
+  .gw-agent .gw-diff {
+    display: grid;
+    margin: 10px 0;
+    padding: 10px 12px;
+    font-size: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .gw-agent .gw-diff .del {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--faint);
+  }
+  .gw-agent .gw-diff .add {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .gw-agent .gw-gate {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+  }
+  .gw-agent .gw-gate .mono {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .gw-agent .gw-allow {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gw-node.is-hit .gw-shape,
+    .gw-agent .gw-msg {
+      animation: none;
+    }
+  }
+</style>

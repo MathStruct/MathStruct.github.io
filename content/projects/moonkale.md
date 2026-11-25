@@ -30,7 +30,8 @@ Tested on Linux (desktop and browser) and on Android:
 - folders, local or over SSH; code editing with syntax highlighting and language servers;
 - a WYSIWYG Markdown editor with wiki-links, backlinks, KaTeX formulas and Typst preview;
 - GPU-rendered 2D and 3D graph views, usable with 100k nodes;
-- databases (SQLite, DuckDB, embedded graph databases and more) as tables and as graphs;
+- databases (SQLite, DuckDB, embedded graph databases and more) as tables and as graphs; SQL
+  tables can be edited, with conflicts checked, and plotted;
 - git as a graph, keyword and meaning-based search, a change history with restore;
 - LLM agents behind an approval gate, and an MCP endpoint;
 - WebAssembly extensions and a node-based flow editor.
