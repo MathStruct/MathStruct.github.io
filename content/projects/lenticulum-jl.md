@@ -7,6 +7,10 @@ tags:
   - julia
 ---
 
+%% On mathstruct.org this page is replaced by landing/src/pages/projects/lenticulum-jl.astro (the
+promotional page, built with Astro). This note still feeds the site's search, graph and link
+previews: keep its facts in step with that page and with the library's README. %%
+
 **Vault:** <https://mathstruct.org/Lenticulum.jl/>, the theory, design and implementation notes
 **API documentation:** <https://mathstruct.org/Lenticulum.jl/api/dev/>
 **Source:** <https://github.com/MathStruct/Lenticulum.jl> ·
@@ -28,36 +32,65 @@ together with its inversions, composed along wires.
 
 ## What works
 
-- **Implicit learners**: diffusion models, deep equilibrium layers and energy models read as
-  relations and queried in any direction, with every answer a stable root of a learned field.
-- **Factors with exact or labelled approximate messages**: linear-Gaussian and acausal
-  constraint factors (exact), nonlinear factors by linearisation or the unscented transform,
-  non-Gaussian likelihoods (counts, ordered categories) by Laplace or expectation propagation.
-- **Graphs**: message passing on trees and loopy graphs, schedules, Bethe free energies,
-  polarity resolution (which way information flows).
-- **Tests against closed forms** wherever one exists, and implementation notes that say what
-  each part does not do.
+The library is built around three paths, each its own set of packages:
 
-It is a research prototype: Julia, not registered, APIs still changing.
+- **A. Gaussian factor graphs** (`LenticulumCore`, `Mycelium`, `Lenticulum`): exact smoothing and
+  state estimation on linear-Gaussian graphs, nonlinear measurements by linearisation, the free
+  energy and its gradient, as in GTSAM, with factors that can be learned.
+- **B. Relation learners** (`VariationalDiffusion`): a diffusion model queried in any direction by
+  root finding, with an adjoint backward pass, Laplace beliefs and conditional sampling.
+- **C. Structure and regimes** (`Lenticulum`, `Mycelium`, `MyceliumLearning`): switching and
+  regime factors, hierarchical models, expectation maximisation, search over structures.
+
+What is exact is tested against closed forms: random linear-Gaussian trees against the dense
+joint solve, switching chains against enumeration, the diffusion field against a Gaussian
+mixture's score. A relation is trained through its own inference with the AD backend chosen per
+model (Zygote, Enzyme, ForwardDiff, Mooncake or Reactant). On MNIST, one diffusion model of
+(image, label) classifies by root finding with the image clamped (96.1%, the same as a diffusion
+classifier with the same network); the other direction, label to image, does not work yet with
+that model ([the note](https://mathstruct.org/Lenticulum.jl/Relation-Learners/MNIST-in-Both-Directions)).
+
+Three further packages are off the three paths and not yet reviewed as the core was:
+`ImplicitLayers` (deep equilibrium models, neural ODEs), `AlgebraicFactors` (exact discrete toric
+models) and `AdversarialFactors` (implicit generative models). Their suites pass and run weekly.
+
+It is a research prototype: Julia, one author, in the
+[MathStruct registry](https://github.com/MathStruct/Registry), APIs still changing.
+
+## Known limits
+
+- a mixture message into a Gaussian or constraint factor is collapsed to its moments, unless the
+  switch and what it reaches share one cluster node;
+- inference cost grows quadratically with the number of separately parametrised factors (plates
+  with tied parameters are not affected);
+- the implicit learner recovers the ridge of a smoothed density, not the data's support, and every
+  query returns a root, on the relation or not;
+- learned networks are small by design: a factor's joint space has a handful of coordinates.
 
 ## Where it goes
 
-- learned factors with full-covariance uncertainty, so a learned relation can sit in a graph
-  with correlated beliefs;
-- graphs that grow as data arrive, and hyperparameters fitted by evidence;
-- a graphical editor for factor graphs in [[projects/moonkale|Moonkale]], and Lenticulum running
-  on [[projects/sophia|Sophia]]'s store.
+Proposed, in the library's backlog:
+
+- the factor graph as a compiled program, with [[projects/sophia|Sophia]] as its compiler backend;
+- factor graphs edited as diagrams in [[projects/moonkale|Moonkale]];
+- hyperparameters by the evidence, and incremental inference after a local change;
+- the whole library to the SciML standard: typed for dispatch, any AD backend, any array type,
+  parallel, benchmarked.
 
 [LenticulumLM](https://mathstruct.org/LenticulumLM/) is a sister project: a diffusion
-language model assembled from such relations, in which continuation, backward prediction and
-infilling are one model queried with different clamps.
+language model assembled from such relations.
 
 ## Installation
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/MathStruct/Lenticulum.jl")
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/MathStruct/Registry.git"))   # once
+Pkg.add("Lenticulum")             # paths A and C
+Pkg.add("VariationalDiffusion")   # path B
 ```
+
+A registered version is a snapshot; for the newest code, `Pkg.develop` a clone of the packages
+under `lib/`.
 
 ## Vault and API documentation
 
@@ -65,4 +98,4 @@ Pkg.add(url = "https://github.com/MathStruct/Lenticulum.jl")
   dead ends: start there to understand *why* it is built this way. Every page has a comment
   thread.
 - The [API documentation](https://mathstruct.org/Lenticulum.jl/api/dev/) is generated from
-  docstrings, with tutorials: start there to *use* it.
+  docstrings, with eleven tutorials: start there to *use* it.

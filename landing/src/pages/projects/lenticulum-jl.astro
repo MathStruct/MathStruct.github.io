@@ -1,0 +1,918 @@
+---
+// /projects/lenticulum-jl: the promotional page of Lenticulum.jl. It replaces the Quartz page
+// built from content/projects/lenticulum-jl.md (which stays, for the site's search and link
+// previews). Its facts come from the library's README and vault, as of 2026-11-24
+// (MathStruct/Lenticulum.jl@7037623); update them from there, not from memory.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+import FactorGraph from "../../components/FactorGraph.astro"
+import RelationExplorer from "../../components/lenticulum/RelationExplorer.astro"
+import HowItWorks from "../../components/lenticulum/HowItWorks.astro"
+import { demos } from "../../lib/lenticulum-demos"
+
+const links = {
+  vault: "https://mathstruct.org/Lenticulum.jl/",
+  api: "https://mathstruct.org/Lenticulum.jl/api/dev/",
+  tutorials: "https://mathstruct.org/Lenticulum.jl/api/dev/tutorials/01_circle/",
+  source: "https://github.com/MathStruct/Lenticulum.jl",
+  doi: "https://doi.org/10.5281/zenodo.23314723",
+  registry: "https://github.com/MathStruct/Registry",
+}
+
+const analogy = [
+  ["approximator", "functions f : X → Y (polynomials)", "relations R ⊆ Z (algebraic varieties)"],
+  ["inference", "forward evaluation", "root finding"],
+  ["backpropagation", "reverse-mode automatic differentiation", "the implicit function theorem"],
+  ["universal approximation", "continuous functions on compacta (Weierstraß)", "compact smooth manifolds (Nash–Tognoli)"],
+  ["well-posedness", "always single-valued", "may be multi-valued, or have no solution (then: the closest point)"],
+  ["symmetry", "a fixed input → output direction", "no distinguished input or output"],
+  ["cost of inference", "cheap", "expensive (Newton's method, …)"],
+  ["wiring", "directed acyclic graph", "arbitrary graph"],
+]
+
+const paths = [
+  {
+    id: "A",
+    title: "Gaussian factor graphs",
+    body: "Exact smoothing and state estimation on linear-Gaussian graphs, nonlinear measurements by linearisation, the free energy and its gradient: GTSAM-style graphs whose factors can be learned.",
+    pkgs: ["LenticulumCore", "Mycelium", "Lenticulum"],
+    link: { label: "Localisation tutorial", href: "https://mathstruct.org/Lenticulum.jl/api/dev/tutorials/08_localization/" },
+  },
+  {
+    id: "B",
+    title: "Relation learners",
+    body: "A diffusion model queried in any direction by root finding, with an adjoint backward pass, Laplace beliefs and conditional sampling.",
+    pkgs: ["VariationalDiffusion"],
+    link: { label: "Implicit Diffusion Learners", href: "https://mathstruct.org/Lenticulum.jl/Relation-Learners/Implicit-Diffusion-Learners" },
+  },
+  {
+    id: "C",
+    title: "Structure and regimes",
+    body: "Switching and regime factors, hierarchical models, expectation maximisation, and search over structures.",
+    pkgs: ["Lenticulum", "Mycelium", "MyceliumLearning"],
+    link: { label: "Switching mixtures tutorial", href: "https://mathstruct.org/Lenticulum.jl/api/dev/tutorials/11_switching_mixtures/" },
+  },
+]
+
+const works = [
+  "Exact inference on linear-Gaussian graphs, tested on random trees against the dense joint solve",
+  "Switching chains, tested against enumeration",
+  "Diffusion models as relations, queried in any direction; the field tested against a Gaussian mixture's score",
+  "Several answers per query: implicit_roots and implicit_mixture collect the branches, implicit_sample samples a query",
+  "Training a relation through its own inference, with the AD backend chosen per model: Zygote, Enzyme, ForwardDiff, Mooncake or Reactant",
+  "Installable from the MathStruct registry, with eleven tutorials, the API documentation and a theory vault",
+]
+const limits = [
+  "A mixture message into a Gaussian or constraint factor is collapsed to its moments, unless the switch and what it reaches share one cluster node",
+  "Inference cost grows quadratically with the number of separately parametrised factors (plates with tied parameters are not affected)",
+  "The implicit learner recovers the ridge of a smoothed density, not the data's support, and every query returns a root, on the relation or not",
+  "Learned networks are small by design: a factor's joint space has a handful of coordinates",
+]
+const next = [
+  { text: "The factor graph as a compiled program, with Sophia as its compiler backend", href: "/projects/sophia" },
+  { text: "Factor graphs edited as diagrams in Moonkale, the graph-native editor", href: "/projects/moonkale" },
+  { text: "Hyperparameters by the evidence, and incremental inference after a local change", href: links.vault },
+  { text: "The whole library to the SciML standard: typed for dispatch, any AD backend, any array type, parallel, benchmarked", href: links.vault },
+]
+
+const audiences = [
+  { who: "Learn by running code", start: "The tutorials: the circle, a trained MLP, a robot arm, GTSAM-style localisation, switching mixtures, …", href: links.tutorials },
+  { who: "From machine learning", start: "Implicit Diffusion Learners → Backpropagation through Implicit Inference", href: "https://mathstruct.org/Lenticulum.jl/Relation-Learners/Implicit-Diffusion-Learners" },
+  { who: "From statistics or robotics", start: "The localisation tutorial → The Linear Gaussian Chain → Bethe Free Energy", href: "https://mathstruct.org/Lenticulum.jl/api/dev/tutorials/08_localization/" },
+  { who: "From category theory", start: "Factors are Parameterized Statistical Games, with the CT-ML wiki as background", href: "https://mathstruct.org/Lenticulum.jl/Foundations/Factors-are-Parameterized-Statistical-Games" },
+  { who: "Looking for an API", start: "The API documentation", href: links.api },
+]
+
+const install = `using Pkg
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/MathStruct/Registry.git"))   # once
+Pkg.add("Lenticulum")             # paths A and C
+Pkg.add("VariationalDiffusion")   # path B`
+
+const example = `using VariationalDiffusion, LuxCore, Random
+sched = VPSDE()
+θ = range(0, 2π; length = 49)[1:48]
+circle = NoisePredictor(GaussianMixtureEps(sched, vcat(cos.(θ)', sin.(θ)'); s = 0.05), sched)
+ps, st = LuxCore.setup(Xoshiro(0), circle)            # a diffusion model of the unit circle
+m = ImplicitDiffusion(circle, field_nodes(Xoshiro(1), 2; samples = 8))
+
+up, _ = implicit_infer(m, [0.6,  0.5], [Inf, 0.0], ps, st)   # x clamped (∞), y free (0)
+dn, _ = implicit_infer(m, [0.6, -0.5], [Inf, 0.0], ps, st)   # same query, other start
+up.z[2], dn.z[2]                                              # ≈ (0.78, -0.78): two branches`
+
+const bibtex = `@software{lenticulum,
+  author    = {{MathStruct}},
+  title     = {Lenticulum.jl},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23314723},
+  url       = {https://mathstruct.org/Lenticulum.jl/}
+}`
+---
+
+<Layout
+  title="Lenticulum.jl: learn relations, not functions · MathStruct"
+  description="Lenticulum.jl learns relations instead of functions: one model, queried in any direction, composed on factor graphs, with uncertainty carried as beliefs. Open source, in Julia."
+  path="/projects/lenticulum-jl"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/#projects">← Projects · Models</a>
+          <h1 class="reveal popover-hint" style="--d:.05s">
+            Learn relations,<br /><span class="serif">not functions.</span>
+          </h1>
+          <p class="lede reveal popover-hint" style="--d:.1s">
+            A neural network learns a function and runs one way. <strong>Lenticulum.jl</strong> learns
+            a <em>relation</em> and decides at query time what is input and what is output. One trained
+            model answers “given <em>x</em>, what is <em>y</em>?”, “given <em>y</em>, what is <em>x</em>?”
+            and “fill in whatever is missing”.
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#get-started">Get started <span class="arrow">→</span></a>
+            <a class="btn" href={links.source}>Source on GitHub</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Julia</li>
+            <li>MIT licence</li>
+            <li>Research prototype</li>
+            <li><a href={links.doi}>DOI 10.5281/zenodo.23314723</a></li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <RelationExplorer mode="sweep" label="One model of a circle: as the clamped x moves, the answers for y follow it, two of them inside the circle and one past its edge" />
+          <figcaption class="mono">
+            one model of a circle · <span class="dash">- -</span> the clamped <em>x</em> · ● the answers for <em>y</em>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- try it -->
+    <section class="section" id="try">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Try it</span>
+            <h2 class="reveal" style="--d:.05s">One model, <span class="serif">any direction.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            This is the example from the README, running in your browser: a model of points on a
+            circle. Its field (the arrows) points towards the circle; a query clamps some coordinates
+            and follows the field in the others until it stops. A function can do none of these
+            three things. A relation does all of them.
+          </p>
+        </div>
+        <div class="try reveal">
+          <RelationExplorer mode="interactive" />
+        </div>
+        <p class="fineprint mono">
+          The model drawn is a Gaussian mixture on 48 points of the unit circle, the closed form the
+          README's example uses, a little more smoothed so that its field reads at this size. The
+          browser follows the field by mean-shift; Lenticulum solves for the same roots with Newton's
+          method.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- how it works -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">How it works</span>
+            <h2 class="reveal" style="--d:.05s">Four ideas, <span class="serif">one library.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Everything else follows from these. Deep equilibrium models share the inference and the
+            backward pass; the difference is that the direction is not fixed, and a factor carries an
+            energy with a probabilistic reading.
+          </p>
+        </div>
+        <HowItWorks />
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- analogy -->
+    <section class="section" id="analogy">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">The analogy behind it</span>
+            <h2 class="reveal" style="--d:.05s">Polynomials <span class="serif">and varieties.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            An explicit learner fits a polynomial <em>y</em> = <em>f</em><sub>θ</sub>(<em>x</em>). An
+            implicit learner fits the zero set of a polynomial residual, an algebraic variety. The
+            clean case that motivates every design choice:
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare">
+            <thead>
+              <tr><th></th><th>explicit</th><th>implicit · Lenticulum</th></tr>
+            </thead>
+            <tbody>
+              {analogy.map(([k, a, b]) => (
+                <tr><th scope="row">{k}</th><td>{a}</td><td>{b}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- compose -->
+    <section class="section compose" id="compose">
+      <div class="wrap compose-grid">
+        <div>
+          <span class="eyebrow reveal">Relations compose</span>
+          <h2 class="reveal" style="--d:.05s">Wired into <span class="serif">factor graphs.</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            Each factor is a learned or hand-written relation; each variable carries a belief: a
+            Gaussian, a mixture, samples, a categorical distribution. Inference is message passing,
+            and the free energy of the graph is the training objective.
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li>The same graphs and message passing as GTSAM-style SLAM, generalised to learned, non-Gaussian factors</li>
+            <li>Any Lux model wraps as a factor; all packages depend on LuxCore only</li>
+            <li>Underneath: a factor is a Bayesian lens once a query picks its direction. You don't need the category theory to use the code.</li>
+          </ul>
+        </div>
+        <div class="compose-art reveal" style="--d:.1s">
+          <FactorGraph />
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- paths -->
+    <section class="section" id="paths">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">What you can build</span>
+            <h2 class="reveal" style="--d:.05s">Three paths <span class="serif">through it.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            The library is built around three uses, and work on them comes first. Each is its own
+            set of packages; pick the one you need.
+          </p>
+        </div>
+        <div class="paths">
+          {paths.map((p, i) => (
+            <article class="path reveal" style={`--d:${0.06 * i}s`}>
+              <span class="path-id">{p.id}</span>
+              <h3>{p.title}</h3>
+              <p>{p.body}</p>
+              <ul class="pkgs mono">{p.pkgs.map((k) => <li>{k}</li>)}</ul>
+              <a class="more" href={p.link.href}>{p.link.label} <span aria-hidden="true">→</span></a>
+            </article>
+          ))}
+        </div>
+        <p class="fineprint mono">
+          Off the three paths, and not yet reviewed as the core was: deep equilibrium models and
+          neural ODEs (ImplicitLayers), exact discrete toric models (AlgebraicFactors), implicit
+          generative models (AdversarialFactors). Their test suites pass and run weekly.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- demos -->
+    {demos.length > 0 && (
+      <section class="section" id="demos">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow reveal">In action</span>
+              <h2 class="reveal" style="--d:.05s">Results, <span class="serif">with their sources.</span></h2>
+            </div>
+            <p class="lede reveal" style="--d:.1s">
+              Every result here links to the note or example it comes from, including what did not
+              work.
+            </p>
+          </div>
+          <div class="demos">
+            {demos.map((d) => (
+              <figure class:list={["demo", "reveal", { "demo--wide": d.wide }]}>
+                <div class="demo-media">
+                  {d.kind === "video" ? (
+                    <video src={d.src} poster={d.poster} muted loop playsinline preload="none" aria-label={d.alt} />
+                  ) : (
+                    <img src={d.src} alt={d.alt} loading="lazy" />
+                  )}
+                </div>
+                <figcaption>
+                  <h3>{d.title}</h3>
+                  <p>{d.caption}</p>
+                  <a class="more mono" href={d.source.href}>{d.source.label} <span aria-hidden="true">↗</span></a>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Where it stands</span>
+            <h2 class="reveal" style="--d:.05s">A prototype, <span class="serif">tested.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            What is exact is tested against closed forms; what is approximate says so. One author,
+            Julia, in the MathStruct registry, with APIs still moving.
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">Works today</h3>
+            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">Known limits</h3>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">Next, proposed</h3>
+            <ul class="ticks ticks--next">{next.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- get started -->
+    <section class="section" id="get-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Get started</span>
+            <h2 class="reveal" style="--d:.05s">Get started <span class="serif">in Julia.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Lenticulum is in the <a href={links.registry}>MathStruct registry</a>, next to General. A
+            registered version is a snapshot; for the newest code, develop a clone.
+          </p>
+        </div>
+        <div class="code-grid">
+          <figure class="code reveal">
+            <figcaption class="mono">Install</figcaption>
+            <pre><code>{install}</code></pre>
+          </figure>
+          <figure class="code reveal" style="--d:.06s">
+            <figcaption class="mono">The circle, in code · no training needed</figcaption>
+            <pre><code>{example}</code></pre>
+          </figure>
+        </div>
+
+        <h3 class="sub reveal">Where to start, by background</h3>
+        <ul class="audiences">
+          {audiences.map((a, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={a.href}>
+                <span class="who">{a.who}</span>
+                <span class="start">{a.start}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- cite -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">Cite and contribute</span>
+          <h2 class="reveal" style="--d:.05s">Open, <span class="serif">and credited.</span></h2>
+          <p class="reveal" style="--d:.1s">
+            Every release is archived on Zenodo. Contributions of every kind are welcome (code, notes,
+            derivations, reviews), and how credit and authorship work is written down in
+            <a href="https://github.com/MathStruct/Lenticulum.jl/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a>.
+            Every page of the <a href={links.vault}>vault</a> has a comment thread.
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.vault}>Read the vault <span class="arrow">→</span></a>
+            <a class="btn" href={links.api}>API documentation</a>
+          </div>
+          <p class="sister reveal" style="--d:.18s">
+            Sister project: <a href="https://mathstruct.org/LenticulumLM/">LenticulumLM</a>, a
+            language model assembled from such relations.
+          </p>
+        </div>
+        <figure class="code reveal" style="--d:.08s">
+          <figcaption class="mono">BibTeX · the concept DOI resolves to the latest version</figcaption>
+          <pre><code>{bibtex}</code></pre>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.1fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7.4vw, 96px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, .step, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .facts a:hover {
+    color: var(--fg);
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    max-width: 520px;
+    justify-self: center;
+  }
+  .hero-art figcaption {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .hero-art em {
+    font-family: var(--font-serif);
+    font-size: 1.2em;
+    color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------- try it */
+  .try {
+    max-width: 1000px;
+  }
+  .try :global(.rx--interactive) {
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 900px) {
+    .try :global(.rx--interactive) {
+      grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+      grid-template-areas: "controls controls" "stage readout";
+      column-gap: 48px;
+      align-items: start;
+    }
+    .try :global(.rx-controls) {
+      grid-area: controls;
+    }
+    .try :global(.rx-stage) {
+      grid-area: stage;
+    }
+    .try :global(.rx-readout) {
+      grid-area: readout;
+      margin-top: 4px;
+    }
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* ------------------------------------------------------------- analogy */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 22%;
+  }
+  .compare td {
+    color: var(--fg-2);
+  }
+  .compare td:last-child {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  /* ------------------------------------------------------------- compose */
+  .compose-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .compose-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .compose h2 {
+    margin: 20px 0 24px;
+  }
+  .compose-art {
+    max-width: 540px;
+    width: 100%;
+    justify-self: center;
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* --------------------------------------------------------------- paths */
+  .paths {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 900px) {
+    .paths {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .path {
+    display: flex;
+    flex-direction: column;
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition:
+      border-color 0.3s var(--ease),
+      background-color 0.3s var(--ease);
+  }
+  .path:hover {
+    border-color: var(--fg);
+    background: var(--bg-raised);
+  }
+  .path-id {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+  }
+  .path h3 {
+    margin-top: 22px;
+    font-size: 24px;
+  }
+  .path p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .pkgs {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pkgs li {
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+  }
+  .more {
+    margin-top: auto;
+    padding-top: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    align-self: flex-start;
+  }
+  .more:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* --------------------------------------------------------------- demos */
+  .demos {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 900px) {
+    .demos {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .demo--wide {
+      grid-column: 1 / -1;
+    }
+  }
+  .demo {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* white, like the figures the library's scripts draw */
+  .demo-media {
+    background: #fff;
+    padding: clamp(12px, 3vw, 28px);
+  }
+  .demo-media :is(img, video) {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+  }
+  .demo figcaption {
+    padding: 24px 28px 28px;
+    display: flex;
+    flex-direction: column;
+  }
+  .demo h3 {
+    font-size: 22px;
+  }
+  .demo p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 90ch;
+  }
+  .demo .more {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+    font-size: 15px;
+    gap: 14px;
+  }
+
+  /* --------------------------------------------------------- get started */
+  .code-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .code figcaption {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .code pre {
+    margin: 0;
+    padding: 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--fg);
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .audiences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audiences a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.3s var(--ease);
+  }
+  @media (min-width: 760px) {
+    .audiences a {
+      grid-template-columns: 260px 1fr auto;
+      align-items: baseline;
+    }
+  }
+  .audiences a:hover {
+    padding-left: 10px;
+  }
+  .who {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .start {
+    color: var(--muted);
+    font-size: 15px;
+    grid-column: 1;
+  }
+  @media (min-width: 760px) {
+    .start {
+      grid-column: 2;
+    }
+  }
+  .audiences .arrow {
+    grid-column: -2;
+    grid-row: 1;
+    transition: transform 0.3s var(--ease);
+  }
+  .audiences a:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* ---------------------------------------------------------------- cite */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .cite-band p a,
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .cite-band p a:hover,
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .sister {
+    margin-top: 32px;
+    font-size: 15px;
+  }
+</style>

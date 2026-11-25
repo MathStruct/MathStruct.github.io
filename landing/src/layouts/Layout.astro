@@ -4,9 +4,13 @@ import "../styles/global.css"
 interface Props {
   title: string
   description: string
+  /** the page's address without ".html" (as GitHub Pages serves it), e.g. "/projects/lenticulum-jl" */
+  path?: string
+  /** social preview image, from the site root */
+  image?: string
 }
-const { title, description } = Astro.props
-const url = new URL(Astro.url.pathname, Astro.site)
+const { title, description, path = "/", image = "/static/og-image.png" } = Astro.props
+const url = new URL(path, Astro.site)
 ---
 
 <!doctype html>
@@ -23,7 +27,7 @@ const url = new URL(Astro.url.pathname, Astro.site)
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={url} />
-    <meta property="og:image" content={new URL("/static/og-image.png", Astro.site)} />
+    <meta property="og:image" content={new URL(image, Astro.site)} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
