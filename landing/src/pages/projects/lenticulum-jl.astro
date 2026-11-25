@@ -20,84 +20,126 @@ const links = {
   registry: "https://github.com/MathStruct/Registry",
 }
 
+// Projects and terms the page mentions, for readers who don't know them. In the arrays below,
+// L(key, text) puts a link into a string that is rendered with set:html.
+const ext: Record<string, string> = {
+  julia: "https://julialang.org/",
+  lux: "https://lux.csail.mit.edu/",
+  luxcore: "https://github.com/LuxDL/Lux.jl/tree/main/lib/LuxCore",
+  zygote: "https://github.com/FluxML/Zygote.jl",
+  enzyme: "https://github.com/EnzymeAD/Enzyme.jl",
+  forwarddiff: "https://github.com/JuliaDiff/ForwardDiff.jl",
+  mooncake: "https://github.com/chalk-lab/Mooncake.jl",
+  reactant: "https://github.com/EnzymeAD/Reactant.jl",
+  optimisers: "https://github.com/FluxML/Optimisers.jl",
+  rxinfer: "https://github.com/ReactiveBayes/RxInfer.jl",
+  gtsam: "https://gtsam.org/",
+  sciml: "https://sciml.ai/",
+  deq: "https://docs.sciml.ai/DeepEquilibriumNetworks/stable/",
+  diffeqflux: "https://docs.sciml.ai/DiffEqFlux/stable/",
+  homotopy: "https://www.juliahomotopycontinuation.org/",
+  general: "https://github.com/JuliaRegistries/General",
+  deqpaper: "https://arxiv.org/abs/1909.01377",
+  sde: "https://arxiv.org/abs/2011.13456",
+  reddiff: "https://arxiv.org/abs/2305.04391",
+  factorgraph: "https://en.wikipedia.org/wiki/Factor_graph",
+  slam: "https://en.wikipedia.org/wiki/Simultaneous_localization_and_mapping",
+  kalman: "https://en.wikipedia.org/wiki/Kalman_filter",
+  bp: "https://en.wikipedia.org/wiki/Belief_propagation",
+  elbo: "https://en.wikipedia.org/wiki/Evidence_lower_bound",
+  em: "https://en.wikipedia.org/wiki/Expectation%E2%80%93maximization_algorithm",
+  diffusion: "https://en.wikipedia.org/wiki/Diffusion_model",
+  ad: "https://en.wikipedia.org/wiki/Automatic_differentiation",
+  ift: "https://en.wikipedia.org/wiki/Implicit_function_theorem",
+  variety: "https://en.wikipedia.org/wiki/Algebraic_variety",
+  weierstrass: "https://en.wikipedia.org/wiki/Stone%E2%80%93Weierstrass_theorem",
+  newton: "https://en.wikipedia.org/wiki/Newton%27s_method",
+  meanshift: "https://en.wikipedia.org/wiki/Mean_shift",
+  plates: "https://en.wikipedia.org/wiki/Plate_notation",
+  evidence: "https://en.wikipedia.org/wiki/Marginal_likelihood",
+  gan: "https://en.wikipedia.org/wiki/Generative_adversarial_network",
+}
+const L = (key: string, text: string) => `<a class="il" href="${ext[key]}">${text}</a>`
+
 const analogy = [
-  ["approximator", "functions f : X → Y (polynomials)", "relations R ⊆ Z (algebraic varieties)"],
-  ["inference", "forward evaluation", "root finding"],
-  ["backpropagation", "reverse-mode automatic differentiation", "the implicit function theorem"],
-  ["universal approximation", "continuous functions on compacta (Weierstraß)", "compact smooth manifolds (Nash–Tognoli)"],
-  ["well-posedness", "always single-valued", "may be multi-valued, or have no solution (then: the closest point)"],
-  ["symmetry", "a fixed input → output direction", "no distinguished input or output"],
-  ["cost of inference", "cheap", "expensive (Newton's method, …)"],
-  ["wiring", "directed acyclic graph", "arbitrary graph"],
+  ["what is learned", "a function f : X → Y, like a polynomial", `a relation R ⊆ Z: the zero set of a polynomial, an ${L("variety", "algebraic variety")}`],
+  ["answering a query", "one forward evaluation", "root finding: solve r(z) = 0 for the unknowns"],
+  ["backpropagation", `reverse-mode ${L("ad", "automatic differentiation")}`, `the ${L("ift", "implicit function theorem")}`],
+  ["what it can approximate", `any continuous function on a bounded, closed set (${L("weierstrass", "Weierstraß")})`, "any compact smooth manifold: a closed surface, a loop (Nash–Tognoli)"],
+  ["how many answers", "always exactly one", "several, or none (then the closest point)"],
+  ["direction", "fixed: input → output", "none: any coordinate can be the input"],
+  ["cost of a query", "cheap", `expensive: an iterative solver (${L("newton", "Newton's method")}, …)`],
+  ["wiring", "a directed acyclic graph, as in a neural network", "any graph, loops included"],
 ]
 
 const paths = [
   {
     id: "A",
     title: "Gaussian factor graphs",
-    body: "Exact smoothing and state estimation on linear-Gaussian graphs, nonlinear measurements by linearisation, the free energy and its gradient: GTSAM-style graphs whose factors can be learned.",
+    body: `Exact state estimation and smoothing, as a ${L("kalman", "Kalman smoother")} does, on linear-Gaussian graphs; nonlinear measurements by linearisation; the free energy and its gradient. The graphs of ${L("gtsam", "GTSAM")}, with factors that can be learned.`,
     pkgs: ["LenticulumCore", "Mycelium", "Lenticulum"],
     link: { label: "Localisation tutorial", href: "https://mathstruct.org/Lenticulum.jl/api/dev/tutorials/08_localization/" },
   },
   {
     id: "B",
     title: "Relation learners",
-    body: "A diffusion model queried in any direction by root finding, with an adjoint backward pass, Laplace beliefs and conditional sampling.",
+    body: `A ${L("diffusion", "diffusion model")} queried in any direction by root finding, with gradients through the solver, a Gaussian error bar around each answer (the Laplace approximation) and conditional sampling.`,
     pkgs: ["VariationalDiffusion"],
     link: { label: "Implicit Diffusion Learners", href: "https://mathstruct.org/Lenticulum.jl/Relation-Learners/Implicit-Diffusion-Learners" },
   },
   {
     id: "C",
     title: "Structure and regimes",
-    body: "Switching and regime factors, hierarchical models, expectation maximisation, and search over structures.",
+    body: `Factors that switch between regimes, like a system with several operating modes; hierarchical models; ${L("em", "expectation maximisation")}; and search over model structures.`,
     pkgs: ["Lenticulum", "Mycelium", "MyceliumLearning"],
     link: { label: "Switching mixtures tutorial", href: "https://mathstruct.org/Lenticulum.jl/api/dev/tutorials/11_switching_mixtures/" },
   },
 ]
 
+// Each body is rendered with set:html, so it can hold L(...) links.
 const apiPkg = (slug: string) => `${links.api}packages/${slug}/`
 const packages = [
   { name: "LenticulumCore", role: "the vocabulary", slug: "lenticulumcore", deps: ["LuxCore"],
-    body: "What a factor is: channels, polarities, an energy and an entropy. Also the belief types (Gaussian, categorical, mixture, Dirac, samples), which convert to RxInfer's. It is to Lenticulum what LuxCore is to Lux." },
+    body: `What a factor is: its channels, polarities, energy and entropy. Also the belief types, the probability distributions a variable can carry (Gaussian, categorical, mixture, a point mass, samples), which convert to those of ${L("rxinfer", "RxInfer")}. It is to Lenticulum what ${L("luxcore", "LuxCore")} is to Lux: the interface, without the implementations.` },
   { name: "Mycelium", role: "inference", slug: "mycelium", deps: ["LenticulumCore"],
-    body: "How factors are wired and in what order they talk: graphs, messages, schedules, plates, cluster nodes and the free energy. Lux has no counterpart to this layer, because in Lux the wiring is a DAG and the order follows from it." },
+    body: `How factors are wired and in what order they talk: graphs, messages, schedules, ${L("plates", "plates")} (repeated copies of a subgraph), cluster nodes (variables handled jointly) and the free energy. Lux has no counterpart to this layer, because in a neural network the wiring is a directed acyclic graph and the order follows from it.` },
   { name: "MyceliumLearning", role: "learning", slug: "myceliumlearning", deps: ["Mycelium", "ImplicitSolvers"],
-    body: "What changes the parameters, as opposed to what infers the beliefs: free-energy gradients, expectation maximisation and the optimiser step." },
+    body: `What changes the parameters, as opposed to what infers the beliefs: free-energy gradients, ${L("em", "expectation maximisation")} (EM) and the optimiser step.` },
   { name: "Lenticulum", role: "the factors", slug: "lenticulum", deps: ["Mycelium", "MyceliumLearning"],
-    body: "The user-facing package: linear-Gaussian and nonlinear factors, linear constraints, switching and regime factors, likelihoods, and their closed-form M-steps. The Gaussian factor doubles as the test oracle, since everything it computes has a closed form." },
+    body: "The user-facing package: linear-Gaussian and nonlinear factors, linear constraints, switching and regime factors, likelihoods, and their closed-form M-steps (the update step of EM). The Gaussian factor doubles as the test oracle: everything it computes has a closed form, so the rest of the library is checked against it." },
   { name: "VariationalDiffusion", role: "relation learners", slug: "variationaldiffusion", deps: ["Mycelium", "ImplicitSolvers"],
-    body: "Diffusion models as relations: a VP-SDE, implicit inference with an adjoint backward pass, Laplace and mixture answers, conditional sampling, RED-Diff and ProxDM." },
+    body: `${L("diffusion", "Diffusion models")} as relations: the ${L("sde", "variance-preserving SDE")} of DDPM-style models, implicit inference with gradients through the solver, answers as a Gaussian (Laplace) or a mixture of branches, conditional sampling, and two inverse-problem solvers, ${L("reddiff", "RED-Diff")} and ProxDM.` },
   { name: "ImplicitSolvers", role: "the numerics", slug: "implicitsolvers", deps: ["LinearAlgebra"],
-    body: "The shared solvers: linear solves (dense, GMRES, MINRES), root finding (Picard, Broyden, Newton, trust region) and the linear systems behind implicit-function adjoints. Every solve returns a report." },
+    body: `The shared numerics: linear solves (dense, GMRES, MINRES), root finding (Picard, Broyden, ${L("newton", "Newton")}, trust region) and the linear systems that give gradients through the implicit function theorem. Every solve returns a report on how it converged.` },
 ]
 const unreviewed = [
   { name: "ImplicitLayers", slug: "implicitlayers",
-    body: "Deep equilibrium networks and neural ODEs from SciML, wrapped as factors. Given the inner network, they can be queried in more than one direction." },
+    body: `${L("deq", "Deep equilibrium networks")} and ${L("diffeqflux", "neural ODEs")} from ${L("sciml", "SciML")}, wrapped as factors. Given the inner network rather than the finished layer, they can be queried in more than one direction.` },
   { name: "AlgebraicFactors", slug: "algebraicfactors",
-    body: "Exact discrete log-linear (toric) models, with optional multi-branch answers through homotopy continuation." },
+    body: `Exact log-linear models of discrete data (toric models, in algebraic statistics), with optional multi-branch answers through ${L("homotopy", "homotopy continuation")}.` },
   { name: "AdversarialFactors", slug: "adversarialfactors",
-    body: "Implicit generative models, with the GAN read as a factor graph. A generator is a function with no residual behind it, so these factors run one way only." },
+    body: `Implicit generative models, with the ${L("gan", "GAN")} read as a factor graph. A generator is a function with no residual behind it, so these factors run one way only.` },
 ]
 
 const works = [
-  "Exact inference on linear-Gaussian graphs, tested on random trees against the dense joint solve",
-  "Switching chains, tested against enumeration",
-  "Diffusion models as relations, queried in any direction; the field tested against a Gaussian mixture's score",
-  "Several answers per query: implicit_roots and implicit_mixture collect the branches, implicit_sample samples a query",
-  "Training a relation through its own inference, with the AD backend chosen per model: Zygote, Enzyme, ForwardDiff, Mooncake or Reactant",
+  "Exact inference on linear-Gaussian graphs, checked on random trees against solving the whole joint Gaussian at once",
+  "Switching chains, checked against enumerating every sequence of regimes",
+  "Diffusion models as relations, queried in any direction; the learned field checked against the exact score (gradient of the log-density) of a Gaussian mixture",
+  "Several answers per query: <code>implicit_roots</code> and <code>implicit_mixture</code> collect the branches, <code>implicit_sample</code> samples a query",
+  `Training a relation through its own inference, with any of Julia's ${L("ad", "automatic differentiation")} libraries, chosen per model: ${L("zygote", "Zygote")}, ${L("enzyme", "Enzyme")}, ${L("forwarddiff", "ForwardDiff")}, ${L("mooncake", "Mooncake")} or ${L("reactant", "Reactant")}`,
   "Installable from the MathStruct registry, with eleven tutorials, the API documentation and a theory vault",
 ]
 const limits = [
-  "A mixture message into a Gaussian or constraint factor is collapsed to its moments, unless the switch and what it reaches share one cluster node",
-  "Inference cost grows quadratically with the number of separately parametrised factors (plates with tied parameters are not affected)",
-  "The implicit learner recovers the ridge of a smoothed density, not the data's support, and every query returns a root, on the relation or not",
-  "Learned networks are small by design: a factor's joint space has a handful of coordinates",
+  "A multi-modal belief (a mixture) that reaches a Gaussian or constraint factor is replaced by one Gaussian with the same mean and covariance, unless the two share a cluster node",
+  `Inference cost grows quadratically with the number of factors that have their own parameters (${L("plates", "plates")}, repeated copies with shared parameters, are not affected)`,
+  "The diffusion learner finds the crest of a slightly blurred data density, not the exact set the data lies on, and every query returns a root, whether it lies on the relation or not",
+  "Learned networks are small by design: a factor relates only a handful of coordinates",
 ]
 const next = [
   { text: "The factor graph as a compiled program, with Sophia as its compiler backend", href: "/projects/sophia" },
   { text: "Factor graphs edited as diagrams in Moonkale, the graph-native editor", href: "/projects/moonkale" },
-  { text: "Hyperparameters by the evidence, and incremental inference after a local change", href: links.vault },
-  { text: "The whole library to the SciML standard: typed for dispatch, any AD backend, any array type, parallel, benchmarked", href: links.vault },
+  { text: "Hyperparameters chosen by the evidence (the marginal likelihood), and incremental inference after a local change", href: links.vault },
+  { text: "The whole library to the standard of SciML, Julia's scientific machine learning ecosystem: any AD library, any array type (GPUs included), parallel, benchmarked", href: links.vault },
 ]
 
 const audiences = [
@@ -161,7 +203,7 @@ const bibtex = `@software{lenticulum,
             <a class="btn" href={links.source}>Source on GitHub</a>
           </div>
           <ul class="facts mono reveal" style="--d:.2s">
-            <li>Julia</li>
+            <li><a href={ext.julia}>Julia</a></li>
             <li>MIT licence</li>
             <li>Research prototype</li>
             <li><a href={links.doi}>DOI 10.5281/zenodo.23314723</a></li>
@@ -186,9 +228,10 @@ const bibtex = `@software{lenticulum,
           </div>
           <p class="lede reveal" style="--d:.1s">
             This is the example from the README, running in your browser: a model of points on a
-            circle. Its field (the arrows) points towards the circle; a query clamps some coordinates
-            and follows the field in the others until it stops. A function can do none of these
-            three things. A relation does all of them.
+            circle. The arrows show which way the model pushes a point to bring it onto the circle.
+            A query holds some coordinates fixed (“clamps” them) and follows the arrows in the others
+            until it stops. Given <em>x</em>, a circle has two values of <em>y</em>, or none: a
+            function can't return either. A relation returns both.
           </p>
         </div>
         <div class="try reveal">
@@ -197,8 +240,8 @@ const bibtex = `@software{lenticulum,
         <p class="fineprint mono">
           The model drawn is a Gaussian mixture on 48 points of the unit circle, the closed form the
           README's example uses, a little more smoothed so that its field reads at this size. The
-          browser follows the field by mean-shift; Lenticulum solves for the same roots with Newton's
-          method.
+          browser follows the field by <a class="il" href={ext.meanshift}>mean shift</a>; Lenticulum
+          solves for the same roots with <a class="il" href={ext.newton}>Newton's method</a>.
         </p>
       </div>
     </section>
@@ -212,9 +255,10 @@ const bibtex = `@software{lenticulum,
             <h2 class="reveal" style="--d:.05s">Four ideas, <span class="serif">one library.</span></h2>
           </div>
           <p class="lede reveal" style="--d:.1s">
-            Everything else follows from these. Deep equilibrium models share the inference and the
-            backward pass; the difference is that the direction is not fixed, and a factor carries an
-            energy with a probabilistic reading.
+            Everything else follows from these. If you know
+            <a href={ext.deqpaper}>deep equilibrium models</a> (networks whose output is the fixed
+            point of a layer), steps 3 and 4 will look familiar. The difference is that the direction
+            is not fixed, and each factor has an energy that reads as a negative log-probability.
           </p>
         </div>
         <HowItWorks />
@@ -230,9 +274,10 @@ const bibtex = `@software{lenticulum,
             <h2 class="reveal" style="--d:.05s">Polynomials <span class="serif">and varieties.</span></h2>
           </div>
           <p class="lede reveal" style="--d:.1s">
-            An explicit learner fits a polynomial <em>y</em> = <em>f</em><sub>θ</sub>(<em>x</em>). An
-            implicit learner fits the zero set of a polynomial residual, an algebraic variety. The
-            clean case that motivates every design choice:
+            A neural network is like a fitted polynomial <em>y</em> = <em>f</em><sub>θ</sub>(<em>x</em>).
+            Lenticulum instead fits the set where a polynomial in all the coordinates is zero, as the
+            circle is the zero set of <em>x</em>² + <em>y</em>² − 1. The polynomial case is the clean
+            one, and it motivates every design choice:
           </p>
         </div>
         <div class="table-wrap reveal">
@@ -242,7 +287,7 @@ const bibtex = `@software{lenticulum,
             </thead>
             <tbody>
               {analogy.map(([k, a, b]) => (
-                <tr><th scope="row">{k}</th><td>{a}</td><td>{b}</td></tr>
+                <tr><th scope="row">{k}</th><td set:html={a} /><td set:html={b} /></tr>
               ))}
             </tbody>
           </table>
@@ -257,14 +302,18 @@ const bibtex = `@software{lenticulum,
           <span class="eyebrow reveal">Relations compose</span>
           <h2 class="reveal" style="--d:.05s">Wired into <span class="serif">factor graphs.</span></h2>
           <p class="lede reveal" style="--d:.1s">
-            Each factor is a learned or hand-written relation; each variable carries a belief: a
-            Gaussian, a mixture, samples, a categorical distribution. Inference is message passing,
-            and the free energy of the graph is the training objective.
+            Larger models are <a href={ext.factorgraph}>factor graphs</a>: variables (circles) joined
+            by factors (squares), the language of Kalman filters, robot mapping and probabilistic
+            programming. Each factor is a learned or hand-written relation; each variable carries a
+            belief, a probability distribution over its value. Inference is
+            <a href={ext.bp}>message passing</a>: neighbours exchange beliefs until they agree. The
+            training objective is the graph's free energy, the negative <a href={ext.elbo}>ELBO</a>
+            of variational inference.
           </p>
           <ul class="ticks reveal" style="--d:.14s">
-            <li>The same graphs and message passing as GTSAM-style SLAM, generalised to learned, non-Gaussian factors</li>
-            <li>Any Lux model wraps as a factor; all packages depend on LuxCore only</li>
-            <li>Underneath: a factor is a Bayesian lens once a query picks its direction. You don't need the category theory to use the code.</li>
+            <li><span>The same graphs and message passing as <a href={ext.gtsam}>GTSAM</a>, the library behind much of robot localisation and mapping (<a href={ext.slam}>SLAM</a>), generalised to learned, non-Gaussian factors</span></li>
+            <li><span>Any model built with <a href={ext.lux}>Lux</a>, Julia's neural-network library, wraps as a factor</span></li>
+            <li>Underneath, in the language of category theory, a factor is a Bayesian lens once a query picks its direction. You don't need any of that to use the code.</li>
           </ul>
         </div>
         <div class="compose-art reveal" style="--d:.1s">
@@ -291,7 +340,7 @@ const bibtex = `@software{lenticulum,
             <article class="path reveal" style={`--d:${0.06 * i}s`}>
               <span class="path-id">{p.id}</span>
               <h3>{p.title}</h3>
-              <p>{p.body}</p>
+              <p set:html={p.body} />
               <ul class="pkgs mono">{p.pkgs.map((k) => <li>{k}</li>)}</ul>
               <a class="more" href={p.link.href}>{p.link.label} <span aria-hidden="true">→</span></a>
             </article>
@@ -313,22 +362,25 @@ const bibtex = `@software{lenticulum,
             <h2 class="reveal" style="--d:.05s">Nine packages, <span class="serif">one stack.</span></h2>
           </div>
           <p class="lede reveal" style="--d:.1s">
-            Lenticulum is split into small packages under <code>lib/</code>, each built on the one
-            below it. All of them depend on LuxCore only, not on Lux, Zygote or Optimisers.
-            Automatic differentiation and Reactant arrive through package extensions, for whichever
-            backend you load.
+            Lenticulum is split into small packages under <code>lib/</code>, each built on the ones
+            above it in this list. All of them depend only on <a href={ext.luxcore}>LuxCore</a>, the
+            small interface package of <a href={ext.lux}>Lux</a>, and not on Lux itself or on
+            training libraries like <a href={ext.zygote}>Zygote</a> and
+            <a href={ext.optimisers}>Optimisers</a>. Automatic differentiation and
+            <a href={ext.reactant}>Reactant</a> (which compiles models for GPUs and TPUs) are
+            switched on by package extensions, when you load them.
           </p>
         </div>
         <ol class="pkg-list">
           {packages.map((k, i) => (
             <li class="reveal" style={`--d:${0.04 * i}s`}>
-              <a href={apiPkg(k.slug)}>
-                <span class="pkg-name mono">{k.name}</span>
+              <div class="pkg-row">
+                <a class="pkg-name mono" href={apiPkg(k.slug)}>{k.name}</a>
                 <span class="pkg-role">{k.role}</span>
-                <span class="pkg-body">{k.body}</span>
+                <span class="pkg-body" set:html={k.body} />
                 <span class="pkg-deps mono">builds on {k.deps.join(" · ")}</span>
-                <span class="arrow" aria-hidden="true">→</span>
-              </a>
+                <a class="pkg-api mono" href={apiPkg(k.slug)} aria-label={`${k.name} API documentation`}>API →</a>
+              </div>
             </li>
           ))}
         </ol>
@@ -336,11 +388,11 @@ const bibtex = `@software{lenticulum,
         <ul class="pkg-list pkg-list--off">
           {unreviewed.map((k, i) => (
             <li class="reveal" style={`--d:${0.04 * i}s`}>
-              <a href={apiPkg(k.slug)}>
-                <span class="pkg-name mono">{k.name}</span>
-                <span class="pkg-body">{k.body}</span>
-                <span class="arrow" aria-hidden="true">→</span>
-              </a>
+              <div class="pkg-row">
+                <a class="pkg-name mono" href={apiPkg(k.slug)}>{k.name}</a>
+                <span class="pkg-body" set:html={k.body} />
+                <a class="pkg-api mono" href={apiPkg(k.slug)} aria-label={`${k.name} API documentation`}>API →</a>
+              </div>
             </li>
           ))}
         </ul>
@@ -392,18 +444,18 @@ const bibtex = `@software{lenticulum,
             <h2 class="reveal" style="--d:.05s">A prototype, <span class="serif">tested.</span></h2>
           </div>
           <p class="lede reveal" style="--d:.1s">
-            What is exact is tested against closed forms; what is approximate says so. One author,
-            Julia, in the MathStruct registry, with APIs still moving.
+            What is exact is tested against closed-form answers; what is approximate says so. One
+            author, in the MathStruct registry, with APIs still moving.
           </p>
         </div>
         <div class="status">
           <div class="col reveal">
             <h3 class="col-h mono">Works today</h3>
-            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+            <ul class="ticks">{works.map((w) => <li><span set:html={w} /></li>)}</ul>
           </div>
           <div class="col reveal" style="--d:.06s">
             <h3 class="col-h mono">Known limits</h3>
-            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li><span set:html={w} /></li>)}</ul>
           </div>
           <div class="col reveal" style="--d:.12s">
             <h3 class="col-h mono">Next, proposed</h3>
@@ -422,8 +474,10 @@ const bibtex = `@software{lenticulum,
             <h2 class="reveal" style="--d:.05s">Get started <span class="serif">in Julia.</span></h2>
           </div>
           <p class="lede reveal" style="--d:.1s">
-            Lenticulum is in the <a href={links.registry}>MathStruct registry</a>, next to General. A
-            registered version is a snapshot; for the newest code, develop a clone.
+            Lenticulum is in the <a href={links.registry}>MathStruct registry</a>, which Julia's
+            package manager uses alongside <a href={ext.general}>General</a>, the default one. A
+            registered version is a snapshot; for the newest code, clone the repository and
+            <code>Pkg.develop</code> it.
           </p>
         </div>
         <div class="code-grid">
@@ -792,19 +846,23 @@ const bibtex = `@software{lenticulum,
   .pkg-list li {
     border-bottom: 1px solid var(--line);
   }
-  .pkg-list a {
+  .pkg-row {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 6px 24px;
     padding: 22px 8px;
     transition: background-color 0.3s var(--ease);
   }
-  .pkg-list a:hover {
+  .pkg-row:hover {
     background: var(--bg-raised);
   }
   .pkg-name {
     font-size: 16px;
     font-weight: 500;
+  }
+  .pkg-name:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .pkg-role {
     font-family: var(--font-serif);
@@ -823,12 +881,18 @@ const bibtex = `@software{lenticulum,
     font-size: 11.5px;
     color: var(--faint);
   }
-  .pkg-list .arrow {
-    display: none;
+  .pkg-api {
+    grid-column: 1 / -1;
+    justify-self: start;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pkg-api:hover {
+    color: var(--fg);
   }
   @media (min-width: 900px) {
-    .pkg-list a {
-      grid-template-columns: 200px 150px 1fr 24px;
+    .pkg-row {
+      grid-template-columns: 200px 150px 1fr 56px;
       align-items: baseline;
     }
     .pkg-role {
@@ -842,22 +906,18 @@ const bibtex = `@software{lenticulum,
       grid-column: 3;
       grid-row: 2;
     }
-    .pkg-list .arrow {
-      display: block;
+    .pkg-api {
       grid-column: 4;
       grid-row: 1;
-      transition: transform 0.3s var(--ease);
+      justify-self: end;
     }
-    .pkg-list a:hover .arrow {
-      transform: translateX(4px);
-    }
-    .pkg-list--off a {
-      grid-template-columns: 200px 1fr 24px;
+    .pkg-list--off .pkg-row {
+      grid-template-columns: 200px 1fr 56px;
     }
     .pkg-list--off .pkg-body {
       grid-column: 2;
     }
-    .pkg-list--off .arrow {
+    .pkg-list--off .pkg-api {
       grid-column: 3;
     }
   }

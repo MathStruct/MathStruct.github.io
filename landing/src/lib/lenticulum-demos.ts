@@ -27,7 +27,7 @@ export const demos: Demo[] = [
   {
     title: "Classify by clamping the image",
     caption:
-      "One diffusion model of (image, label) on MNIST. Clamp the 784 pixels, free the 10 label coordinates, and the root is the classification: 96.1% on 9000 test digits, the same as a diffusion classifier reading the same network (95.8%). The most ambiguous digits land between two codes, like this “2” written as an “a” at 2: 0.49 / 3: 0.48. The other direction, label to image, does not work yet with this model; the note says why.",
+      "One diffusion model of (image, label) on MNIST. Clamp the 784 pixels, free the 10 label coordinates (a one-hot code), and the root is the classification: 96.1% on 9000 test digits, about the same as a standard diffusion classifier built on the same network (95.8%). The most ambiguous digits land between two codes, like this “2” written as an “a” at 2: 0.49 / 3: 0.48. The other direction, label to image, does not work yet with this model; the note says why.",
     kind: "image",
     src: "/projects/lenticulum-jl-media/mnist_ambiguous.png",
     alt: "Eight handwritten test digits, each titled with the two largest label coordinates of its root, e.g. 2: 0.49 · 3: 0.48 for a 2 written like an a",
