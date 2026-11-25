@@ -1,0 +1,63 @@
+---
+import "../styles/global.css"
+
+interface Props {
+  title: string
+  description: string
+}
+const { title, description } = Astro.props
+const url = new URL(Astro.url.pathname, Astro.site)
+---
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={url} />
+    <link rel="icon" href="/static/icon.png" />
+    <link rel="alternate" type="application/rss+xml" title="MathStruct blog" href="/index.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={url} />
+    <meta property="og:image" content={new URL("/static/og-image.png", Astro.site)} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <script is:inline>
+      // Same key and values as Quartz's dark-mode toggle, so the choice carries over to every
+      // other page of mathstruct.org (same origin, same localStorage).
+      ;(() => {
+        let t = null
+        try {
+          t = localStorage.getItem("theme")
+        } catch {}
+        if (t !== "light" && t !== "dark")
+          t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+        const html = document.documentElement
+        html.dataset.theme = t
+        html.classList.remove("no-js")
+      })()
+    </script>
+  </head>
+  <body>
+    <slot />
+    <script>
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              e.target.classList.add("in")
+              io.unobserve(e.target)
+            }
+          }
+        },
+        { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
+      )
+      document.querySelectorAll(".reveal").forEach((el) => io.observe(el))
+    </script>
+  </body>
+</html>

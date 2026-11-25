@@ -1,0 +1,870 @@
+---
+import Layout from "../layouts/Layout.astro"
+import Nav from "../components/Nav.astro"
+import FactorGraph from "../components/FactorGraph.astro"
+import Glyph from "../components/Glyph.astro"
+import Footer from "../components/Footer.astro"
+import { projects } from "../lib/projects"
+import { latestPosts, personSlug } from "../lib/blog"
+
+const posts = latestPosts(3)
+const fmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+
+const stats = [
+  { value: "4", label: "projects, one idea" },
+  { value: "64 566", label: "theorems traced to their axioms" },
+  { value: "100k", label: "nodes in a GPU graph view" },
+  { value: "MIT", label: "open source, and it stays that way" },
+]
+
+const principles = [
+  {
+    title: "Open by default",
+    body: "Code, notes, design decisions and negative results are public. The software is MIT-licensed.",
+  },
+  {
+    title: "Every project is a vault",
+    body: "Concepts, derivations and design notes link to each other and to the code, including what it does not do and what went wrong on the way.",
+  },
+  {
+    title: "Tested against what is known",
+    body: "Where a closed form exists, the code is tested against it. Approximations say that they are approximations.",
+  },
+  {
+    title: "Asynchronous, on GitHub",
+    body: "Issues, pull requests and discussions. A comment on any page of any vault goes straight into GitHub Discussions.",
+  },
+]
+
+const meets = [
+  {
+    from: "Lenticulum",
+    to: "Moonkale",
+    body: "A Lenticulum model is a factor graph; Moonkale is to edit it as a diagram that stays a diagram instead of becoming code.",
+  },
+  {
+    from: "Sophia",
+    to: "Moonkale",
+    body: "Sophia is designed as the store that Moonkale edits: a definition, its proof and its tests are one node rather than three files.",
+  },
+  {
+    from: "Wiki",
+    to: "everything",
+    body: "Factors are Bayesian lenses and wiring is composition. The wiki is where that is worked out.",
+  },
+]
+---
+
+<Layout
+  title="MathStruct: open-source tooling for mathematics, scientific computing and AI"
+  description="MathStruct is an open-source research collective developing tooling for mathematics, scientific computing and AI/ML, in which models, code and knowledge are built from parts that compose."
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow reveal">Open-source research collective</span>
+          <h1 class="reveal" style="--d:.05s">
+            Structure that <span class="serif">composes.</span>
+          </h1>
+          <p class="lede reveal" style="--d:.12s">
+            We build tooling for mathematics, scientific computing and AI/ML: libraries, editors
+            and stores in which models, code and knowledge are made of parts that compose, with
+            the mathematics that says <em>why</em> they compose written down next to the code.
+          </p>
+          <div class="cta reveal" style="--d:.18s">
+            <a class="btn btn--solid" href="#projects">Explore the projects <span class="arrow">→</span></a>
+            <a class="btn" href="/about">Our mission</a>
+          </div>
+        </div>
+        <div class="hero-art">
+          <FactorGraph />
+        </div>
+      </div>
+
+      <div class="wrap">
+        <dl class="stats">
+          {
+            stats.map((s, i) => (
+              <div class="stat reveal" style={`--d:${0.05 * i}s`}>
+                <dt>{s.label}</dt>
+                <dd>{s.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- projects -->
+    <section class="section" id="projects">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Projects</span>
+            <h2 class="reveal" style="--d:.05s">One idea, <span class="serif">three layers.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Most tools treat a model as a function, a program as text in files, and knowledge as
+            documents in folders. We treat all three as <strong>graphs of parts with typed
+            interfaces</strong>, and build one project per layer, on a shared mathematical
+            foundation.
+          </p>
+        </div>
+
+        <ol class="projects">
+          {
+            projects.map((p, i) => (
+              <li class="project reveal">
+                <div class="p-index">
+                  <span class="mono">0{i + 1}</span>
+                  <span class="p-layer">{p.layer}</span>
+                </div>
+                <div class="p-glyph">
+                  <Glyph kind={p.layer} />
+                </div>
+                <div class="p-main">
+                  <h3>
+                    <a href={p.page}>{p.name}</a>
+                  </h3>
+                  <p class="p-tagline serif">{p.tagline}</p>
+                  <p class="p-desc">{p.description}</p>
+                  <ul class="p-highlights">
+                    {p.highlights.map((h) => (
+                      <li>{h}</li>
+                    ))}
+                  </ul>
+                  {p.related && (
+                    <p class="p-related">
+                      Sister project: <a href={p.related.href}>{p.related.label}</a>, {p.related.note}.
+                    </p>
+                  )}
+                </div>
+                <div class="p-side">
+                  <div class="p-meta">
+                    <span class="badge">
+                      <i />
+                      {p.status}
+                    </span>
+                    <span class="stack mono">{p.stack}</span>
+                  </div>
+                  <div class="p-links">
+                    {p.links.map((l) => (
+                      <a href={l.href}>
+                        {l.label}
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    ))}
+                  </div>
+                  <a class="p-more" href={p.page}>
+                    Overview <span aria-hidden="true">→</span>
+                  </a>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- statement -->
+    <section class="statement">
+      <div class="wrap">
+        <p class="reveal">
+          We are early, and we say so plainly. <span class="dim">Each project lists what works,
+          what does not, and what is planned.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- approach -->
+    <section class="section" id="approach">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Approach</span>
+            <h2 class="reveal" style="--d:.05s">Research, <span class="serif">written down.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Every project is also a published vault of linked notes: the theory, the design
+            decisions and the dead ends sit beside the code they explain, and every page can be
+            commented on.
+          </p>
+        </div>
+
+        <div class="principles">
+          {
+            principles.map((p, i) => (
+              <article class="principle reveal" style={`--d:${0.06 * i}s`}>
+                <span class="mono num">0{i + 1}</span>
+                <h3>{p.title}</h3>
+                <p>{p.body}</p>
+              </article>
+            ))
+          }
+        </div>
+
+        <div class="meets">
+          <h3 class="reveal">How the layers meet</h3>
+          <div class="meets-grid">
+            {
+              meets.map((m, i) => (
+                <div class="meet reveal" style={`--d:${0.06 * i}s`}>
+                  <span class="mono route">
+                    {m.from} <span aria-hidden="true">→</span>
+                    <span class="sr">to</span> {m.to}
+                  </span>
+                  <p>{m.body}</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------------ blog -->
+    {
+      posts.length > 0 && (
+        <section class="section" id="writing">
+          <div class="wrap">
+            <div class="blog-head">
+              <div>
+                <span class="eyebrow reveal">Writing</span>
+                <h2 class="reveal" style="--d:.05s">
+                  From the <span class="serif">blog.</span>
+                </h2>
+              </div>
+              <a class="btn reveal" href="/blog/">
+                All posts <span class="arrow">→</span>
+              </a>
+            </div>
+            <div class="posts">
+              {posts.map((p, i) => (
+                <article class="post reveal" style={`--d:${0.06 * i}s`}>
+                  <a class="post-link" href={`/${p.slug}`} aria-label={p.title} />
+                  <time class="mono" datetime={p.created.toISOString().slice(0, 10)}>
+                    {fmt.format(p.created)}
+                  </time>
+                  <h3>{p.title}</h3>
+                  <p>{p.description}</p>
+                  <footer>
+                    {p.authors.map((a) => (
+                      <a href={`/${personSlug(a)}`}>{a}</a>
+                    ))}
+                    {p.tags.length > 0 && <span class="mono tags">{p.tags.map((t) => `#${t}`).join("  ")}</span>}
+                  </footer>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )
+    }
+
+    <!-- ------------------------------------------------------------------ join -->
+    <section class="join" id="join">
+      <div class="wrap">
+        <div class="join-head">
+          <span class="eyebrow reveal">Work with us</span>
+          <h2 class="reveal" style="--d:.05s">Build it <span class="serif">with us.</span></h2>
+        </div>
+        <div class="join-grid">
+          <article class="reveal">
+            <h3>Researchers &amp; contributors</h3>
+            <p>
+              Every page of every vault has a comment thread: sign in with GitHub and comment.
+              Questions, corrections and "this is wrong" are all welcome. Contributions are
+              credited, including authorship on releases.
+            </p>
+          </article>
+          <article class="reveal" style="--d:.06s">
+            <h3>Funders</h3>
+            <p>
+              The projects are open research infrastructure for mathematics, scientific computing
+              and machine learning. Read what we are trying to do, and why.
+            </p>
+          </article>
+          <article class="reveal" style="--d:.12s">
+            <h3>Companies &amp; investors</h3>
+            <p>
+              The open-source core stays open source. Applications built downstream of it can be
+              commercial. If that interests you, get in touch.
+            </p>
+          </article>
+        </div>
+        <div class="join-cta reveal">
+          <a class="btn btn--solid" href="https://github.com/MathStruct/MathStruct.github.io/discussions">
+            Start a discussion <span class="arrow">→</span>
+          </a>
+          <a class="btn" href="/people/">Meet the people</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(40px, 7vw, 88px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: center top;
+    mask-image: radial-gradient(ellipse 70% 60% at 62% 38%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 62% 38%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(52px, 8.6vw, 112px);
+    letter-spacing: -0.05em;
+    line-height: 0.94;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+    padding-right: 0.06em;
+  }
+  .hero-copy .lede {
+    margin-top: 28px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  .hero-copy em {
+    font-family: var(--font-serif);
+    font-size: 1.12em;
+    line-height: 1;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 36px;
+  }
+  .hero-art {
+    max-width: 560px;
+    width: 100%;
+    justify-self: center;
+  }
+
+  .stats {
+    position: relative;
+    margin: clamp(56px, 8vw, 96px) 0 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 860px) {
+    .stats {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .stat {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    padding: 28px 20px 4px 0;
+  }
+  .stat + .stat {
+    padding-left: 20px;
+    border-left: 1px solid var(--line);
+  }
+  @media (max-width: 859px) {
+    .stat + .stat:nth-child(3) {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .stat:nth-child(n + 3) {
+      border-top: 1px solid var(--line);
+    }
+  }
+  .stat dd {
+    margin: 0;
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat dt {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ------------------------------------------------------------ projects */
+  .projects {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+  .project {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 36px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 720px) {
+    .project {
+      grid-template-columns: 96px 1fr;
+      column-gap: 32px;
+    }
+    .p-index {
+      grid-column: 1 / -1;
+    }
+    .p-glyph {
+      grid-row: 2 / 4;
+    }
+  }
+  @media (min-width: 1080px) {
+    .project {
+      grid-template-columns: 120px 88px 1fr 280px;
+      column-gap: 40px;
+      padding: 48px 0;
+    }
+    .p-index {
+      grid-column: auto;
+    }
+    .p-glyph {
+      grid-row: auto;
+    }
+  }
+  .project::before {
+    content: "";
+    position: absolute;
+    inset: 0 calc(var(--gutter) * -1);
+    background: var(--bg-raised);
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+    z-index: -1;
+  }
+  .project:hover::before {
+    opacity: 1;
+  }
+  .p-index {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (min-width: 1080px) {
+    .p-index {
+      flex-direction: column;
+      gap: 6px;
+    }
+  }
+  .p-layer {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg);
+  }
+  .p-glyph {
+    width: 88px;
+    height: 88px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--fg);
+    transition:
+      background-color 0.35s var(--ease),
+      color 0.35s var(--ease);
+  }
+  .project:hover .p-glyph {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+  .p-main h3 {
+    font-size: clamp(28px, 3.2vw, 40px);
+    letter-spacing: -0.035em;
+  }
+  .p-main h3 a {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+    transition: background-size 0.4s var(--ease);
+  }
+  .p-main h3 a:hover {
+    background-size: 100% 1px;
+  }
+  .p-tagline {
+    margin: 6px 0 0;
+    font-size: 24px;
+    color: var(--fg-2);
+    line-height: 1.25;
+  }
+  .p-desc {
+    margin: 16px 0 0;
+    color: var(--fg-2);
+    max-width: 60ch;
+  }
+  .p-highlights {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .p-highlights li {
+    display: flex;
+    gap: 12px;
+  }
+  .p-highlights li::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-top: 0.62em;
+    border: 1px solid var(--fg);
+    transform: rotate(45deg);
+  }
+  .p-related {
+    margin: 18px 0 0;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .p-related a {
+    color: var(--fg);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .p-related a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .p-side {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  @media (min-width: 720px) and (max-width: 1079px) {
+    .p-side {
+      grid-column: 2;
+    }
+  }
+  .p-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .badge i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--fg);
+    box-shadow: 0 0 0 3px var(--glow);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      box-shadow: 0 0 0 6px transparent;
+    }
+  }
+  .stack {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .p-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .p-links a {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    font-size: 14px;
+    transition:
+      border-color 0.2s var(--ease),
+      background-color 0.2s var(--ease);
+  }
+  .p-links a span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .p-links a:hover {
+    border-color: var(--fg);
+    background: var(--bg);
+  }
+  .p-more {
+    font-size: 15px;
+    font-weight: 500;
+    align-self: flex-start;
+    border-bottom: 1px solid var(--line-strong);
+    transition: border-color 0.2s var(--ease);
+  }
+  .p-more:hover {
+    border-bottom-color: var(--fg);
+  }
+
+  /* ----------------------------------------------------------- statement */
+  .statement {
+    padding: clamp(72px, 10vw, 128px) 0;
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .statement p {
+    margin: 0;
+    max-width: 22ch;
+    font-family: var(--font-serif);
+    font-size: clamp(36px, 5.6vw, 72px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .statement .dim {
+    opacity: 0.5;
+  }
+
+  /* ------------------------------------------------------------ approach */
+  .principles {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 720px) {
+    .principles {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1080px) {
+    .principles {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .principle {
+    background: var(--bg);
+    padding: 32px 28px 36px;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.3s var(--ease);
+  }
+  .principle:hover {
+    background: var(--bg-raised);
+  }
+  .principle .num {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: auto;
+    padding-bottom: 48px;
+  }
+  .principle p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .meets {
+    margin-top: clamp(56px, 8vw, 96px);
+  }
+  .meets > h3 {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .meets-grid {
+    display: grid;
+    gap: 32px;
+    margin-top: 28px;
+  }
+  @media (min-width: 860px) {
+    .meets-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+    }
+  }
+  .route {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .meet p {
+    margin: 10px 0 0;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  /* ---------------------------------------------------------------- blog */
+  .blog-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: end;
+    gap: 24px;
+    margin-bottom: clamp(36px, 5vw, 56px);
+  }
+  .blog-head h2 {
+    margin-top: 20px;
+  }
+  .posts {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 860px) {
+    .posts {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .post {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 28px;
+    min-height: 280px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition:
+      border-color 0.3s var(--ease),
+      transform 0.3s var(--ease),
+      background-color 0.3s var(--ease);
+  }
+  .post:hover {
+    border-color: var(--fg);
+    background: var(--bg-raised);
+    transform: translateY(-2px);
+  }
+  .post-link {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .post time {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .post h3 {
+    margin-top: 18px;
+    font-size: 23px;
+  }
+  .post p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .post footer {
+    margin-top: auto;
+    padding-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+  .post footer a {
+    position: relative;
+    z-index: 1;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .post footer a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .tags {
+    font-size: 12px;
+    color: var(--faint);
+    white-space: pre;
+  }
+
+  /* ---------------------------------------------------------------- join */
+  .join {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .join-head h2 {
+    margin-top: 20px;
+    font-size: clamp(44px, 7vw, 88px);
+  }
+  .join-grid {
+    display: grid;
+    gap: 36px;
+    margin-top: clamp(40px, 6vw, 72px);
+  }
+  @media (min-width: 860px) {
+    .join-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .join-grid article {
+    border-top: 1px solid var(--fg);
+    padding-top: 20px;
+  }
+  .join-grid p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .join-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 48px;
+  }
+</style>

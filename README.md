@@ -1,7 +1,9 @@
 # MathStruct
 
-The organisation website for [MathStruct](https://github.com/MathStruct), built
-with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
+The organisation website for [MathStruct](https://github.com/MathStruct). The front page is
+a small [Astro](https://astro.build) site in `landing/`; everything else (blog, projects,
+people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
+same style as the project wikis.
 
 **Live site:** <https://mathstruct.org/>
 
@@ -18,6 +20,7 @@ with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault.
 │   ├── projects/      #   one page per project
 │   ├── guides/        #   authoring guide
 │   └── templates/     #   Obsidian templates (not published)
+├── landing/           # the front page (Astro): mathstruct.org/ only
 ├── site/              # this site's Quartz config; the engine is MathStruct/quartz
 └── .github/workflows/ # build and deploy to GitHub Pages
 ```
@@ -54,14 +57,30 @@ math: typst               # optional; omit for LaTeX/KaTeX
   note that used both, which is the list to work through if you want to make the
   vault pure.
 
+## Front page
+
+`landing/` is an Astro project with one page, `src/pages/index.astro`. `site/build.sh` builds
+it after Quartz and copies `landing/dist/` over Quartz's output, so it replaces only
+`/index.html` (plus `/assets/` and `/mark.png`). It is black and white, with a light and a dark
+theme that share Quartz's `theme` setting, so a choice made on one page holds on all of them.
+
+- The project list is `landing/src/lib/projects.ts`; keep it in step with `content/projects/`.
+- The latest three blog posts are read from `content/blog/` at build time: nothing to update.
+- `content/index.md` is not shown as a page any more, but it still feeds Quartz's search.
+
+```bash
+cd landing && npm install && npm run dev    # http://localhost:4321, reloads as you edit
+```
+
 ## Local preview
 
 ```bash
 site/build.sh --serve      # needs git and Node 22+
 ```
 
-Then open <http://localhost:8080>; it rebuilds as you edit. `site/build.sh`
-alone builds into `site/public/`.
+Then open <http://localhost:8080>; it rebuilds as you edit. In this mode `/` is Quartz's
+rendering of `content/index.md`, not the Astro front page (see above). `site/build.sh` alone
+builds everything, front page included, into `site/public/`.
 
 A pull request is built by CI too: the rendered site is attached to the
 workflow run as the `site` artifact, so reviewers can look at it without

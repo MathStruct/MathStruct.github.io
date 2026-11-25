@@ -3,6 +3,10 @@ title: MathStruct
 description: An open-source research collective developing tooling for mathematics, scientific computing and AI/ML.
 ---
 
+%% The front page mathstruct.org/ is built from landing/ (Astro) and replaces this note when the
+site is built. This note still feeds Quartz's search, graph and backlinks, so keep it in step
+with landing/src/. %%
+
 **MathStruct is an open-source research collective. We develop tooling for mathematics,
 scientific computing and AI/ML**: libraries, editors and stores in which models, code and
 knowledge are built from parts that compose, with the mathematics that says why they compose

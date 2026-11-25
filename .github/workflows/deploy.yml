@@ -1,6 +1,7 @@
 name: Deploy site to GitHub Pages
 
-# Builds the site with site/build.sh (MathStruct's shared Quartz, https://github.com/MathStruct/quartz)
+# Builds the site with site/build.sh (MathStruct's shared Quartz, https://github.com/MathStruct/quartz,
+# plus the Astro front page in landing/)
 # and deploys it on every push to master. A pull request is built too, without deploying: the
 # rendered site is attached to the run as the "site" artifact, so a change can be looked at
 # before it is merged (download, unzip, `npx serve <folder>`).
@@ -30,6 +31,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
       - name: Build site with Quartz
         run: site/build.sh
       - name: Attach the rendered site to a pull request's run

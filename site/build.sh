@@ -32,3 +32,12 @@ fi
 OUT="$HERE/public"
 for arg in "$@"; do [[ "$arg" == --* ]] || OUT="$arg"; done
 cp -r "$HERE/redirects/." "$OUT/"
+
+# The front page is not Quartz: landing/ is an Astro site whose only page replaces Quartz's
+# /index.html (plus its bundles in /assets/ and the logo). Every other page stays a Quartz page.
+# Preview it on its own with `npm run dev` in landing/.
+LANDING="$HERE/../landing"
+if [[ -z "${SKIP_LANDING:-}" ]]; then
+  (cd "$LANDING" && { [[ -d node_modules ]] || npm ci --no-audit --no-fund; } && npx astro build --silent)
+  cp -r "$LANDING/dist/." "$OUT/"
+fi

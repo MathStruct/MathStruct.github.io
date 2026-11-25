@@ -1,0 +1,87 @@
+---
+// One line drawing per layer, in the style of the hero's factor graph.
+interface Props {
+  kind: "models" | "code" | "interface" | "foundation"
+}
+const { kind } = Astro.props
+---
+
+<svg class="glyph" viewBox="0 0 96 96" aria-hidden="true">
+  {
+    kind === "models" && (
+      <g>
+        <path d="M24 30 L44 44 M24 66 L44 52 M52 48 L72 48" />
+        <circle cx="20" cy="27" r="7" />
+        <circle cx="20" cy="69" r="7" />
+        <rect x="42" y="42" width="12" height="12" rx="1.5" class="fill" />
+        <circle cx="78" cy="48" r="7" />
+      </g>
+    )
+  }
+  {
+    kind === "code" && (
+      <g>
+        <path d="M48 26 L28 48 M48 26 L68 48 M28 56 L28 66 M68 56 L58 70 M68 56 L78 70" />
+        <rect x="40" y="16" width="16" height="10" rx="1.5" class="fill" />
+        <rect x="20" y="46" width="16" height="10" rx="1.5" />
+        <rect x="60" y="46" width="16" height="10" rx="1.5" />
+        <rect x="20" y="66" width="16" height="10" rx="1.5" />
+        <rect x="50" y="70" width="16" height="10" rx="1.5" />
+        <rect x="70" y="70" width="16" height="10" rx="1.5" />
+      </g>
+    )
+  }
+  {
+    kind === "interface" && (
+      <g>
+        <rect x="12" y="18" width="72" height="60" rx="5" />
+        <path d="M12 30 H84" />
+        <circle cx="19" cy="24" r="1.6" class="fill" />
+        <circle cx="25" cy="24" r="1.6" class="fill" />
+        <path d="M32 46 L52 40 M32 46 L46 64 M52 40 L66 58 M46 64 L66 58" class="thin" />
+        <circle cx="32" cy="46" r="4" class="fill" />
+        <circle cx="52" cy="40" r="4" />
+        <circle cx="46" cy="64" r="4" />
+        <circle cx="66" cy="58" r="4" class="fill" />
+      </g>
+    )
+  }
+  {
+    kind === "foundation" && (
+      <g>
+        <path d="M30 26 H62 M26 32 V60 M68 32 V60 M30 66 H62" />
+        <path d="M58 22 L63 26 L58 30 M22 56 L26 61 L30 56 M64 56 L68 61 L72 56 M58 62 L63 66 L58 70" />
+        <text x="20" y="31">A</text>
+        <text x="66" y="31">B</text>
+        <text x="20" y="72">C</text>
+        <text x="66" y="72">D</text>
+      </g>
+    )
+  }
+</svg>
+
+<style>
+  .glyph {
+    width: 100%;
+    height: 100%;
+  }
+  .glyph :is(path, circle, rect) {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .glyph .fill {
+    fill: currentColor;
+  }
+  .glyph .thin {
+    stroke-opacity: 0.55;
+  }
+  .glyph text {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 13px;
+    fill: currentColor;
+  }
+</style>

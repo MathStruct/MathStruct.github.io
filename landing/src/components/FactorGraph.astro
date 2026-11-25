@@ -1,0 +1,227 @@
+---
+// The hero picture: a small factor graph. Circles are variables (beliefs), squares are factors
+// (relations), and the dots travelling along the wires are messages, as in Lenticulum.jl.
+type Node = { id: string; x: number; y: number; label?: string }
+
+const vars: Node[] = [
+  { id: "x", x: 70, y: 96, label: "x" },
+  { id: "y", x: 70, y: 256, label: "y" },
+  { id: "z", x: 70, y: 410, label: "z" },
+  { id: "t", x: 300, y: 176, label: "θ" },
+  { id: "h", x: 300, y: 340, label: "h" },
+  { id: "w", x: 500, y: 258, label: "w" },
+]
+const factors: Node[] = [
+  { id: "p", x: 300, y: 54 },
+  { id: "a", x: 185, y: 136 },
+  { id: "b", x: 185, y: 298 },
+  { id: "c", x: 185, y: 395 },
+  { id: "d", x: 410, y: 208 },
+  { id: "e", x: 410, y: 310 },
+]
+const edges: [string, string][] = [
+  ["p", "t"],
+  ["a", "x"],
+  ["a", "t"],
+  ["b", "y"],
+  ["b", "t"],
+  ["b", "h"],
+  ["c", "z"],
+  ["c", "h"],
+  ["d", "t"],
+  ["d", "w"],
+  ["e", "h"],
+  ["e", "w"],
+]
+const at = Object.fromEntries([...vars, ...factors].map((n) => [n.id, n]))
+const R = 19
+const S = 11
+
+// shorten a wire so it starts and ends at the shapes' rims
+function wire(f: string, v: string) {
+  const a = at[f]
+  const b = at[v]
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len = Math.hypot(dx, dy)
+  const ux = dx / len
+  const uy = dy / len
+  const s = S / Math.max(Math.abs(ux), Math.abs(uy))
+  return {
+    x1: +(a.x + ux * s).toFixed(1),
+    y1: +(a.y + uy * s).toFixed(1),
+    x2: +(b.x - ux * R).toFixed(1),
+    y2: +(b.y - uy * R).toFixed(1),
+  }
+}
+
+const wires = edges.map(([f, v], i) => ({ ...wire(f, v), i }))
+---
+
+<svg class="fg" viewBox="0 0 570 460" role="img" aria-labelledby="fg-title">
+  <title id="fg-title">A factor graph: variables joined by factors, with messages passing along the wires</title>
+
+  <g class="wires">
+    {
+      wires.map((w) => (
+        <line x1={w.x1} y1={w.y1} x2={w.x2} y2={w.y2} pathLength="1" style={`--i:${w.i}`} />
+      ))
+    }
+  </g>
+
+  <g class="messages">
+    {
+      wires.map((w) => {
+        const fwd = `M${w.x1},${w.y1} L${w.x2},${w.y2}`
+        const back = `M${w.x2},${w.y2} L${w.x1},${w.y1}`
+        const dur = 2.6 + (w.i % 4) * 0.45
+        return (
+          <>
+            <circle r="2.6">
+              <animateMotion dur={`${dur}s`} begin={`${(w.i * 0.37) % 2.4}s`} repeatCount="indefinite" path={fwd} />
+            </circle>
+            <circle r="2.6" class="back">
+              <animateMotion
+                dur={`${dur + 0.8}s`}
+                begin={`${1.2 + ((w.i * 0.53) % 2.1)}s`}
+                repeatCount="indefinite"
+                path={back}
+              />
+            </circle>
+          </>
+        )
+      })
+    }
+  </g>
+
+  <g class="factors">
+    {factors.map((f, i) => <rect x={f.x - S} y={f.y - S} width={2 * S} height={2 * S} rx="2" style={`--i:${i}`} />)}
+  </g>
+
+  <g class="vars">
+    {
+      vars.map((v, i) => (
+        <g style={`--i:${i}`}>
+          <circle cx={v.x} cy={v.y} r={R + 7} class="halo" />
+          <circle cx={v.x} cy={v.y} r={R} class="node" />
+          <text x={v.x} y={v.y + 7} text-anchor="middle">
+            {v.label}
+          </text>
+        </g>
+      ))
+    }
+  </g>
+
+  <g class="notes" aria-hidden="true">
+    <text x="322" y="58">prior</text>
+    <text x="336" y="182" class="formula">p(θ | x, y)</text>
+    <text x="436" y="400">messages ⇄ beliefs</text>
+    <line x1="434" y1="388" x2="420" y2="330" />
+  </g>
+</svg>
+
+<style>
+  .fg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .wires line {
+    stroke: var(--fg);
+    stroke-opacity: 0.35;
+    stroke-width: 1.1;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: draw 1.4s var(--ease) forwards;
+    animation-delay: calc(0.25s + var(--i) * 0.07s);
+  }
+  .factors rect {
+    fill: var(--fg);
+    opacity: 0;
+    animation: pop 0.6s var(--ease) forwards;
+    animation-delay: calc(0.6s + var(--i) * 0.08s);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .vars > g {
+    opacity: 0;
+    animation: pop 0.7s var(--ease) forwards;
+    animation-delay: calc(0.15s + var(--i) * 0.09s);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .node {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.3;
+  }
+  .halo {
+    fill: none;
+    stroke: var(--fg);
+    stroke-opacity: 0.1;
+    stroke-dasharray: 2 4;
+  }
+  .vars text {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 22px;
+    fill: var(--fg);
+  }
+  .messages circle {
+    fill: var(--fg);
+    opacity: 0;
+    animation: fade 0.6s 1.8s forwards;
+  }
+  .messages .back {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1;
+  }
+  .notes text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    fill: var(--muted);
+  }
+  .notes .formula {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 17px;
+    letter-spacing: 0;
+    fill: var(--fg-2);
+  }
+  .notes line {
+    stroke: var(--muted);
+    stroke-width: 0.8;
+    stroke-dasharray: 2 3;
+  }
+  .notes {
+    opacity: 0;
+    animation: fade 0.8s 1.6s forwards;
+  }
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade {
+    to {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .messages {
+      display: none;
+    }
+  }
+</style>
