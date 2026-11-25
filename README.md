@@ -1,7 +1,8 @@
 # MathStruct
 
-The organisation website for [MathStruct](https://github.com/MathStruct). The front page is
-a small [Astro](https://astro.build) site in `landing/`; everything else (blog, projects,
+The organisation website for [MathStruct](https://github.com/MathStruct). The front page and
+a few promotional pages (`/projects/lenticulum-jl`) are a small [Astro](https://astro.build)
+site in `landing/`; everything else (blog, projects,
 people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
 same style as the project wikis.
 
@@ -20,7 +21,7 @@ same style as the project wikis.
 │   ├── projects/      #   one page per project
 │   ├── guides/        #   authoring guide
 │   └── templates/     #   Obsidian templates (not published)
-├── landing/           # the front page (Astro): mathstruct.org/ only
+├── landing/           # the front page and promotional pages (Astro)
 ├── site/              # this site's Quartz config; the engine is MathStruct/quartz
 └── .github/workflows/ # build and deploy to GitHub Pages
 ```
@@ -59,9 +60,18 @@ math: typst               # optional; omit for LaTeX/KaTeX
 
 ## Front page
 
-`landing/` is an Astro project with one page, `src/pages/index.astro`. `site/build.sh` builds
-it after Quartz and copies `landing/dist/` over Quartz's output, so it replaces only
-`/index.html` (plus `/assets/` and `/favicon.svg`). It is black and white, with a light and a dark
+`landing/` is an Astro project. `site/build.sh` builds it after Quartz and copies
+`landing/dist/` over Quartz's output, so each Astro page replaces the Quartz page at the same
+address (plus `/assets/` and `/favicon.svg`):
+
+- `src/pages/index.astro`: the front page, `mathstruct.org/`;
+- `src/pages/projects/lenticulum-jl.astro`: Lenticulum.jl's page, with the interactive circle
+  model (`src/components/lenticulum/`). Its demos are a list in `src/lib/lenticulum-demos.ts`:
+  add an entry, with the image or video in `public/projects/lenticulum-jl-media/`.
+
+A page here keeps its Markdown note in `content/` for the site's search, graph and link
+previews; keep the two in step. A folder in `public/` must not have the name of a page
+(`projects/lenticulum-jl/`), or GitHub Pages serves the folder instead of the page. It is black and white, with a light and a dark
 theme that share Quartz's `theme` setting, so a choice made on one page holds on all of them.
 
 - The project list is `landing/src/lib/projects.ts`; keep it in step with `content/projects/`.
