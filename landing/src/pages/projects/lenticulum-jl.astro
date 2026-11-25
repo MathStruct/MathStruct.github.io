@@ -55,6 +55,30 @@ const paths = [
   },
 ]
 
+const apiPkg = (slug: string) => `${links.api}packages/${slug}/`
+const packages = [
+  { name: "LenticulumCore", role: "the vocabulary", slug: "lenticulumcore", deps: ["LuxCore"],
+    body: "What a factor is: channels, polarities, an energy and an entropy. Also the belief types (Gaussian, categorical, mixture, Dirac, samples), which convert to RxInfer's. It is to Lenticulum what LuxCore is to Lux." },
+  { name: "Mycelium", role: "inference", slug: "mycelium", deps: ["LenticulumCore"],
+    body: "How factors are wired and in what order they talk: graphs, messages, schedules, plates, cluster nodes and the free energy. Lux has no counterpart to this layer, because in Lux the wiring is a DAG and the order follows from it." },
+  { name: "MyceliumLearning", role: "learning", slug: "myceliumlearning", deps: ["Mycelium", "ImplicitSolvers"],
+    body: "What changes the parameters, as opposed to what infers the beliefs: free-energy gradients, expectation maximisation and the optimiser step." },
+  { name: "Lenticulum", role: "the factors", slug: "lenticulum", deps: ["Mycelium", "MyceliumLearning"],
+    body: "The user-facing package: linear-Gaussian and nonlinear factors, linear constraints, switching and regime factors, likelihoods, and their closed-form M-steps. The Gaussian factor doubles as the test oracle, since everything it computes has a closed form." },
+  { name: "VariationalDiffusion", role: "relation learners", slug: "variationaldiffusion", deps: ["Mycelium", "ImplicitSolvers"],
+    body: "Diffusion models as relations: a VP-SDE, implicit inference with an adjoint backward pass, Laplace and mixture answers, conditional sampling, RED-Diff and ProxDM." },
+  { name: "ImplicitSolvers", role: "the numerics", slug: "implicitsolvers", deps: ["LinearAlgebra"],
+    body: "The shared solvers: linear solves (dense, GMRES, MINRES), root finding (Picard, Broyden, Newton, trust region) and the linear systems behind implicit-function adjoints. Every solve returns a report." },
+]
+const unreviewed = [
+  { name: "ImplicitLayers", slug: "implicitlayers",
+    body: "Deep equilibrium networks and neural ODEs from SciML, wrapped as factors. Given the inner network, they can be queried in more than one direction." },
+  { name: "AlgebraicFactors", slug: "algebraicfactors",
+    body: "Exact discrete log-linear (toric) models, with optional multi-branch answers through homotopy continuation." },
+  { name: "AdversarialFactors", slug: "adversarialfactors",
+    body: "Implicit generative models, with the GAN read as a factor graph. A generator is a function with no residual behind it, so these factors run one way only." },
+]
+
 const works = [
   "Exact inference on linear-Gaussian graphs, tested on random trees against the dense joint solve",
   "Switching chains, tested against enumeration",
@@ -274,10 +298,52 @@ const bibtex = `@software{lenticulum,
           ))}
         </div>
         <p class="fineprint mono">
-          Off the three paths, and not yet reviewed as the core was: deep equilibrium models and
-          neural ODEs (ImplicitLayers), exact discrete toric models (AlgebraicFactors), implicit
-          generative models (AdversarialFactors). Their test suites pass and run weekly.
+          Off the three paths are three more packages, not yet reviewed as the core was. They are
+          listed with the others <a href="#packages">below</a>.
         </p>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- packages -->
+    <section class="section" id="packages">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">The sublibraries</span>
+            <h2 class="reveal" style="--d:.05s">Nine packages, <span class="serif">one stack.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Lenticulum is split into small packages under <code>lib/</code>, each built on the one
+            below it. All of them depend on LuxCore only, not on Lux, Zygote or Optimisers.
+            Automatic differentiation and Reactant arrive through package extensions, for whichever
+            backend you load.
+          </p>
+        </div>
+        <ol class="pkg-list">
+          {packages.map((k, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={apiPkg(k.slug)}>
+                <span class="pkg-name mono">{k.name}</span>
+                <span class="pkg-role">{k.role}</span>
+                <span class="pkg-body">{k.body}</span>
+                <span class="pkg-deps mono">builds on {k.deps.join(" · ")}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+        <h3 class="sub reveal">Off the paths <span class="pkg-tag mono">not yet reviewed · tested weekly</span></h3>
+        <ul class="pkg-list pkg-list--off">
+          {unreviewed.map((k, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={apiPkg(k.slug)}>
+                <span class="pkg-name mono">{k.name}</span>
+                <span class="pkg-body">{k.body}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
 
@@ -714,6 +780,96 @@ const bibtex = `@software{lenticulum,
   .more:hover {
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+
+  /* ------------------------------------------------------------ packages */
+  .pkg-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .pkg-list li {
+    border-bottom: 1px solid var(--line);
+  }
+  .pkg-list a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 22px 8px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .pkg-list a:hover {
+    background: var(--bg-raised);
+  }
+  .pkg-name {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .pkg-role {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 19px;
+    color: var(--muted);
+  }
+  .pkg-body {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 68ch;
+  }
+  .pkg-deps {
+    grid-column: 1 / -1;
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+  .pkg-list .arrow {
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .pkg-list a {
+      grid-template-columns: 200px 150px 1fr 24px;
+      align-items: baseline;
+    }
+    .pkg-role {
+      font-size: 18px;
+    }
+    .pkg-body {
+      grid-column: 3;
+      grid-row: 1;
+    }
+    .pkg-deps {
+      grid-column: 3;
+      grid-row: 2;
+    }
+    .pkg-list .arrow {
+      display: block;
+      grid-column: 4;
+      grid-row: 1;
+      transition: transform 0.3s var(--ease);
+    }
+    .pkg-list a:hover .arrow {
+      transform: translateX(4px);
+    }
+    .pkg-list--off a {
+      grid-template-columns: 200px 1fr 24px;
+    }
+    .pkg-list--off .pkg-body {
+      grid-column: 2;
+    }
+    .pkg-list--off .arrow {
+      grid-column: 3;
+    }
+  }
+  .pkg-list--off {
+    border-top: 0;
+  }
+  .pkg-tag {
+    margin-left: 10px;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--muted);
+    vertical-align: middle;
   }
 
   /* --------------------------------------------------------------- demos */
