@@ -1,0 +1,1207 @@
+---
+// /zh/projects/lenticulumLM：LenticulumLM 推广页的中文版，与 ../../projects/lenticulumLM.astro
+// 保持一致；链接指向中文页面（尚无中文版的保持英文链接）。
+import Layout from "../../../layouts/Layout.astro"
+import Nav from "../../../components/Nav.astro"
+import Footer from "../../../components/Footer.astro"
+import IsamText from "../../../components/lenticulum-lm/IsamText.astro"
+import DenoiseFront from "../../../components/lenticulum-lm/DenoiseFront.astro"
+import QueryDepth from "../../../components/lenticulum-lm/QueryDepth.astro"
+
+const links = {
+  vault: "https://mathstruct.org/LenticulumLM/",
+  discussions: "https://github.com/MathStruct/MathStruct.github.io/discussions",
+  lenticulum: "/zh/projects/lenticulum-jl",
+  sophia: "/zh/projects/sophia",
+  moonkale: "/zh/projects/moonkale",
+  lmNote: "https://mathstruct.org/Lenticulum.jl/Parked/Applications/Language-Models",
+  dynamic: "https://mathstruct.org/Lenticulum.jl/Gaussian-Graphs/Dynamic-Graphs",
+  beliefs: "https://mathstruct.org/Lenticulum.jl/Gaussian-Graphs/Beliefs",
+  isam2: "https://doi.org/10.1177/0278364911430419",
+}
+
+// ------------------------------------------------------------- 首屏示意图
+// 许多小因子，一句话穿行其间，以及它发出的消息
+let seed = 3
+const rnd = () => {
+  seed = (seed * 16807) % 2147483647
+  return seed / 2147483647
+}
+const HW = 560
+const HH = 460
+const field: [number, number][] = []
+for (let k = 0; field.length < 150 && k < 9000; k++) {
+  const x = 14 + rnd() * (HW - 28)
+  const y = 14 + rnd() * (HH - 28)
+  if (field.every(([a, b]) => (a - x) ** 2 + (b - y) ** 2 > 30 ** 2)) field.push([x, y])
+}
+const words = ["every", "prime", "p", "is", "odd", "since", "2∣p", "▓▓", "░░"]
+const path = words.map((w, i) => {
+  const x = 46 + i * ((HW - 92) / (words.length - 1))
+  const y = 250 + 46 * Math.sin(i * 0.8 + 0.4)
+  return { w, x, y, noise: Math.max(0, (i - 5) / 3) }
+})
+// 每个词触达离它最近的因子
+const reach = path.flatMap((p, i) =>
+  field
+    .map(([x, y], j) => ({ j, d: (x - p.x) ** 2 + (y - p.y) ** 2 }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, i < 7 ? 4 : 2)
+    .map(({ j }) => ({ i, j })),
+)
+const hot = new Set(reach.map((r) => r.j))
+const fieldEdges: [number, number][] = []
+field.forEach(([x, y], i) => {
+  field.forEach(([a, b], j) => {
+    if (j > i && (a - x) ** 2 + (b - y) ** 2 < 52 ** 2) fieldEdges.push([i, j])
+  })
+})
+
+// ---------------------------------------------------------------- 核心主张
+const compare: [string, string, string][] = [
+  ["模型是什么", "一个固定的函数：一个检查点里的几十亿参数", "成千上万个小型关系（因子）构成的图，保存在存储里"],
+  ["增添知识", "微调或重训网络，或把它粘进提示词", "追加因子，只训练这些因子，对照它周围的图"],
+  ["移除知识", "没有可靠的办法：机器遗忘是公开难题", "删掉因子：它的贡献随之消失"],
+  ["生成文本", "从左到右，每次前向计算提交一个词元", "在任意位置去噪信念；一个词元在安定之前始终可修改"],
+  ["一次查询的代价", "同样长度的查询代价相同", "由查询触及的图的那部分决定"],
+  ["不确定性", "下一个词元上的 softmax", "每个位置上都有信念；自由能说明因子间分歧多大"],
+  ["硬约束", "遮蔽 logits，或事后检查输出", "图中的约束因子：一个语法、一个类型检查器、一个 Lean 4 内核"],
+  ["工具、检索、代理循环", "模型之外的代码（脚手架）", "图内的变量与因子，与其余部分一样可编辑"],
+  ["为什么是这个答案？", "事后归因", "逐因子的能量：哪些因子往哪里拉"],
+  ["方向", "提示 → 续写", "任意：续写、补空、由结论反推前提"],
+]
+
+const slam: [string, string][] = [
+  ["机器人的位姿 xₜ", "位置 t 的状态：其词元上的一个信念"],
+  ["两个位姿间的里程计因子", "相邻位置之间的局部语言关系"],
+  ["一个路标", "一条事实、一个定义、存储里的一份文档"],
+  ["一次回环检测", "一处回指：一个名字、一个变量、先前做出的断言"],
+  ["一次 GPS 修正、一个全局约束", "覆盖一段文本的校验器：Lean 4、类型检查器、一个测试"],
+  ["边际协方差", "一个位置有多安定：它的噪声水平"],
+  ["iSAM2 的增量更新", "下一个词元：只重新求解新因子触及的部分"],
+  ["重新线性化", "新证据说早先的词元错了时，修改它"],
+]
+
+const blocks = [
+  { k: "因子", t: "小型关系学习器", d: "Lenticulum.jl 的扩散模型与 EnergyNetworks、n-gram 窗口、小型网络。每一个都是关系，可向任意方向查询。" },
+  { k: "信念", t: "每个位置上都有信念", d: "词元上的类别分布、嵌入上的高斯、被钉住位置的点质量、多种读法并存的混合。" },
+  { k: "信念代数", t: "连线", d: "合并两个信念是它们密度的乘积；对词元是逐元素乘积。消息能精确处精确，不能精确处标注为近似。" },
+  { k: "存储", t: "因子放进 Sophia", d: "内容寻址：一个因子以结构的哈希为键、有版本，只在查询触及它时才加载。" },
+  { k: "校验器", t: "DSL 即因子", d: "Lean 4 内核、类型检查器、SQL 引擎、JSON schema：硬因子，在其管辖范围内精确。" },
+  { k: "学习", t: "沿图训练", d: "知识图与代码图给出结构。一条新事实或一个新库版本就是一个新因子，就地训练。" },
+  { k: "脚手架", t: "代理循环放进图里", d: "检索、工具调用、计划与检查都是子图，像模型的其他部分一样在 Moonkale 里编辑。" },
+  { k: "预算", t: "随时可停的推断", d: "自由能量度分歧：低则停，高则够得更远，持续高则弃答。" },
+]
+
+const exists = [
+  { text: "Lenticulum.jl：因子图、消息传递与自由能，均与解析形式核对", href: links.lenticulum },
+  { text: "扩散模型与 EnergyNetworks 作为关系使用，通过求根向任意方向查询", href: links.lenticulum },
+  { text: "信念代数，含类别信念及其精确乘积", href: links.beliefs },
+  { text: "Sophia：带 Datalog 查询语言的内容寻址代码存储", href: links.sophia },
+  { text: "Moonkale：图原生编辑器，带审批门槛后的 LLM 代理", href: links.moonkale },
+]
+const missing = [
+  "LenticulumLM 本身：没有分词器、没有语言因子、没有训练好的模型",
+  "因子保存在存储中、查询触及时才加载（Lenticulum.jl 待办 O1–O5）",
+  "追加后复用分解的增量推断（待办 I10）",
+  "类别信念的 GPU 路径；校验器因子；作为图的脚手架",
+]
+const open = [
+  "扩散模型的分数相加只在 t = 0 处采样到它们的乘积；沿轨迹需要一个修正，如每个噪声层各做一次 MCMC（Du 等，2023）",
+  "专家乘积难以采样，且一致性倾向于选出平淡的文本",
+  "有环图上的消息传递未必收敛；调度表很要紧",
+  "核心赌注尚无测量：同等算力下，许多小因子能否在一个大网络上比拼流畅性",
+]
+
+const roadmap = [
+  { n: "01", t: "n-gram 链", d: "由分隔符连接的窗口关系，向任意方向查询都精确。是最小的一个诚实的因子图语言模型。" },
+  { n: "02", t: "下一个词元即一次追加", d: "生成即增量平滑：每个词元追加因子，只有它们触及的部分被重新求解。" },
+  { n: "03", t: "图背后的存储", d: "因子放进 Sophia，查询触及时惰性加载；在加载出的子图上训练，参数写回。" },
+  { n: "04", t: "跨区段去噪", d: "覆盖位置区段的扩散与能量因子；多个位置同时去噪；每步一个序列级能量。" },
+  { n: "05", t: "校验器入环", d: "Lean 4 与类型检查器作为硬因子，它们覆盖的部分出来时就是检查过的。" },
+  { n: "06", t: "脚手架进图", d: "检索、工具与代理循环作为 Moonkale 里可编辑的子图；在同等算力下与变换器做基准对比。" },
+]
+---
+
+<Layout
+  title="LenticulumLM：可以编辑的语言模型 · MathStruct"
+  description="LenticulumLM 是一个计划中的语言模型：由成千上万个小模型组成的因子图，用信念代数连线；文本生成即增量平滑，如 iSAM2 之于 SLAM；知识作为因子增删；Lean 4 等校验器在模型之内；代价由查询深度决定。尚未实现。"
+  path="/zh/projects/lenticulumLM"
+  lang="zh"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/zh/#projects">← 项目 · 模型</a>
+          <h1 class="reveal" style="--d:.05s">
+            一个可以<br /><span class="serif">编辑的语言模型。</span>
+          </h1>
+          <p class="lede reveal" style="--d:.1s">
+            变换器是一个冻住的函数。<strong>LenticulumLM</strong> 是一个计划中的语言模型，构建为一张<em>因子图</em>：成千上万个各自连接少数几个变量的小模型，由
+            <a href={links.lenticulum}>Lenticulum.jl</a> 的信念代数连线。因子从存储里追加、删除、加载。写文本变成机器人学家早已擅长的问题——增量平滑——而一次查询所费的功夫随它触及的深度增长。
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#slam">看它如何工作 <span class="arrow">→</span></a>
+            <a class="btn" href="#status">如今已有什么</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Julia</li>
+            <li>基于 Lenticulum.jl · Sophia · Moonkale</li>
+            <li class="fact-flag">概念：尚未实现</li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <svg viewBox={`0 0 ${HW} ${HH}`} aria-label="许多小因子；一句话穿行其间，较早的词已干净，最后的词仍是噪声，每个词与离它最近的因子交换消息">
+            <g class="h-mesh">
+              {fieldEdges.map(([a, b]) => (
+                <line x1={field[a][0]} y1={field[a][1]} x2={field[b][0]} y2={field[b][1]} />
+              ))}
+            </g>
+            <g class="h-reach">
+              {reach.map(({ i, j }, k) => (
+                <line
+                  x1={path[i].x}
+                  y1={path[i].y}
+                  x2={field[j][0]}
+                  y2={field[j][1]}
+                  style={`animation-delay:${(-(k * 0.37) % 2.4).toFixed(2)}s`}
+                />
+              ))}
+            </g>
+            <g class="h-field">
+              {field.map(([x, y], j) => (
+                <rect x={x - 4} y={y - 4} width="8" height="8" class={hot.has(j) ? "hot" : ""} />
+              ))}
+            </g>
+            <polyline class="h-path" points={path.map((p) => `${p.x},${p.y}`).join(" ")} />
+            <g class="h-words">
+              {path.map((p, i) => (
+                <g style={`opacity:${(1 - 0.55 * p.noise).toFixed(2)}`}>
+                  <circle cx={p.x} cy={p.y} r={7 + 9 * p.noise} class="h-halo" />
+                  <circle cx={p.x} cy={p.y} r="6.5" class={p.noise > 0 ? "h-var noisy" : "h-var"} />
+                  <text x={p.x} y={p.y + (i % 2 ? 30 : -18)}>{p.w}</text>
+                </g>
+              ))}
+            </g>
+          </svg>
+          <figcaption class="mono">
+            方块是小模型 · 圆是文本中的位置 · 较早的词已安定，较新的仍是噪声
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ compare -->
+    <section class="section" id="difference">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">不同之处</span>
+            <h2 class="reveal" style="--d:.05s">不是一个网络，<span class="serif">而是一张小网络的图。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            用统计的话说：变换器是拟合一次的单一条件分布。LenticulumLM 是一个<em>概率图模型</em>，其因子是习得的关系，其结构在运行中变化，生成即推断。逐行看这改变了什么：
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare vs">
+            <thead>
+              <tr><th></th><th>变换器 LLM</th><th>LenticulumLM，目标</th></tr>
+            </thead>
+            <tbody>
+              {compare.map(([k, a, b]) => (
+                <tr><th scope="row">{k}</th><td class="them">{a}</td><td>{b}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------------- slam -->
+    <section class="section" id="slam">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">生成即 SLAM</span>
+            <h2 class="reveal" style="--d:.05s">写作是<span class="serif">边走边建图。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            做 SLAM 的机器人维护一张“到过哪里、见过什么”的因子图，每走一步都往里加。<a href={links.isam2}>iSAM2</a>（Kaess 等，2012）让这变得很快：保持图的分解，新因子到来时只重新求解它们触及的变量。生成文本形状相同：每个新词元是一个新位姿，对早先说过的话的回指是一次回环。
+          </p>
+        </div>
+        <div class="reveal">
+          <IsamText />
+        </div>
+        <p class="fineprint mono">
+          一个玩具，在你的浏览器里精确求解。光晕是一个小型线性-高斯图的边际标准差，每步重算；重新求解变量的计数是 iSAM2 对按时间消元的图给出的。在 LenticulumLM 中，位置上携带词元信念，因子则是习得的。
+        </p>
+
+        <div class="slam-map">
+          <div class="slam-copy">
+            <h3 class="reveal">对照表</h3>
+            <p class="reveal" style="--d:.05s">
+              SLAM 的每一件东西在文本里都有对应物。Lenticulum.jl 以
+              <a class="il" href="https://gtsam.org/">GTSAM</a> 为师而建，它关于
+              <a class="il" href={links.dynamic}>动态图</a>的笔记已计划让追加只触及最新的因子，对 SLAM 与下一个词元预测一视同仁（待办 I10、O4）。
+            </p>
+          </div>
+          <div class="table-wrap reveal" style="--d:.08s">
+            <table class="compare">
+              <thead>
+                <tr><th>SLAM 里</th><th>LenticulumLM 里</th></tr>
+              </thead>
+              <tbody>
+                {slam.map(([a, b]) => (
+                  <tr><th scope="row">{a}</th><td>{b}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ denoise -->
+    <section class="section" id="denoise">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">去噪</span>
+            <h2 class="reveal" style="--d:.05s">会安定的文本，<span class="serif">而非一锤定音的文本。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            因子可以是扩散模型或能量网络，两者 Lenticulum.jl 都已能作为关系查询。用它们读生成有两种方式。作为<em>流</em>：较早的词元噪声小、较新的大，一道锋面向前推进。或作为<em>图</em>：许多位置同时去噪，只要图知道得够多。
+          </p>
+        </div>
+        <div class="reveal">
+          <DenoiseFront />
+        </div>
+        <p class="fineprint mono">
+          一段画在你浏览器里的调度，不是一个模型。流的读法接近滚动扩散（Ruhe 等，2024）与 diffusion forcing（Chen 等，2024）；掩码扩散语言模型（LLaDA、MDLM、SEDD）同时去噪所有位置。图的读法让结构决定哪些位置先走。
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- depth -->
+    <section class="section" id="depth">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">查询深度即模型大小</span>
+            <h2 class="reveal" style="--d:.05s">问什么，<span class="serif">付什么。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            变换器对每个词元都跑全部权重，无论问题是算术还是证明。这里一次查询钉住它提到的变量，只加载经未定部分与它们相连的因子。浅问题触及几十个因子；深问题伸进存储深处。就这次查询而言，模型的大小就是查询触及的远近。
+          </p>
+        </div>
+        <div class="reveal">
+          <QueryDepth />
+        </div>
+        <p class="fineprint mono">
+          一张几百个因子的随机图，构建时画出。预设是示意性的深度，不是测量。在库里，这是查询从钉住的变量经 d-分离触及的子图，调度表限定其中（Lenticulum.jl 待办 O4）。
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- verify -->
+    <section class="section north" id="verified">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">经过校验的输出</span>
+          <h2 class="reveal" style="--d:.05s">校验器<span class="serif">也只是一个因子。</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            任何带校验器的语言都可以作为因子在模型内运行：Lean 4、类型检查器、SQL 引擎、JSON schema、单位制。对图而言，校验器是它覆盖位置上的硬约束，与习得的因子经同一套信念代数结合。模型仍可能提出错的东西，但在校验器覆盖的部分，错的东西出不来。
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li><span>受限解码早已用语法遮蔽 logits。那不过是一个类别信念与硬因子的结合，做得零散。在这里它是通则。</span></li>
+            <li><span>工具结果（编译器裁定、查询结果、检索到的文档）是被钉住的变量，其余围绕它推断。</span></li>
+            <li><span>Lenticulum.jl 把每个信念标为精确或近似。检查过的区段标精确；其余的都自称不精确。</span></li>
+          </ul>
+        </div>
+        <figure class="code reveal" style="--d:.08s">
+          <figcaption class="mono">设想的 API 草图 · 这些都还不存在</figcaption>
+          <pre><code><span class="c"># 模型是一张图，背后是一个存储</span>
+g = LMGraph(store = Sophia("factors"))
+
+<span class="c"># 提示词被钉住</span>
+prompt!(g, "Lemma: every prime p > 2 is odd.")
+
+<span class="c"># 检索到的事实成为因子</span>
+attach!(g, Retrieve(kind = :theorem, k = 8))
+
+<span class="c"># 一个硬因子：内核必须接受</span>
+attach!(g, LeanFactor(span = :proof))
+
+<span class="c"># 去噪直到自由能足够低，</span>
+<span class="c"># 或预算用尽</span>
+ans = denoise!(g; budget = :adaptive)
+
+isexact(ans.proof)    <span class="c"># true：检查过</span>
+energies(ans)         <span class="c"># 谁往哪里拉</span></code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- learning -->
+    <section class="section" id="learning">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">以插入来学习</span>
+            <h2 class="reveal" style="--d:.05s">新知识，<span class="serif">新因子。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            训练沿知识图与代码图进行。教模型一个新的库版本、一篇新论文或一家公司的内部 API，就是把编码它的因子加进来、对照周围的图训练它们。其余一概不重训。
+          </p>
+        </div>
+        <div class="learn">
+          <figure class="learn-art reveal" aria-label="一条新事实作为一个新因子接入已有的图；只有它与邻居被训练，其余保持冻结">
+            <svg viewBox="0 0 520 300">
+              <g class="lg-old">
+                <line x1="70" y1="80" x2="170" y2="60" /><line x1="170" y1="60" x2="250" y2="130" />
+                <line x1="70" y1="80" x2="110" y2="190" /><line x1="110" y1="190" x2="250" y2="130" />
+                <line x1="110" y1="190" x2="200" y2="250" /><line x1="250" y1="130" x2="200" y2="250" />
+                <line x1="250" y1="130" x2="340" y2="90" />
+              </g>
+              <g class="lg-new">
+                <line x1="340" y1="90" x2="430" y2="150" /><line x1="250" y1="130" x2="430" y2="150" />
+                <line x1="430" y1="150" x2="400" y2="250" />
+              </g>
+              <g class="lg-nodes">
+                <rect x="64" y="74" width="12" height="12" /><rect x="164" y="54" width="12" height="12" />
+                <rect x="104" y="184" width="12" height="12" /><rect x="194" y="244" width="12" height="12" />
+                <rect class="nb" x="244" y="124" width="12" height="12" /><rect class="nb" x="334" y="84" width="12" height="12" />
+                <rect class="nb" x="394" y="244" width="12" height="12" />
+                <rect class="nw" x="421" y="141" width="18" height="18" />
+              </g>
+              <text class="lbl" x="430" y="128">新事实</text>
+              <text class="lbl" x="140" y="290">冻结</text>
+              <text class="lbl" x="320" y="290">现在训练</text>
+            </svg>
+          </figure>
+          <ul class="ticks learn-ticks">
+            <li class="reveal"><span><strong>追加。</strong>一条事实、一个定义、代码图里的一个函数：一个新因子，在 Sophia 里以结构哈希为键，同一个定义不会被存两次。</span></li>
+            <li class="reveal" style="--d:.04s"><span><strong>就地训练。</strong>梯度对每个因子的参数是局部的，所以加载出的子图作为一块坐标训练，参数写回（待办 O5）。</span></li>
+            <li class="reveal" style="--d:.08s"><span><strong>删除。</strong>删掉一个因子就是移除一份知识：对被撤回的事实、过时的 API，以及必须遗忘的数据。</span></li>
+            <li class="reveal" style="--d:.12s"><span><strong>溯源。</strong>每个答案都带着塑造它的因子与它们的能量：与生俱来的出处。</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ harness -->
+    <section class="section" id="harness">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">脚手架在内</span>
+            <h2 class="reveal" style="--d:.05s">代理循环<span class="serif">是模型的一部分。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            今天的模型周围长出一套越来越厚的脚手架：提示词、检索、工具调用、代理链、检查，全写在权重之外、对权重不可见。在 LenticulumLM 中它们是模型自身的子图：推断看得见的变量与因子、训练可以调节、人可以在 <a href={links.moonkale}>Moonkale</a> 里打开编辑。
+          </p>
+        </div>
+        <div class="harness">
+          <figure class="h-panel reveal">
+            <figcaption class="mono">今天</figcaption>
+            <svg viewBox="0 0 420 260" aria-label="今天：中间是一个固定的模型，四周的脚手架是各自独立的代码">
+              <rect class="hz-out" x="14" y="14" width="392" height="232" rx="14" />
+              <text class="hz-k" x="30" y="40">脚手架：模型之外的代码</text>
+              <rect class="hz-box solid" x="150" y="100" width="120" height="64" rx="10" />
+              <text class="hz-t inv" x="210" y="128">LLM</text>
+              <text class="hz-s inv" x="210" y="146">固定权重</text>
+              {[["提示", 40, 70], ["检索", 300, 70], ["工具", 40, 200], ["检查", 300, 200]].map(([t, x, y]) => (
+                <g>
+                  <rect class="hz-box" x={x as number} y={(y as number) - 16} width="80" height="30" rx="7" />
+                  <text class="hz-s" x={(x as number) + 40} y={(y as number) + 3}>{t}</text>
+                </g>
+              ))}
+              <path class="hz-arrow" d="M120 70 C 140 80, 150 95, 160 100" />
+              <path class="hz-arrow" d="M300 70 C 280 80, 270 95, 260 100" />
+              <path class="hz-arrow" d="M160 164 C 150 175, 135 190, 120 200" />
+              <path class="hz-arrow" d="M260 164 C 270 175, 285 190, 300 200" />
+            </svg>
+          </figure>
+          <figure class="h-panel reveal" style="--d:.08s">
+            <figcaption class="mono">LenticulumLM</figcaption>
+            <svg viewBox="0 0 420 260" aria-label="LenticulumLM：提示、检索、工具与检查都是与语言因子同一张图里的因子">
+              <rect class="hz-out solidline" x="14" y="14" width="392" height="232" rx="14" />
+              <text class="hz-k" x="30" y="40">一张图：模型</text>
+              {[[90, 120], [150, 90], [210, 130], [270, 95], [330, 130], [150, 170], [270, 175], [210, 205]].map(([x, y], i, a) =>
+                i ? <line class="hz-wire" x1={a[i - 1][0]} y1={a[i - 1][1]} x2={x} y2={y} /> : null,
+              )}
+              <line class="hz-wire" x1="90" y1="120" x2="150" y2="170" />
+              <line class="hz-wire" x1="210" y1="130" x2="270" y2="175" />
+              {[[90, 120], [150, 90], [210, 130], [270, 95], [330, 130], [150, 170], [270, 175], [210, 205]].map(([x, y]) => (
+                <circle class="hz-var" cx={x} cy={y} r="6" />
+              ))}
+              {[["提示", 60, 72], ["检索", 300, 62], ["工具", 60, 214], ["Lean ✓", 300, 214]].map(([t, x, y]) => (
+                <g>
+                  <rect class="hz-box solid" x={x as number} y={(y as number) - 15} width="70" height="28" rx="7" />
+                  <text class="hz-s inv" x={(x as number) + 35} y={(y as number) + 3}>{t}</text>
+                </g>
+              ))}
+              <line class="hz-wire" x1="95" y1="86" x2="90" y2="114" />
+              <line class="hz-wire" x1="335" y1="76" x2="330" y2="124" />
+              <line class="hz-wire" x1="95" y1="200" x2="150" y2="176" />
+              <line class="hz-wire" x1="300" y1="205" x2="270" y2="181" />
+            </svg>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- blocks -->
+    <section class="section" id="blocks">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">组成部分</span>
+            <h2 class="reveal" style="--d:.05s">八个部件，<span class="serif">一张图。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            LenticulumLM 由什么构成。多数部件已以某种形式存在于姊妹项目中；新的是把它们拼成一个语言模型。
+          </p>
+        </div>
+        <ul class="features">
+          {blocks.map((f, i) => (
+            <li class="feature reveal" style={`--d:${0.03 * (i % 4)}s`}>
+              <span class="feature-k mono">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">现状</span>
+            <h2 class="reveal" style="--d:.05s">一个计划，<span class="serif">建在能用的部件上。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            LenticulumLM 还没有代码。它要用到的零件已经有了：一个带习得关系的因子图库、一个内容寻址存储、一个图编辑器。下面是什么已存在、什么没有、以及什么可能让它失败。
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">如今已存在</h3>
+            <ul class="ticks">{exists.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">尚未构建</h3>
+            <ul class="ticks ticks--next">{missing.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">悬而未决</h3>
+            <ul class="ticks ticks--limit">{open.map((w) => <li>{w}</li>)}</ul>
+          </div>
+        </div>
+        <p class="fineprint mono">
+          悬而未决的问题来自 Lenticulum.jl 自己对这个想法的评审，
+          <a class="il" href={links.lmNote}>Language Models</a>：扩散模型上的专家乘积，它在哪里划算（异质区段、硬约束、工具输出），在哪里不划算。
+        </p>
+
+        <h3 class="sub reveal">六步走</h3>
+        <ol class="road">
+          {roadmap.map((r, i) => (
+            <li class="reveal" style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="road-n mono">{r.n}</span>
+              <h4>{r.t}</h4>
+              <p>{r.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ contact -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">参与进来</span>
+          <h2 class="reveal" style="--d:.05s">来建<span class="serif">第一个。</span></h2>
+          <p class="reveal" style="--d:.1s">
+            LenticulumLM 是一个研究赌注：语言模型可以是一张能生长、能修剪、能检视、能校验的图，而不只是一个只能运行检查点。如果你资助研究、做概率推断、SLAM 或扩散模型，或想要一个知识可以编辑的模型，我们想听听你的想法。
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.discussions}>开始交流 <span class="arrow">→</span></a>
+            <a class="btn" href={links.vault}>设计笔记</a>
+          </div>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href={links.lenticulum} style="--d:.06s">
+            <span class="mono sib-k">模型 · 因子</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">因子图上习得的关系，向任意方向查询：LenticulumLM 由其信念、消息与扩散因子构成。</span>
+          </a>
+          <a class="sib reveal" href={links.sophia} style="--d:.1s">
+            <span class="mono sib-k">代码 · 存储</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">以结构为键的内容寻址存储：因子与代码图的栖身之处。</span>
+          </a>
+          <a class="sib reveal" href={links.moonkale} style="--d:.14s">
+            <span class="mono sib-k">界面 · 编辑器</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">一张图，每个编辑器都是视图：模型、脚手架与知识将被编辑的地方。</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .fact-flag {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+    margin-top: -2px;
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    color: var(--fg);
+  }
+  .hero-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .h-mesh line {
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .h-field rect {
+    fill: var(--bg);
+    stroke: var(--faint);
+    stroke-width: 1;
+  }
+  .h-field rect.hot {
+    fill: var(--fg);
+    stroke: var(--fg);
+  }
+  .h-reach line {
+    stroke: var(--fg);
+    stroke-width: 1.1;
+    stroke-dasharray: 2 7;
+    animation: h-flow 2.4s linear infinite;
+  }
+  @keyframes h-flow {
+    to {
+      stroke-dashoffset: -18;
+    }
+  }
+  .h-path {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.6;
+  }
+  .h-halo {
+    fill: var(--glow);
+    stroke: var(--line-strong);
+    stroke-dasharray: 3 3;
+  }
+  .h-var {
+    fill: var(--fg);
+    stroke: var(--bg);
+    stroke-width: 2;
+  }
+  .h-var.noisy {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+  }
+  .h-words text {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    text-anchor: middle;
+    fill: var(--fg);
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 5px;
+  }
+
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 38%;
+  }
+  .compare td {
+    color: var(--fg);
+    font-size: 15px;
+  }
+  .vs {
+    min-width: 720px;
+  }
+  .vs tbody th {
+    width: 20%;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .vs td {
+    width: 40%;
+  }
+  .vs td.them {
+    color: var(--muted);
+  }
+
+  .slam-map {
+    display: grid;
+    gap: 32px;
+    margin-top: clamp(56px, 8vw, 88px);
+  }
+  @media (min-width: 960px) {
+    .slam-map {
+      grid-template-columns: 1fr 1.5fr;
+      gap: 56px;
+    }
+  }
+  .slam-copy p {
+    color: var(--fg-2);
+    margin: 14px 0 0;
+    max-width: 46ch;
+  }
+
+  /* -------------------------------------------------------------- verify */
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .code figcaption {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .code pre {
+    margin: 0;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .code .c {
+    color: var(--muted);
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------ learning */
+  .learn {
+    display: grid;
+    gap: 40px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .learn {
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+    }
+  }
+  .learn-art {
+    margin: 0;
+  }
+  .learn-art svg {
+    width: 100%;
+    height: auto;
+  }
+  .lg-old line {
+    stroke: var(--line-strong);
+    stroke-width: 1.4;
+  }
+  .lg-new line {
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+    animation: h-flow 1.6s linear infinite;
+  }
+  .lg-nodes rect {
+    fill: var(--bg);
+    stroke: var(--faint);
+    stroke-width: 1.4;
+  }
+  .lg-nodes rect.nb {
+    stroke: var(--fg);
+  }
+  .lg-nodes rect.nw {
+    fill: var(--fg);
+    stroke: var(--fg);
+  }
+  .learn-art .lbl {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--muted);
+    text-anchor: middle;
+  }
+  .learn-ticks {
+    margin: 0;
+    gap: 20px;
+  }
+
+  /* ------------------------------------------------------------- harness */
+  .harness {
+    display: grid;
+    gap: 24px;
+  }
+  @media (min-width: 900px) {
+    .harness {
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+  }
+  .h-panel {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    background: var(--bg-raised);
+  }
+  .h-panel figcaption {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .h-panel svg {
+    width: 100%;
+    height: auto;
+  }
+  .hz-out {
+    fill: none;
+    stroke: var(--faint);
+    stroke-dasharray: 5 5;
+  }
+  .hz-out.solidline {
+    stroke: var(--fg);
+    stroke-dasharray: none;
+    stroke-width: 1.4;
+  }
+  .hz-k {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  .hz-box {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.2;
+  }
+  .hz-box.solid {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+  }
+  .hz-t {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 500;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .hz-s {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .inv {
+    fill: var(--invert-fg);
+  }
+  .hz-arrow {
+    fill: none;
+    stroke: var(--faint);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 3;
+  }
+  .hz-wire {
+    stroke: var(--fg);
+    stroke-opacity: 0.55;
+    stroke-width: 1.2;
+  }
+  .hz-var {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .road {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 700px) {
+    .road {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .road {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .road li {
+    background: var(--bg);
+    padding: 24px 24px 28px 0;
+  }
+  @media (min-width: 700px) {
+    .road li {
+      padding: 24px 28px 28px 0;
+    }
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  @media (min-width: 1000px) {
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 0;
+    }
+    .road li:not(:nth-child(3n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  .road-n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .road h4 {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .road p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ------------------------------------------------------------- contact */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>

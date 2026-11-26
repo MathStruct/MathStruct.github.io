@@ -1,0 +1,1073 @@
+---
+// /zh/projects/moonkale：Moonkale 推广页的中文版，与 ../../projects/moonkale.astro 保持一致；
+// 链接指向中文页面（尚无中文版的保持英文链接）。
+import Layout from "../../../layouts/Layout.astro"
+import Nav from "../../../components/Nav.astro"
+import Footer from "../../../components/Footer.astro"
+import GraphWorkspace from "../../../components/moonkale/GraphWorkspace.astro"
+import HowItWorks from "../../../components/moonkale/HowItWorks.astro"
+
+const vault = "https://mathstruct.org/Moonkale/"
+const note = (path: string) => vault + path
+const links = {
+  vault,
+  source: "https://github.com/MathStruct/Moonkale",
+  download: "https://github.com/MathStruct/Moonkale/releases/latest",
+  releases: "https://github.com/MathStruct/Moonkale/releases",
+  issues: "https://github.com/MathStruct/Moonkale/issues/new/choose",
+  start: note("Getting-Started"),
+  install: note("packaging/Install"),
+  status: note("Status"),
+  feedback: note("Feedback"),
+  catalogue: note("extensions/Extension-Catalogue"),
+  remote: note("architecture/Remote-and-Server-Modes"),
+  overview: note("architecture/Overview"),
+  northStar: note("architecture/North-Star"),
+  lenticulum: note("architecture/Julia-and-Lenticulum"),
+  licensing: note("platform/Licensing"),
+  development: "https://github.com/MathStruct/Moonkale/blob/master/markdown/Development.md",
+}
+
+// Getting Started 里的 “来自 VS Code” 与 “来自 Obsidian”
+const fromVSCode = [
+  ["Ctrl+Shift+P、Ctrl+P", "同样的按键，同样的想法；或者干脆选 VS Code 布局"],
+  ["编辑器", "CodeMirror 配你的语言服务器（rust-analyzer、pyright、clangd……），或纯 Rust 编辑器"],
+  ["Source Control", "Git：暂存、提交、差异，历史画成图"],
+  ["Remote-SSH", "打开远程文件夹：终端、git 与语言服务器跑在另一台机器上"],
+  ["集成终端", "原样保留；其输出里的 路径:行号 会打开文件"],
+]
+const fromObsidian = [
+  ["实时预览", "富文本模式（所见即所得）或源码模式，一键切换"],
+  ["[[链接]] 与反向链接", "同样的链接；未解析的画虚线，点一下即创建笔记"],
+  ["关系图视图", "Graph 面板，代码和数据库也在其中"],
+  ["front matter", "笔记上方的属性栏；源码不动"],
+  ["MathJax", "KaTeX，行内与块级，支持自定义宏；另有 Typst 预览"],
+]
+
+// README 的 "What works today" 与 Status
+const features = [
+  { k: "来源", t: "文件夹，本地或经 SSH", d: "一个 Sources 面板跟随磁盘上的变化，快速打开、命令面板、跨文件查找替换。" },
+  { k: "代码", t: "两个代码编辑器", d: "配语言服务器的 CodeMirror（诊断、悬停、转到定义、补全、重命名），以及一个纯 Rust 编辑器。" },
+  { k: "笔记", t: "富文本 Markdown", d: "所见即所得，带 wiki 链接、反向链接、KaTeX 公式与 front matter，另有 Typst 预览。" },
+  { k: "图", t: "GPU 上的 2D 与 3D", d: "一个文件夹的文件、链接与符号，十万节点仍可用；3D 里每种事物一个平面。" },
+  { k: "数据", t: "数据库既表且图", d: "SQLite、DuckDB（也包括 CSV 与 Parquet 文件夹）、Turso、redb、RocksDB、HelixDB、LadybugDB。SQL 表可编辑、可查冲突、可绘图。" },
+  { k: "终端", t: "栈跟踪变成图", d: "文件夹里的终端，远程文件夹则在远程机器上；其中的跟踪会变成可点击的图。" },
+  { k: "Git", t: "历史即图", d: "改动、差异、暂存、提交，历史画成图。" },
+  { k: "历史", t: "每次编辑皆可恢复", d: "每一次编辑的记录——你的、代理的或 git 的——都可恢复。" },
+  { k: "搜索", t: "按关键词，也按语义", d: "关键词搜索常备；配置了嵌入模型后可按语义搜索。" },
+  { k: "代理", t: "审批门槛之后的 LLM 代理", d: "订阅的 Claude Code、Anthropic、OpenAI 兼容接口或 Ollama；它们读、搜、查询，仅在你允许时编辑。另有一个面向外部代理的 MCP 端点。" },
+  { k: "扩展", t: "WebAssembly 扩展", d: "内置编辑器也是扩展；一个节点式流程编辑器带 Lux.jl 块库（默认关闭）。" },
+  { k: "平台", t: "桌面、浏览器、手机", d: "一份 Rust 代码库配 Dioxus；moonkale-server 把同一个应用提供给浏览器或 Android 手机。" },
+]
+
+// “Rust，而非 Electron”：取自笔记库的 JavaScript Inventory 与 Overview（2026-11-18）
+const stack = [
+  ["随应用附带的", "一整个 Chromium 浏览器与 Node.js，装进你安装的每个应用", "没有浏览器也没有 Node.js：操作系统自带的 WebView（WebKitGTK、WebView2、WKWebView、Android WebView）"],
+  ["逻辑在哪里运行", "JavaScript，在 Node 里和页面里", "一个原生 Rust 进程：索引、语言服务器、git、搜索、历史、数据库与代理"],
+  ["内存安全", "一个 JavaScript 运行时，加上 C 与 C++ 的原生扩展", "一切会思考的东西都在 Rust 的保证之下；JavaScript 只画代码编辑器和终端"],
+  ["扩展", "Node 模块，对机器的权限与编辑器相同", "WebAssembly 模块（桌面上用 wasmtime）；内置编辑器是无特权的扩展"],
+  ["平台", "桌面；Web 与手机是另外的产品", "一份 Rust 代码库覆盖桌面、浏览器（编译为 wasm）与 Android"],
+]
+const jsRoad = [
+  { t: "终端", d: "xterm.js → alacritty_terminal 与 Rust 网格", s: "下一步" },
+  { t: "代码编辑器", d: "CodeMirror → 纯 Rust 编辑器，已可选", s: "进行中" },
+  { t: "富文本 Markdown", d: "Milkdown → Rust 块编辑器", s: "最长的路" },
+  { t: "渲染器", d: "WebView → dioxus-native：Rust 直接画到 GPU", s: "以后" },
+]
+
+const works = [
+  "打开文件夹与数据库、关系图、带 wiki 链接与 KaTeX 的富文本编辑器",
+  "配语言服务器的 CodeMirror、git、变更历史、经 SSH 的远程文件夹",
+  "代理，可同时多个代理与会话，历史保留在文件夹里",
+  "在 Linux（桌面与浏览器）和一台 Android 手机上测试过；作者每天在用",
+]
+const limits = [
+  "一个原型：设置、文件格式、扩展 API 与包结构都会变，不提供迁移路径",
+  "有 Windows 与 macOS 构建，但未签名、未测试",
+  "服务器模式仍有安全缺陷：只在内网使用",
+  "没有调试器、没有扩展市场、没有自带的同步；语言服务器功能只在 CodeMirror 编辑器里",
+  "图数据库与键值数据库只读",
+]
+const next = [
+  { text: "一个小内核的库：扩展、来源与服务器路由无需改外壳即可加入", href: links.status },
+  { text: "Postgres、TypeDB、FalkorDB 与 Redis 作为来源；组合多个来源并跨来源链接的项目", href: links.status },
+  { text: "一个服务器上的协同编辑：账户、在线状态、合并编辑；锚定到文件、行与节点的评论", href: links.status },
+  { text: "Lenticulum.jl 的因子图编辑器，以及一个 ModelingToolkit 编辑器", href: "/zh/projects/lenticulum-jl" },
+]
+
+// README 的 "Install"
+const install = [
+  ["Arch Linux", "moonkale-<release>-arch-x86_64.pkg.tar.zst", "sudo pacman -U <file>"],
+  ["Debian 12+ / Ubuntu 22.04+", "moonkale-<release>-debian-amd64.deb", "sudo apt install ./<file>"],
+  ["Nix / NixOS", "从源码", "nix profile install github:MathStruct/Moonkale"],
+  ["Linux，任意（tarball）", "moonkale-<release>-linux-x86_64.tar.gz", "解压后 ./bin/moonkale"],
+  ["Android (arm64)", "moonkale-<release>-android-arm64.apk", "侧载，或 adb install -r <file>"],
+  ["Windows / macOS", ".msi / .exe / .dmg", "未签名未测试：见安装页"],
+]
+
+const audiences = [
+  { who: "来自 VS Code 或 Obsidian", start: "Getting Started：四个想法，十分钟内的第一次使用", href: links.start },
+  { who: "准备安装", start: "Install：每个平台，含故障排除", href: links.install },
+  { who: "在另一台机器上工作", start: "Remote and Server Modes：SSH 文件夹、服务器、手机", href: links.remote },
+  { who: "想知道每个部件做什么", start: "The Extension Catalogue：每个扩展做什么、在哪里运行", href: links.catalogue },
+  { who: "想了解内部", start: "Architecture Overview → the Graph-Native Model", href: links.overview },
+  { who: "想看长远图景", start: "North Star：代码图，以及为何 Lenticulum 是原因", href: links.northStar },
+]
+---
+
+<Layout
+  title="Moonkale：一张图，每个编辑器都是一个视图 · MathStruct"
+  description="Moonkale 是一个面向代码与知识的图原生编辑器：文件夹与数据库打开为同一张图，每个编辑器（代码、笔记、表格、图、终端）都是它上面的视图，人与 AI 代理皆可使用。开源，Rust 实现，支持 Linux、Web 与 Android。"
+  path="/zh/projects/moonkale"
+  lang="zh"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/zh/#projects">← 项目 · 界面</a>
+          <h1 class="reveal popover-hint" style="--d:.05s">
+            一张图，<br /><span class="serif">每个编辑器<br />都是一个视图。</span>
+          </h1>
+          <p class="lede reveal popover-hint" style="--d:.1s">
+            代码编辑器、笔记应用与数据库工具是三个互不相通的世界。<strong>Moonkale</strong> 打开文件夹<em>和</em>数据库，把一切显示为一张图：文件、函数、wiki 链接、表格与关系都是节点与边。代码编辑器、富文本编辑器、表格、终端与关系图都是它上面的视图，语言服务器与 AI 代理也是。
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href={links.download}>下载 <span class="arrow">→</span></a>
+            <a class="btn" href={links.start}>入门指南</a>
+            <a class="btn" href={links.source}>GitHub 源码</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>Rust · Dioxus</li>
+            <li>不用 Electron</li>
+            <li>Linux、Web、Android</li>
+            <li>MIT 许可</li>
+            <li>可运行原型</li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <div class="shots">
+            <img
+              class="shot-desk"
+              src="/projects/moonkale-media/desktop.webp"
+              width="1920"
+              height="1080"
+              alt="Linux 桌面上的 Moonkale：左侧是活动栏与资源管理器，其下是终端，中间是把整个仓库显示为文件与符号的图，右侧的代码编辑器里打开着一个 Julia 文件"
+            />
+            <img
+              class="shot-phone"
+              src="/projects/moonkale-media/android.webp"
+              width="606"
+              height="1158"
+              alt="Android 手机上的 Moonkale：一篇富文本笔记在一个 Rust 文件上方，以及底栏"
+            />
+          </div>
+          <figcaption class="mono">
+            Linux 上的 Moonkale，把它自己的仓库显示为一张图 · 以及手机上
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- try it -->
+    <section class="section" id="try">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">试一试</span>
+            <h2 class="reveal" style="--d:.05s">点什么，<span class="serif">都开。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            一个文件夹和一个数据库，索引成一张图。点一个节点，它在适合它的编辑器里打开；在编辑器里点一个名字或链接，图随之而行。然后问代理：它查询的是同一张图，且只在你允许时编辑。
+          </p>
+        </div>
+        <div class="reveal">
+          <GraphWorkspace />
+        </div>
+        <p class="fineprint mono">
+          一个画在你浏览器里的示意：七个节点与一段脚本化的代理对话。真实的应用用 tree-sitter 与语言服务器索引真实的文件夹，把图画在 GPU 上，并连接真实的模型。
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- how it works -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">工作原理</span>
+            <h2 class="reveal" style="--d:.05s">四个想法，<span class="serif">一个编辑器。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            用笔记库里 <a href={links.start}>Getting Started</a> 的话说，Moonkale 与你已在用的编辑器有何不同。
+          </p>
+        </div>
+        <HowItWorks />
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- familiar -->
+    <section class="section" id="familiar">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">上手即熟</span>
+            <h2 class="reveal" style="--d:.05s">你的习惯，<span class="serif">照旧。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            如果你用 VS Code 写代码、用 Obsidian 记笔记，你已知的大多数都能带过来。设置 → 快捷键里有 VS Code 与 Obsidian 两种布局，你的自定义改动在最上层。
+          </p>
+        </div>
+        <div class="familiar">
+          {[
+            { from: "VS Code", rows: fromVSCode },
+            { from: "Obsidian", rows: fromObsidian },
+          ].map((t, i) => (
+            <div class="table-wrap reveal" style={`--d:${0.06 * i}s`}>
+              <table class="compare">
+                <thead>
+                  <tr><th>{t.from} 里</th><th>Moonkale 里</th></tr>
+                </thead>
+                <tbody>
+                  {t.rows.map(([a, b]) => (
+                    <tr><th scope="row">{a}</th><td>{b}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- stack -->
+    <section class="section" id="stack">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">引擎盖下</span>
+            <h2 class="reveal" style="--d:.05s">Rust，<span class="serif">而非 Electron。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            过去十年的多数编辑器——包括 VS Code 与 Obsidian——是 Electron 应用：一个网页，带着自己的 Chrome 与 Node.js。Moonkale 用 Rust 和
+            <a href="https://dioxuslabs.com">Dioxus</a> 写成，基于更新的技术栈：更轻的分发，底层是内存安全的代码，攻击面更小。
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare compare--3">
+            <thead>
+              <tr><th></th><th>典型的 Electron 编辑器</th><th>Moonkale</th></tr>
+            </thead>
+            <tbody>
+              {stack.map(([a, b, c]) => (
+                <tr><th scope="row">{a}</th><td class="them" data-l="Electron">{b}</td><td data-l="Moonkale">{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="jsroad">
+          <div class="reveal">
+            <h3 class="jsroad-h">对剩下的部分，我们照直说</h3>
+            <p>
+              Moonkale 今天仍是一个 WebView 应用：约 3 MB 的 JavaScript 画着代码编辑器、富文本编辑器与终端，服务器模式只面向可信的内网。每一件都有一个 Rust 替代计划，顺序如下（笔记库的
+              <a href={note("architecture/JavaScript-Inventory")}>JavaScript 清单</a>）：
+            </p>
+          </div>
+          <ol class="jsroad-list">
+            {jsRoad.map((r, i) => (
+              <li class="reveal" style={`--d:${0.04 * i}s`}>
+                <span class="mono jr-n">0{i + 1}</span>
+                <span class="jr-t">{r.t}</span>
+                <span class="jr-d">{r.d}</span>
+                <span class="mono jr-s">{r.s}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- features -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">如今能做什么</span>
+            <h2 class="reveal" style="--d:.05s">它现在<span class="serif">能做的十二件事。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            在 Linux 的桌面与浏览器、以及一台 Android 手机上测试过。逐个领域，连同仍然缺的部分：<a href={links.status}>Status</a> 页。
+          </p>
+        </div>
+        <ul class="features">
+          {features.map((f, i) => (
+            <li class="feature reveal" style={`--d:${0.03 * (i % 4)}s`}>
+              <span class="feature-k mono">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- north -->
+    <section class="section north" id="north">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">它为何存在</span>
+          <h2 class="reveal" style="--d:.05s">图表<span class="serif">始终是图表。</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            Moonkale 为 <a href="/zh/projects/lenticulum-jl">Lenticulum.jl</a> 而生：它的模型是因子图——无向、有环、通道的方向在查询时才选定。对这样的模型来说，一页 <code>connect(…)</code> 调用就像用原始 RDF 表示一张图。磁盘上的文件是给 git、差异与代理的；编辑器才是界面。
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li><span>
+              长远的图景是数据库里的代码图：多种语言并排解析、证明作为注解、代码图与知识图相遇（<a href={links.northStar}>North Star</a>）
+            </span></li>
+            <li><span>
+              <a href="/zh/projects/sophia">Sophia</a> 已经是 Moonkale 的代码图缓存：文件仍是真相所在，一个定义在两个工具中有相同的内容 id
+            </span></li>
+            <li><span>
+              Julia 活在核心之外、自己的仓库里：面向 Lux、ModelingToolkit 与 RxInfer 的流程库，默认关闭
+            </span></li>
+          </ul>
+        </div>
+        <figure class="north-art reveal" style="--d:.1s" aria-label="Moonkale、Sophia 与 Lenticulum.jl：Moonkale 编辑，Sophia 把代码存成图，Lenticulum 的因子图正是 Moonkale 要画的东西">
+          <svg viewBox="0 0 400 300">
+            <path class="link" d="M200 70 L95 220"></path>
+            <path class="link" d="M200 70 L305 220"></path>
+            <path class="link plan" d="M120 236 H280"></path>
+            <text class="lab" x="128" y="140">代码图</text>
+            <text class="lab" x="272" y="140">因子图</text>
+            <text class="lab" x="200" y="290">模型存入，以后</text>
+            <g class="node main">
+              <rect x="135" y="40" width="130" height="56" rx="12"></rect>
+              <text x="200" y="66">Moonkale</text>
+              <text class="sub" x="200" y="83">编辑器</text>
+            </g>
+            <g class="node">
+              <rect x="30" y="208" width="130" height="56" rx="12"></rect>
+              <text x="95" y="234">Sophia</text>
+              <text class="sub" x="95" y="251">存储</text>
+            </g>
+            <g class="node">
+              <rect x="240" y="208" width="130" height="56" rx="12"></rect>
+              <text x="305" y="234">Lenticulum.jl</text>
+              <text class="sub" x="305" y="251">模型</text>
+            </g>
+          </svg>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">现状</span>
+            <h2 class="reveal" style="--d:.05s">一个原型，<span class="serif">每天在用。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            版本 0.1：作者每天使用，边角仍然粗糙。可以一试，但请先别依赖它。
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">如今稳固</h3>
+            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">已知局限</h3>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">已规划</h3>
+            <ul class="ticks ticks--next">{next.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- get started -->
+    <section class="section" id="get-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">开始使用</span>
+            <h2 class="reveal" style="--d:.05s">安装，<span class="serif">打开一个文件夹。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            版本以日期命名（<code>YYMMDD-proto</code>），见<a href={links.releases}>发布页</a>；下文的 <code>&lt;release&gt;</code> 指这个版本名。想自己构建：<a href={links.development}>Development</a>。
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare install">
+            <thead>
+              <tr><th>平台</th><th>文件</th><th>安装</th></tr>
+            </thead>
+            <tbody>
+              {install.map(([p, f, c]) => (
+                <tr><th scope="row">{p}</th><td class="mono">{f}</td><td class="mono">{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub reveal">从哪里开始</h3>
+        <ul class="audiences">
+          {audiences.map((a, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={a.href}>
+                <span class="who">{a.who}</span>
+                <span class="start">{a.start}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- feedback -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">反馈</span>
+          <h2 class="reveal" style="--d:.05s">告诉我们<span class="serif">什么坏了。</span></h2>
+          <p class="reveal" style="--d:.1s">
+            Bug、想法，以及“我搞不定它”，一律欢迎。来自 Windows 与 macOS 的报告尤其有用：那是那些构建仅有的测试。每个被报告的问题都会连同修复进入笔记库的问题日志。
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.issues}>提一个 issue <span class="arrow">→</span></a>
+            <a class="btn" href={links.vault}>阅读笔记库</a>
+          </div>
+          <p class="sister reveal" style="--d:.18s">
+            MIT 许可。二进制中还包含各自宽松许可下的第三方软件；没有仅 GPL 的依赖。<a href={links.licensing}>完整清单</a>。
+          </p>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href="/zh/projects/sophia" style="--d:.06s">
+            <span class="mono sib-k">代码 · 存储</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">以结构为键的代码。如今是 Moonkale 的代码图缓存，两个工具中的内容 id 相同。</span>
+          </a>
+          <a class="sib reveal" href="/zh/projects/lenticulum-jl" style="--d:.12s">
+            <span class="mono sib-k">模型 · 缘由</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">因子图上习得的关系——Moonkale 生来要画的图表。</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1fr 1.1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .lede code,
+  .cite-band code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+  }
+  .shots {
+    position: relative;
+    padding: 0 7% 9% 0;
+  }
+  .shots img {
+    display: block;
+    height: auto;
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.45);
+  }
+  .shot-desk {
+    width: 100%;
+    border-radius: 10px;
+  }
+  .shot-phone {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22%;
+    border-radius: 14px;
+    outline: 5px solid var(--bg);
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 38%;
+  }
+  .compare td {
+    color: var(--fg);
+    font-size: 15px;
+  }
+  .compare--3 {
+    min-width: 640px;
+  }
+  .compare--3 tbody th {
+    width: 22%;
+  }
+  .compare--3 td {
+    width: 39%;
+    padding-right: 24px;
+  }
+  .compare--3 td.them {
+    color: var(--muted);
+  }
+  .compare--3 thead th:last-child {
+    color: var(--fg);
+  }
+  @media (max-width: 700px) {
+    .compare--3 {
+      min-width: 0;
+    }
+    .compare--3 thead {
+      display: none;
+    }
+    .compare--3 tr,
+    .compare--3 th,
+    .compare--3 td {
+      display: block;
+      width: auto !important;
+    }
+    .compare--3 tbody tr {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .compare--3 tbody th,
+    .compare--3 td {
+      border: 0;
+      padding: 0 0 8px;
+    }
+    .compare--3 td::before {
+      content: attr(data-l);
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+  }
+  .jsroad {
+    margin-top: clamp(48px, 7vw, 72px);
+    display: grid;
+    gap: 28px;
+  }
+  @media (min-width: 960px) {
+    .jsroad {
+      grid-template-columns: 5fr 7fr;
+      gap: 64px;
+    }
+  }
+  .jsroad-h {
+    font-size: 22px;
+  }
+  .jsroad p {
+    margin: 12px 0 0;
+    color: var(--fg-2);
+    font-size: 16px;
+    max-width: 52ch;
+  }
+  .jsroad p a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .jsroad p a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .jsroad-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+  .jsroad-list li {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    grid-template-areas: "n t s" ". d d";
+    gap: 2px 14px;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .jr-n,
+  .jr-s {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .jr-s {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .jr-n {
+    grid-area: n;
+  }
+  .jr-s {
+    grid-area: s;
+    white-space: nowrap;
+  }
+  .jr-t {
+    grid-area: t;
+    font-weight: 500;
+  }
+  .jr-d {
+    grid-area: d;
+    font-size: 15px;
+    color: var(--fg-2);
+  }
+  .familiar {
+    display: grid;
+    gap: 32px;
+  }
+  @media (min-width: 960px) {
+    .familiar {
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+  }
+  .install {
+    min-width: 760px;
+  }
+  .install tbody th {
+    width: 22%;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+  }
+  .install td.mono {
+    font-size: 12.5px;
+    color: var(--fg-2);
+  }
+  .lede a,
+  .cite-band p a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover,
+  .cite-band p a:hover {
+    border-bottom-color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* --------------------------------------------------------------- north */
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .north .lede code {
+    font-size: 0.85em;
+  }
+  .north-art {
+    margin: 0;
+    max-width: 480px;
+    width: 100%;
+    justify-self: center;
+    color: var(--fg);
+  }
+  .north-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .north-art .link {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+  .north-art .link.plan {
+    stroke-dasharray: 4 5;
+    stroke-opacity: 0.6;
+  }
+  .north-art .node rect {
+    fill: var(--bg);
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+  .north-art .node.main rect {
+    fill: var(--invert-bg);
+    stroke: var(--invert-bg);
+  }
+  .north-art text {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 500;
+    fill: currentColor;
+    text-anchor: middle;
+  }
+  .north-art .main text {
+    fill: var(--invert-fg);
+  }
+  .north-art text.sub {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+  }
+  .north-art .lab {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 400;
+    fill: var(--muted);
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+
+  /* --------------------------------------------------------- get started */
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .audiences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audiences a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.3s var(--ease);
+  }
+  @media (min-width: 760px) {
+    .audiences a {
+      grid-template-columns: 340px 1fr auto;
+      align-items: baseline;
+    }
+  }
+  .audiences a:hover {
+    padding-left: 10px;
+  }
+  .who {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .start {
+    color: var(--muted);
+    font-size: 15px;
+    grid-column: 1;
+  }
+  @media (min-width: 760px) {
+    .start {
+      grid-column: 2;
+    }
+  }
+  .audiences .arrow {
+    grid-column: -2;
+    grid-row: 1;
+    transition: transform 0.3s var(--ease);
+  }
+  .audiences a:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* ------------------------------------------------------------ feedback */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .sister {
+    margin-top: 32px;
+    font-size: 13px;
+    color: var(--muted) !important;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>

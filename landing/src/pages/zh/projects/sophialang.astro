@@ -1,0 +1,1011 @@
+---
+// /zh/projects/sophialang：sophialang 推广页的中文版，与 ../../projects/sophialang.astro
+// 保持一致；链接指向中文页面（尚无中文版的保持英文链接）。
+import Layout from "../../../layouts/Layout.astro"
+import Nav from "../../../components/Nav.astro"
+import Footer from "../../../components/Footer.astro"
+import Profiles from "../../../components/sophialang/Profiles.astro"
+import Levels from "../../../components/sophialang/Levels.astro"
+import Rebuild from "../../../components/sophialang/Rebuild.astro"
+
+const vault = "https://mathstruct.org/Sophia/"
+const note = (path: string) => vault + path
+const links = {
+  vault,
+  source: "https://github.com/MathStruct/Sophia",
+  discussions: "https://github.com/MathStruct/MathStruct.github.io/discussions",
+  overview: note("vault/Languages/SophiaLang/SophiaLang-Overview"),
+  principles: note("vault/Specifications/SPEC-002-Sophialang-Principles"),
+  core: note("vault/Specifications/SPEC-003-Sophialang-Core-v0"),
+  precompile: note("vault/Design/Content-Addressed-Precompilation"),
+  sp006: note("vault/Problems/SP-006-Open-method-tables-versus-content-addressing"),
+  milestones: note("vault/Plans/Milestones"),
+  risks: note("vault/Design/Open-Problems-and-Risks"),
+  harper: "https://existentialtype.wordpress.com/2011/03/27/the-holy-trinity/",
+  trinity: note("vault/Theory/Computational-Trinitarianism"),
+  binaries: note("vault/Design/Minimal-Binaries"),
+  query: note("vault/Languages/Sophia-Query/Sophia-Query-Overview"),
+  compression: note("vault/Research/Compression-and-Canonical-Form"),
+  llms: note("vault/Research/LLMs-and-Mixed-Language-Code"),
+  sophia: "/zh/projects/sophia",
+  moonkale: "/zh/projects/moonkale",
+  lenticulum: "/zh/projects/lenticulum-jl",
+  unison: "https://www.unison-lang.org/",
+}
+
+// ---------------------------------------------------------------- 核心主张
+const compare: [string, string, string][] = [
+  ["上手方式", "按程序最难的部分选语言：动态带垃圾回收，或显式带检查", "内存、线程、编译一概不写；由系统选择，如 Julia 所为"],
+  ["底层控制", "按语言全有或全无：处处借用检查，或处处没有", "按区段、按侧面：热循环里显式管理内存，其余用默认值"],
+  ["保证", "语言的那个固定检查器看得见的", "你在哪里写证明，哪里就有证明；按侧面用 DSL 写，由带版本的检查器检查"],
+  ["类型系统", "由语言固定", "可更换：依赖、求精或其他检查器是构建可以要求的东西，绝不是代码生成器需要的东西"],
+  ["类型与证明的代价", "一些语言为零，另一些语言是装箱与检查", "一律擦除：除非程序要求，否则没有运行时表示"],
+  ["运行时", "永远都在（GC、JIT），或永远没有", "只在某些区段把某侧面留给系统时才链接"],
+  ["函数是什么", "文件里的一行文本", "一个以规范化结构之哈希为键的定义；名字只是它的标签"],
+  ["一次编辑之后", "按文件、crate 或包重建重测", "恰好是被改的 id 与依赖它们的部分"],
+]
+
+// ---------------------------------------------------------------- 是系统，不是语法
+const system = [
+  { k: "存储的", t: "规范化并压缩", d: "没有名字、没有变量、没有空白：de Bruijn 指标、32 字节哈希的引用、共享结构只存一次。它不是给人读的。" },
+  { k: "显示的", t: "用你选的语法", d: "类 Julia、类 Rust、类 Lean，或你自定义的：一个 profile 是一项设置，像其他设置一样存储。两个人可以各用一种语法读同一个定义、编辑同一个 id。" },
+  { k: "计划的", t: "图上的代理", d: "今天模型经由 profile（类 Julia 文本）工作，每次写回都要重新解析。我们想要直接在图上工作的代理：核心项与挖掘出的抽象，中间没有前端语言。" },
+]
+
+// ---------------------------------------------------------------- 三位一体
+const trinity: [string, string, string][] = [
+  ["一个命题 A", "一个类型 A", "一个对象 A"],
+  ["A ⊢ B 的一个证明", "一个程序 x : A ⊢ t : B", "一个态射 A → B"],
+  ["A ∧ B、A ∨ B", "积类型、和类型", "积、余积"],
+  ["A ⇒ B", "函数类型 A → B", "指数对象"],
+  ["一个 Horn 子句", "一条 Datalog 规则、一个关系", "正则范畴中的一个关系"],
+]
+const oneLanguage = [
+  { k: "类型语言", d: "一个规格就是一个类型，像其他定义一样存储。依赖类型、求精类型或所有权类型是 sophialang，不是外挂的第二套记号。" },
+  { k: "查询语言", d: "一次查询是存储事实上的一组 Horn 子句：逻辑程序，写成 sophialang 的关系与规则定义，像函数一样哈希与命名。" },
+  { k: "逻辑", d: "一个证明是它所证类型的一个项。它像代码一样被存储、哈希、重命名与查询，并在程序运行前擦除。" },
+]
+
+const exists = [
+  { text: "带两个可编辑 profile（Julia 风格与 Rust 风格）的表面语法", href: links.overview },
+  { text: "打印 → 解析 → 同一内容 id 的往返，在两万个随机定义上测试", href: links.overview },
+  { text: "核心演算 sophialang-core@0：de Bruijn 绑定、使用量、洞、Unsafe 标记、规范编码、SCC 哈希", href: links.core },
+  { text: "对照存储的名字解析，以及从 Moonkale 经 Sophia 界面的编辑", href: links.sophia },
+]
+const missing = [
+  "核心项上的解释器：尚无任何东西能运行（里程碑 M4）",
+  "类型检查器、作为存储事实的分派解析、作为缓存事实的测试（M4）",
+  "降到 LLVM、最小二进制、以内容 id 与参数类型为键的 JIT 缓存（M5）",
+  "面向内存、并发与编译的证明 DSL",
+  "一门用来定义类型系统的语言：sophialang 的第三部分，尚未成文",
+  "自举：用 sophialang 写 sophialang（M6）",
+]
+const open = [
+  "开放方法表对内容寻址：泛型函数必须是名义的，且失效必须精确（SP-006）",
+  "关系需要自己的身份：否则两个同签名、无规则的关会同为一物",
+  "证明 DSL 是否真的是工作中的程序员会写的东西",
+  "Julia 的语义、零开销与可选的依赖类型能否装进同一门语言",
+]
+
+const levels: [string, string, boolean | null][] = [
+  ["L1 · 解析", "两个渲染 profile；一个带限度与诊断的解析器", true],
+  ["L2 · 规范化", "核心项、规范编码、哈希；名字从不改变 id", true],
+  ["L3 · 解析引用", "局部量、存储的名字、内建与构造器", true],
+  ["L4 · 降级", "目标 IR：其他语言将降到它", null],
+  ["L5 · 可执行", "尚无求值器与类型检查器", false],
+  ["L6 · 已验证", "尚无", false],
+]
+
+const roadmap = [
+  { n: "M4", t: "它能运行", d: "核心项上的解释器、一个简单的检查器、记为事实的分派解析，以及缓存为事实的测试。" },
+  { n: "M5", t: "它能编译", d: "经 MLIR 降到 LLVM、最小二进制，以及以内容 id 与参数类型为键的 JIT 缓存。" },
+  { n: "M6", t: "它自举", d: "先用 sophialang 写打印机，再写编译 DSL 与依赖检查器；Rust 代码缩成一个小小的引导内核。" },
+  { n: "B-037", t: "类型系统即数据", d: "一门用来定义类型系统的语言，检查器成为构建可以要求的一个带版本的存储物。" },
+  { n: "以后", t: "图上的代理", d: "直接读写核心项与挖掘出的抽象的模型，而不是像 Julia 那样经由前端语言。" },
+  { n: "B-045", t: "进浏览器", d: "sophialang 编译成 WebAssembly，Sophia 的 crate 在浏览器里打开查询。" },
+  { n: "P0 · 3", t: "可复现的分派", d: "方法表变了，先前的世界仍复现原先的调用。这在存储里已通过；端到端要等 M4 的解释器。" },
+]
+---
+
+<Layout
+  title="sophialang：一门语言，从原型到证明 · MathStruct"
+  description="sophialang 是 Sophia 代码存储计划中的语言：Julia 风格、多重分派、擦除的依赖类型作为可更换的检查器，以及按代码区段为内存、并发与编译选择的 autoresolve → unsafe → safe 原则。定义以结构为键，一次编辑只重建、重测它可能影响的部分。一个实验：语法与核心已存在，尚无任何东西能运行。"
+  path="/zh/projects/sophialang"
+  lang="zh"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/zh/#projects">← 项目 · 代码</a>
+          <h1 class="reveal" style="--d:.05s">
+            写起来像 Julia。<br /><span class="serif">要紧处给出证明。</span>
+          </h1>
+          <p class="lede reveal" style="--d:.1s">
+            <strong>sophialang</strong> 是 <a href={links.sophia}>Sophia</a> 代码存储计划中的语言。你从什么都不指定开始，由系统选择：垃圾回收、调度器、按需编译。哪里要紧，你就接管某个区段的某个侧面，它被标为
+            <em>unsafe</em>。补上一个证明，它就变成 <em>safe</em>。而每个定义以结构而非文件为键，一次编辑只重建、重测它可能影响的部分。
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#levels">看为什么 <span class="arrow">→</span></a>
+            <a class="btn" href="#status">如今已有什么</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>今天是 Rust，以后是 sophialang</li>
+            <li>Sophia 的一部分</li>
+            <li class="fact-flag">计划中 · 一项实验</li>
+          </ul>
+        </div>
+        <figure class="hero-art reveal" style="--d:.1s">
+          <Profiles />
+          <figcaption class="mono">
+            Julia 与 Rust 已由 sophialang-syntax 打印解析，Lean 在计划中；id 来自 sophialang-core
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- banner -->
+    <section class="band">
+      <div class="wrap">
+        <p class="band-text reveal">
+          <span class="mono band-k">状态</span>
+          sophialang 是一个带初版核心的计划。它可以被书写、打印、解析与存储；它还不能运行。它能否满足全部规格，正是这项实验要回答的。
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- system -->
+    <section class="section" id="system">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">不是文本格式</span>
+            <h2 class="reveal" style="--d:.05s">一个程序设计系统，<span class="serif">而非一门程序设计语言。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            sophialang 不以文本存储，也不是给人读的。存储里放的是规范化、压缩后的核心项。你读到的是它在你的配置所要求的语法下的一个投影。所以 sophialang 与其说是一门语言，不如说是一个系统：一个定义的存储，配多少个表面由用户要多少个。<a href={links.unison}>Unison</a> 先行开创了以结构哈希存储代码、名字作标签、没有源文件的路线，这个想法不是我们独有的；Sophia 在它之上构建。
+          </p>
+        </div>
+        <ul class="features features--3 reveal">
+          {system.map((f) => (
+            <li class="feature">
+              <span class="mono feature-k">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="fineprint mono">
+          取自 Sophia 的笔记 <a class="il" href={links.compression}>Compression and Canonical Form</a>
+          与 <a class="il" href={links.llms}>LLMs and Mixed-Language Code</a>。这里的压缩指结构共享，已存在；从语料挖掘抽象在计划中，作为永不改变 id 的派生层。Julia 与 Rust profile 已存在；Lean 在计划中。Sophia 的代理服务器已能让模型查询与读取存储；直接编辑图的代理属于将来。
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- levels -->
+    <section class="section" id="levels">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">autoresolve → unsafe → safe</span>
+            <h2 class="reveal" style="--d:.05s">只为需要控制的地方<span class="serif">付出代价。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            今天，程序最难的部分替整份代码选了语言。一个需要手动管理内存的热循环，整库就都得活在借用检查器下；一个要快跑的原型，就永远无法对它证明任何事。sophialang 把选择权放到每个<em>区段</em>、每个侧面（内存、并发、编译），各分三级。
+          </p>
+        </div>
+        <div class="reveal">
+          <Levels />
+        </div>
+        <p class="fineprint mono">
+          <a class="il" href={links.principles}>SPEC-002</a> §2–§3 规则的示意，画在你的浏览器里；没有编译任何东西。运行时库只在某个区段把某侧面留给系统时才链接；这项审计是 Rust 的 <code>unsafe</code> 关键字使成为可能的那种审计，推广到内存、并发与编译。“大多安全”——一个带具名假设的证明——如实记录，绝不四舍五入成安全。
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- rebuild -->
+    <section class="section" id="rebuild">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">以结构为键</span>
+            <h2 class="reveal" style="--d:.05s">改一处，<span class="serif">就重建一处。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            在 Sophia 里，一个定义的身份是其规范化结构的哈希，每个编译特化与每个测试结果也是如此。改名不改哈希。证明不改哈希。真正的编辑恰好改变那些引用它的定义的哈希。于是“哪些要重编译、哪些测试要重跑？”有了精确的答案，而不是“这个包”。
+          </p>
+        </div>
+        <div class="reveal">
+          <Rebuild />
+        </div>
+        <p class="fineprint mono">
+          一个玩具程序；规则取自 SPEC-002 §4 与 §8。Nat 一例正是 sophialang-core 自己的依赖测试：改 Nat 会改 add 及其测试，但不改 double。今天的工具粗细不一（Julia 的包镜像、一个 crate、一个文件），而精确的缓存正是<a class="il" href={links.precompile}>内容寻址预编译</a>的用意：赢的不是缓存，是失效的精度。效果逃出存储（文件、网络、时钟）的测试永不缓存。以名字为标签的内容寻址定义来自 <a class="il" href={links.unison}>Unison</a>。
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ compare -->
+    <section class="section" id="difference">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">为什么还要一门语言</span>
+            <h2 class="reveal" style="--d:.05s">一门语言，<span class="serif">从原型到证明。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Julia 证明动态与性能可以靠设计调和。Rust 证明安全可以不用垃圾回收器就得到检查。Lean 与 Idris 证明证明与程序可以是同一个东西，Idris 2 证明类型在运行时可以分文不花。<a href={links.unison}>Unison</a> 证明代码可以以结构哈希而非名字或文件来标识。sophialang 押的是：这些不必是五门不同的语言。
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare vs">
+            <thead>
+              <tr><th></th><th>今天选一门语言</th><th>sophialang，目标</th></tr>
+            </thead>
+            <tbody>
+              {compare.map(([k, a, b]) => (
+                <tr><th scope="row">{k}</th><td class="them">{a}</td><td>{b}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- trinity -->
+    <section class="section" id="trinity">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">计算三位一体</span>
+            <h2 class="reveal" style="--d:.05s">同一门学问的三个视图，<span class="serif">一门语言。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            <a href={links.harper}>计算三位一体</a>是 Robert Harper 给一个古老观察起的名字：逻辑、类型论与范畴论是同一门学问的三个视图。命题即类型即对象；证明即程序即态射。每个对应都是定理，所以在一个视图里发现的东西在另外两个里也成立。
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare tri">
+            <thead>
+              <tr><th>逻辑</th><th>类型论</th><th>范畴论</th></tr>
+            </thead>
+            <tbody>
+              {trinity.map(([l, t, c]) => (
+                <tr><td>{l}</td><td>{t}</td><td>{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tri-grid">
+          <div>
+            <h3 class="tri-h reveal">所以 sophialang 不是三门语言。</h3>
+            <p class="reveal" style="--d:.05s">
+              多数系统各自交付一门类型语言、一门查询语言与一门证明语言，各有语法、语义与工具。在三位一体之下它们是同一件事的三个视图，sophialang 把它们当作同一存储上的一门语言。
+            </p>
+            <ul class="ticks reveal" style="--d:.1s">
+              {oneLanguage.map((o) => <li><span><strong>{o.k}。</strong> {o.d}</span></li>)}
+            </ul>
+          </div>
+          <figure class="code reveal" style="--d:.08s">
+            <figcaption class="mono">编译即查询 · Sophia 的查询语法</figcaption>
+            <pre><code><span class="c"># main 静态依赖的一切：</span>
+<span class="c"># 沿存储的 refs 做一次图遍历</span>
+query closure(main::Id)
+    dep(a, b) = refs(a, b)
+    dep(a, c) = refs(a, b) && dep(b, c)
+    select d where dep(main, d)
+end
+
+<span class="c"># 二进制是编译出的答案，加上分派</span>
+<span class="c"># 在钉住的版本能到达的方法</span>
+binary(main) = compile(closure(main) ∪ dispatch_closure(main))</code></pre>
+          </figure>
+        </div>
+
+        <div class="tri-band reveal">
+          <span class="eyebrow">精确的二进制是一次查询</span>
+          <p>
+            因为定义的 id 是其结构的哈希，<code>main</code> 需要的一切的集合不是猜测：它是对图存储一次递归查询的答案。编译成最小二进制就是那条查询的编译。没有“把整个包打进来”，没有启发式摇树。类型、证明、测试与存储本身都被擦除；GC、分派器或 JIT 只在闭包的某个区段要求时才链接。
+          </p>
+        </div>
+
+        <p class="fineprint mono">
+          取自 Sophia 的笔记 <a class="il" href={links.trinity}>Computational Trinitarianism</a>
+          与 <a class="il" href={links.binaries}>Minimal Binaries</a>；另见 Harper 的
+          <a class="il" href={links.harper}><em>The Holy Trinity</em></a>（2011）。今天 Sophia 的<a class="il" href={links.query}>查询语言</a>已能运行（它是存储唯一达到 L5 的语言），作为共享原语之上的独立 crate；把它折进 sophialang 的关系是设计、还不是代码。上面的查询用它的语法；<code>compile</code> 与分派闭包要等 M5。二进制在封闭世界契约下精确：没有 <code>eval</code>、反射或动态加载，除非链接了它们的运行时。
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- erased -->
+    <section class="section north" id="erased">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">零内在开销</span>
+          <h2 class="reveal" style="--d:.05s">类型与证明<span class="serif">在运行时分文不花。</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            sophialang 里不得有任何使编译后的代码天生慢于 C++、Rust 或 Julia 的东西。行为拿不准时，它照 Julia 的做：机器整数、IEEE 浮点、多重分派、把提升当作普通方法。
+          </p>
+          <ul class="ticks reveal" style="--d:.14s">
+            <li><span><strong>擦除。</strong>每个绑定带使用量；使用量为 0 的绑定（类型、证明）没有运行时表示。Atkey 与 Idris 2 的量化类型论。</span></li>
+            <li><span><strong>可更换。</strong>代码生成器只需要表示类型与分派看得见的类型。依赖或求精检查器改变构建接受什么，绝不改变它生成什么。</span></li>
+            <li><span><strong>代价可见。</strong>具体类型不装箱。抽象类型之所以装箱是因为你要求，存储记下这一事实。</span></li>
+            <li><span><strong>热路径上没有存储。</strong>每个身份在构建时解析；编译出的程序从不查询存储。</span></li>
+          </ul>
+        </div>
+        <figure class="code reveal" style="--d:.08s">
+          <figcaption class="mono">设想的表面草图 · 这些都还不能运行</figcaption>
+          <pre><code><span class="c"># autoresolve：GC、JIT、动态分派，</span>
+<span class="c"># 替你选好并记为事实</span>
+function mean(xs::Vector{"{"}Float64{"}"})::Float64
+    sum(xs) / length(xs)
+end
+
+<span class="c"># unsafe：显式内存，在每个视图里都可见</span>
+function step!(w::World)
+    unsafe(:memory) do
+        buf = alloc(w.arena, Float64, w.n)
+        <span class="c"># …</span>
+    end
+end
+
+<span class="c"># safe：同样的代码，加一个经过检查的证明；</span>
+<span class="c"># step! 的内容 id 不变</span>
+proves(:memory, step!, Ownership(w.arena))</code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">现状</span>
+            <h2 class="reveal" style="--d:.05s">一项实验，<span class="serif">有了第一个核心。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            sophialang 以规格与两个 Rust crate 的形式存在：sophialang-core 与 sophialang-syntax。它们已就是 Moonkale 经 Sophia 编辑的东西。让它成为一门能运行的语言的一切都还在计划中。它们能否同时成立，我们尚不知道；弄清这一点正是实验的意义。
+          </p>
+        </div>
+
+        <div class="table-wrap reveal">
+          <table class="compare lvl">
+            <thead>
+              <tr><th>级别</th><th>状态</th><th></th></tr>
+            </thead>
+            <tbody>
+              {levels.map(([k, d, ok]) => (
+                <tr>
+                  <th scope="row">{k}</th>
+                  <td>{d}</td>
+                  <td class="lvl-s mono"><span class:list={["pill", { yes: ok === true, no: ok === false }]}>{ok === true ? "已存在" : ok === false ? "计划中" : "按设计"}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">如今已存在</h3>
+            <ul class="ticks">{exists.map((n) => <li><a href={n.href}>{n.text}</a></li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">尚未构建</h3>
+            <ul class="ticks ticks--next">{missing.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">悬而未决</h3>
+            <ul class="ticks ticks--limit">{open.map((w) => <li>{w}</li>)}</ul>
+          </div>
+        </div>
+        <p class="fineprint mono">
+          取自 Sophia 的笔记库：<a class="il" href={links.overview}>SophiaLang 总览</a>、<a class="il" href={links.principles}>原则</a>、<a class="il" href={links.core}>核心演算</a>、<a class="il" href={links.sp006}>SP-006</a> 与<a class="il" href={links.risks}>公开问题与风险</a>。
+        </p>
+
+        <h3 class="sub reveal">路线</h3>
+        <ol class="road">
+          {roadmap.map((r, i) => (
+            <li class="reveal" style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="road-n mono">{r.n}</span>
+              <h4>{r.t}</h4>
+              <p>{r.d}</p>
+            </li>
+          ))}
+        </ol>
+        <p class="fineprint mono">
+          里程碑与待办编号同 <a class="il" href={links.milestones}>Milestones</a>；均无日期。
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ contact -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">参与进来</span>
+          <h2 class="reveal" style="--d:.05s">告诉我们<span class="serif">它会在哪里断裂。</span></h2>
+          <p class="reveal" style="--d:.1s">
+            sophialang 是一项实验，我们边走边学。如果你研究 Julia 的编译器、Rust 的所有权模型、量化或依赖类型论、分离逻辑或构建系统，并且你看出这为什么行不通、或者怎样才能行得通，我们想听听你的想法。
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.discussions}>开始交流 <span class="arrow">→</span></a>
+            <a class="btn" href={links.overview}>设计笔记</a>
+          </div>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href={links.sophia} style="--d:.06s">
+            <span class="mono sib-k">代码 · 存储</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">sophialang 所栖身的内容寻址存储，旁边是 Julia、Rust、Python 与 Metamath，各有各的规范形式。</span>
+          </a>
+          <a class="sib reveal" href={links.moonkale} style="--d:.1s">
+            <span class="mono sib-k">界面 · 编辑器</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">今天经 Sophia 的 profile 编辑 sophialang 的图编辑器。</span>
+          </a>
+          <a class="sib reveal" href={links.lenticulum} style="--d:.14s">
+            <span class="mono sib-k">模型 · 第一个用户</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">Sophia 被设想为它的模型编译器：让 Lenticulum 跑在 Sophia 里，需要 sophialang 能跑。</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .fact-flag {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+    margin-top: -2px;
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    color: var(--fg);
+  }
+  .hero-art svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .hero-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
+    width: 38%;
+  }
+  .compare td {
+    color: var(--fg);
+    font-size: 15px;
+  }
+  .vs {
+    min-width: 720px;
+  }
+  .vs tbody th {
+    width: 20%;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .vs td {
+    width: 40%;
+  }
+  .vs td.them {
+    color: var(--muted);
+  }
+
+  /* -------------------------------------------------------------- verify */
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .code figcaption {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .code pre {
+    margin: 0;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .code .c {
+    color: var(--muted);
+  }
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .features--3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .road {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 700px) {
+    .road {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .road {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .road li {
+    background: var(--bg);
+    padding: 24px 24px 28px 0;
+  }
+  @media (min-width: 700px) {
+    .road li {
+      padding: 24px 28px 28px 0;
+    }
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  @media (min-width: 1000px) {
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 0;
+    }
+    .road li:not(:nth-child(3n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  .road-n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .road h4 {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .road p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ------------------------------------------------------------- contact */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  /* -------------------------------------------------------------- banner */
+  .band {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+    padding: 22px 0;
+  }
+  .band-text {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    max-width: 96ch;
+  }
+  .band-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+  }
+  .fineprint code {
+    font-family: var(--font-mono);
+  }
+  .north {
+    border-top: 1px solid var(--line);
+  }
+
+  /* -------------------------------------------------------------- levels */
+  .lvl {
+    min-width: 560px;
+    margin-bottom: clamp(40px, 6vw, 64px);
+  }
+  .lvl tbody th {
+    width: 22%;
+    color: var(--fg);
+  }
+  .lvl-s {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right !important;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+  }
+  .pill.yes {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .pill.no {
+    border: 1px dashed var(--fg);
+    color: var(--fg);
+  }
+  /* ------------------------------------------------------------- trinity */
+  .tri {
+    min-width: 560px;
+  }
+  .tri td {
+    width: 33.3%;
+    font-family: var(--font-serif);
+    font-size: 16.5px;
+  }
+  .tri-grid {
+    display: grid;
+    gap: 40px;
+    align-items: start;
+    margin-top: clamp(40px, 6vw, 64px);
+  }
+  @media (min-width: 960px) {
+    .tri-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+  }
+  .tri-h {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .tri-grid p {
+    color: var(--fg-2);
+    margin: 14px 0 0;
+  }
+  .tri-band {
+    margin-top: clamp(40px, 6vw, 64px);
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-sunken);
+  }
+  .tri-band p {
+    margin: 12px 0 0;
+    color: var(--fg-2);
+    max-width: 92ch;
+  }
+  .tri-band code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+  }
+</style>

@@ -1,0 +1,1020 @@
+---
+// /zh/projects/category-theory-ml-wiki：范畴论与机器学习维基推广页的中文版，与
+// ../../projects/category-theory-ml-wiki.astro 保持一致；链接指向中文页面（尚无中文版的保持英文链接）。
+import Layout from "../../../layouts/Layout.astro"
+import Nav from "../../../components/Nav.astro"
+import Footer from "../../../components/Footer.astro"
+import LearningMap from "../../../components/ctml/LearningMap.astro"
+
+const wiki = "https://mathstruct.org/CategoryTheory-ML-Wiki/"
+const note = (path: string) => wiki + path
+const links = {
+  wiki,
+  source: "https://github.com/MathStruct/CategoryTheory-ML-Wiki",
+  issues: "https://github.com/MathStruct/CategoryTheory-ML-Wiki/issues",
+  start: note("Start-Here"),
+  map: note("Map-of-Content"),
+  catlab: note("Catlab"),
+  adjunction: note("Adjunction"),
+  bayesianLens: note("Bayesian-Lens"),
+  backprop: note("Backprop-as-Functor"),
+  eGraph: note("E-Graph"),
+  exercises: note("Exercises/7S-Chapter-3-Exercises"),
+  lenticulum: "/zh/projects/lenticulum-jl",
+  lenticulumVault: "https://mathstruct.org/Lenticulum.jl/",
+  sophia: "/zh/projects/sophia",
+  sophiaVault: "https://mathstruct.org/Sophia/",
+  moonkale: "/zh/projects/moonkale",
+  authoring: "/guides/authoring",
+}
+
+const inVault = [
+  { k: "概念", t: "347 篇概念笔记", d: "每个定义、定理或构造一篇，从集合与预序到 Kan 扩张、马尔可夫范畴与 e-graph。" },
+  { k: "来源", t: "四本书、67 篇论文", d: "Seven Sketches、Category Theory for Scientists、The Dao of Functional Programming 与 Kittenlab.jl 讲义；每篇论文有自己的笔记。" },
+  { k: "核对", t: "精确的出处", d: "每篇笔记的定义都以一行 Sources 收尾：小节、定义与习题编号，逐书列出。" },
+  { k: "习题", t: "约 490 道，附解答", d: "三十篇章节笔记，一道习题一个标题，各链接到一篇完整解答，并双向回链。" },
+  { k: "代码", t: "Julia、Lean 4、Haskell", d: "近三百篇笔记带标签页。Julia 对 Catlab 0.16 跑过；Lean 给出 Mathlib 的名称；Haskell 给出惯用法。" },
+  { k: "图示", t: "交换图", d: "52 篇笔记里有 tikz-cd，建站时编译成 SVG，各配一个暗色变体。" },
+  { k: "次序", t: "一份学习计划", d: "核心部分为阶段 0–4，之后六条轨道：应用、编程、依赖类型、进阶、机器学习、编译器与数据库。" },
+  { k: "链接", t: "188 篇项目笔记链接至此", d: "Lenticulum.jl 笔记库的 121 篇与 Sophia 的 67 篇在理论处引用这些笔记，只保留自己独有的内容。" },
+]
+
+const anatomy = [
+  ["#definition #theorem", "一行标签：这是一篇什么类型的笔记"],
+  ["定义", "用笔记库的记号写成，链接到它用到的东西"],
+  ["要点列表", "每个来源各添了什么，在一处汇合核对"],
+  ["> Sources:", "每本书或论文里的小节、定义与习题编号"],
+  ["```tikz", "一张交换图，建站时编译"],
+  ["````tabs", "Julia、Lean 4 与 Haskell；一行 Builds on: 列出其代码必须先运行的笔记"],
+]
+
+const works = [
+  "每个概念一篇笔记，来源汇合核对、出处精确到习题",
+  "习题与完整解答，双向链接",
+  "Julia 标签页对 Catlab 0.16 运行；Lean 标签页给出 Mathlib 声明的名称",
+  "一条学习次序：阶段 0–4，然后轨道 A–F，通向 Lenticulum.jl 与 Sophia",
+  "带 TikZ、标签页与 KaTeX 发布；各项目的笔记库都链接进来",
+]
+const limits = [
+  "初稿：笔记是在 AI 帮助下从来源写成的，并非每句话都已对照原书原文核验",
+  "链接只说两篇笔记相关，不说如何相关：先修、推广、例子与实现看起来一个样",
+  "代码不由 CI 运行；Lean 标签页多是 #check 行，不是证明",
+  "一个扁平的笔记文件夹，只讲一门学问；ML、数据库与编译器只经由范畴论出现",
+]
+const plan = [
+  { n: "01", t: "带类型的链接", d: "用 front matter 说明两篇笔记为何相关：需要、推广、是……的例子、被……实现、被……测试。上面的学习图就由这样的链接画出，此处是手工画的。" },
+  { n: "02", t: "被检查的代码", d: "每个 Julia 标签页在 CI 里对钉住的 Catlab 运行，每个 Lean 标签页对 Mathlib 编译，每个 Haskell 标签页过 GHC。代码坏了的笔记自己说明。" },
+  { n: "03", t: "Moonkale 里的一张图", d: "维基、各项目笔记库与项目代码打开成一张图：一个概念、用到它的设计笔记与实现它的函数并排可见。" },
+  { n: "04", t: "学习路径", d: "沿先修图通往一个目标的路线、作为复习卡的习题，以及保存为一张地图的进度：你会什么、接下来能读什么。" },
+  { n: "05", t: "超出范畴论", d: "机器学习、数据库与编译器工程用同一格式：每个概念一篇笔记、出处引到习题、代码能跑。" },
+  { n: "06", t: "学习软件", d: "建在图上的小工具：答案经过检查的习题、待补全的图示、能在浏览器里运行并修改的笔记代码。" },
+]
+
+// Start Here 的“视你从哪里来，三种入门方式”
+const audiences = [
+  { who: "来自编程", start: "Category、Functor、Natural Transformation，然后带 Haskell 标签页的轨道 B", href: note("Start-Here#three-ways-in-depending-on-who-you-are") },
+  { who: "来自数学", start: "按顺序过阶段 1–4，然后轨道 A；Lean 标签页给出可形式化的对象", href: note("Start-Here#suggested-order-of-study") },
+  { who: "来自自然科学", start: "阶段 0，然后数据库 schema、C-集、数据迁移、层与马尔可夫链", href: note("Start-Here#stage-0--sets-and-ologs-as-a-warm-up-ctfs-ch-2") },
+  { who: "来自机器学习", start: "快速过阶段 2，然后轨道 E：透镜、马尔可夫范畴、统计博弈", href: note("Start-Here#track-e--category-theory-for-machine-learning-arxiv-papers-the-road-to-lenticulumjl") },
+  { who: "来自编译器或数据库", start: "阶段 2、轨道 B，然后轨道 F：e-graph、合取查询、Datalog", href: note("Start-Here#track-f--category-theory-for-compilers-and-databases-arxiv-papers-the-road-to-sophia") },
+  { who: "想动手算", start: "安装 Catlab 0.16，然后 C-Set、Data Migration 与 Colimit 的 Julia 标签页", href: links.catlab },
+]
+---
+
+<Layout
+  title="范畴论与机器学习维基：可以运行的知识 · MathStruct"
+  description="MathStruct 的共享知识图谱：范畴论在学习、推断、数据库与编译器中出现之处，每个概念一篇笔记，出处引到习题，附 Julia、Lean 4 与 Haskell 代码。每个 MathStruct 项目都用同一格式书写文档，并在理论处链接至此。"
+  path="/zh/projects/category-theory-ml-wiki"
+  lang="zh"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/zh/#projects">← 项目 · 基础</a>
+          <h1 class="reveal popover-hint" style="--d:.05s">
+            可以<br /><span class="serif">运行的知识。</span>
+          </h1>
+          <p class="lede reveal popover-hint" style="--d:.1s">
+            <strong>范畴论与机器学习维基</strong>是 MathStruct 存放所知的地方：每个概念一篇笔记，出处引到习题，有助益处配图示，附 Julia、Lean 4 与 Haskell 代码。<a href={links.lenticulum}>Lenticulum.jl</a> 与 <a href={links.sophia}>Sophia</a> 用同一格式书写文档、在理论处链接至此，于是每个项目的笔记汇成知识与代码的<em>一张图</em>。
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href={links.start}>从这里开始 <span class="arrow">→</span></a>
+            <a class="btn" href="#learn">试试学习地图</a>
+            <a class="btn" href={links.source}>GitHub 源码</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>347 个概念</li>
+            <li>约 490 道习题，已解答</li>
+            <li>67 篇论文</li>
+            <li>Obsidian 笔记库</li>
+            <li class="fact-flag">初稿</li>
+          </ul>
+        </div>
+
+        <figure class="hero-art reveal" style="--d:.1s" aria-label="一篇笔记的各部分，以 Adjunction 一篇为例">
+          <div class="notecard">
+            <div class="nc-bar mono">
+              <span>Adjunction.md</span>
+              <span class="nc-tags">#definition #example #theorem #proof</span>
+            </div>
+            <div class="nc-body">
+              <p class="nc-def">
+                <span class="nc-link">函子</span> <i>L</i> : 𝔠 → 𝔡 与 <i>R</i> : 𝔡 → 𝔡 若存在一双射，则称<strong>伴随</strong>，记 <i>L</i> ⊣ <i>R</i>：
+              </p>
+              <p class="nc-math"><i>𝔠</i>(<i>c</i>, <i>R d</i>) ≅ <i>𝔡</i>(<i>L c</i>, <i>d</i>)</p>
+              <p class="nc-def">对 <i>c</i> 与 <i>d</i> 自然。</p>
+              <svg class="nc-cd" viewBox="0 0 220 64" aria-hidden="true">
+                <text x="30" y="38">𝔠</text>
+                <text x="178" y="38">𝔡</text>
+                <path d="M50 26 Q105 2 168 26" />
+                <path d="M168 40 Q105 64 50 40" />
+                <path class="ah" d="M162 20 L168 26 L160 28" />
+                <path class="ah" d="M56 46 L50 40 L58 38" />
+                <text class="sm" x="102" y="12">L</text>
+                <text class="sm" x="102" y="62">R</text>
+                <text class="sm" x="101" y="37">⊥</text>
+              </svg>
+              <p class="nc-src mono">
+                <span>Sources</span> 7 Sketches §3.4.2, Def. 3.70 · DaoFP Ch. 10 · CTfS §5.1
+              </p>
+              <div class="nc-tabs mono" role="presentation">
+                <span>Julia</span><span class="on">Lean</span><span>Haskell</span>
+              </div>
+              <pre class="nc-code"><code>#check CategoryTheory.Adjunction
+#check CategoryTheory.Adjunction.toMonad
+#check CategoryTheory.exp.adjunction</code></pre>
+              <p class="nc-used mono">
+                <span>引向</span> Monad · Kleisli 范畴 · 数据迁移
+              </p>
+            </div>
+          </div>
+          <figcaption class="mono">一篇笔记的缩写：定义、图、出处、代码，以及它引向何处</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- band -->
+    <section class="band" aria-label="状态">
+      <div class="wrap">
+        <p class="band-text">
+          <span class="band-k mono">初稿</span>
+          这些笔记是在 AI 帮助下从四本书、几套讲义与约七十篇论文起草的，正在逐一核验。本页如实展示这个笔记库，以及它正在变成的知识图谱。
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- learn -->
+    <section class="section" id="learn">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">试一试</span>
+            <h2 class="reveal" style="--d:.05s">选一个目标，<span class="serif">点亮道路。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            维基的二十二篇笔记与建立在它们之上的两个项目，画成一张先修图。点一篇笔记阅读并标记为已掌握：接下来能读的东西随之点亮。选定一个目标，通往它的路线便会画出，最短的优先。
+          </p>
+        </div>
+        <div class="reveal">
+          <LearningMap />
+        </div>
+        <p class="fineprint mono">
+          笔记、它们的出处、最初的 Lean 行与链接计数都来自笔记库；先修关系依 Start Here 的学习次序、由手工画出。你的进度保存在这台浏览器里。在维基本身，链接尚未说明哪篇在前：那是下面计划的第一项。
+        </p>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- in vault -->
+    <section class="section" id="today">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">笔记库现状</span>
+            <h2 class="reveal" style="--d:.05s">几百篇笔记，<span class="serif">互相链接。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            一个 Obsidian 笔记库，发布在 <a href={links.wiki}>mathstruct.org/CategoryTheory-ML-Wiki</a>，与每个 MathStruct 站点用同一个 Quartz。在浏览器里读，或克隆下来在 Obsidian 或 Moonkale 里打开。
+          </p>
+        </div>
+        <ul class="features">
+          {inVault.map((f, i) => (
+            <li class="feature reveal" style={`--d:${0.03 * (i % 4)}s`}>
+              <span class="feature-k mono">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ format -->
+    <section class="section north" id="format">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">同一种格式</span>
+          <h2 class="reveal" style="--d:.05s">每个项目<span class="serif">都这样写。</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            维基的一篇概念笔记、Lenticulum.jl 笔记库里的一篇设计笔记与 Sophia 的一份规格共享同一个形状。项目笔记只保留自己独有的内容，一般概念链接到维基，于是理论只写一次，每个项目都找得到。
+          </p>
+          <div class="table-wrap reveal" style="--d:.14s">
+            <table class="compare anatomy">
+              <thead><tr><th scope="col">笔记里的</th><th scope="col">装的是什么</th></tr></thead>
+              <tbody>
+                {anatomy.map(([k, v]) => (
+                  <tr><th scope="row">{k}</th><td>{v}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <figure class="north-art reveal" style="--d:.1s" aria-label="三层：维基的概念、项目的笔记、它们的代码，连成一张图">
+          <svg viewBox="0 0 560 320" role="img">
+            <g class="layer">
+              <text class="lk" x="0" y="54">维基</text>
+              <text class="lk2" x="0" y="70">概念</text>
+              <rect x="140" y="14" width="410" height="84" rx="12" />
+            </g>
+            <g class="layer">
+              <text class="lk" x="0" y="158">项目笔记库</text>
+              <text class="lk2" x="0" y="174">设计、决策</text>
+              <rect x="140" y="118" width="410" height="84" rx="12" />
+            </g>
+            <g class="layer plan">
+              <text class="lk" x="0" y="262">代码</text>
+              <text class="lk2" x="0" y="278">在 Sophia 里，计划中</text>
+              <rect x="140" y="222" width="410" height="84" rx="12" />
+            </g>
+            <path class="e" d="M178 160 L178 56" />
+            <path class="e" d="M300 160 L300 56" />
+            <path class="e" d="M422 160 L422 56" />
+            <path class="e plan" d="M178 264 L178 160" />
+            <path class="e plan" d="M300 264 L300 160" />
+            <path class="e plan" d="M422 264 L422 160" />
+            <g class="n "><circle cx="178" cy="56" r="6" /><text x="190" y="60">贝叶斯透镜</text></g>
+            <g class="n "><circle cx="300" cy="56" r="6" /><text x="312" y="60">统计博弈</text></g>
+            <g class="n "><circle cx="422" cy="56" r="6" /><text x="434" y="60">E-graph</text></g>
+            <g class="n p"><rect x="172" y="154" width="12" height="12" rx="2" /><text x="190" y="164">Lenticulum 笔记</text></g>
+            <g class="n p"><rect x="294" y="154" width="12" height="12" rx="2" /><text x="312" y="164">Lenticulum 笔记</text></g>
+            <g class="n p"><rect x="416" y="154" width="12" height="12" rx="2" /><text x="434" y="164">Sophia 规格</text></g>
+            <g class="n c"><circle cx="178" cy="264" r="6" /><text x="190" y="268">Julia 函数</text></g>
+            <g class="n c"><circle cx="300" cy="264" r="6" /><text x="312" y="268">一个测试</text></g>
+            <g class="n c"><circle cx="422" cy="264" r="6" /><text x="434" y="268">Rust 模块</text></g>
+          </svg>
+          <figcaption class="mono">
+            实线：如今已链接 · 虚线：计划中，经 Sophia 的内容 id 与 Moonkale 的图
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">现状</span>
+            <h2 class="reveal" style="--d:.05s">一份初稿，<span class="serif">正在重建。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            笔记库已经可以当参考书用，各项目也链接至此。它还不是它想成为的知识图谱，也还不是一个适合独自学习的地方。
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">如今稳固</h3>
+            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">已知局限</h3>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">计划中</h3>
+            <ul class="ticks ticks--next">{plan.slice(0, 4).map((p) => <li><a href={`#p${p.n}`}>{p.t}</a></li>)}</ul>
+          </div>
+        </div>
+
+        <h3 class="sub reveal" id="plan">去向</h3>
+        <ol class="road">
+          {plan.map((p, i) => (
+            <li class="reveal" id={`p${p.n}`} style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="road-n mono">{p.n}</span>
+              <h4>{p.t}</h4>
+              <p>{p.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- get started -->
+    <section class="section" id="get-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">读它</span>
+            <h2 class="reveal" style="--d:.05s">六种入口，<span class="serif">一个笔记库。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            <a href={links.start}>Start Here</a> 解释约定并给出学习次序；<a href={links.map}>Map of Content</a> 按主题列出全部笔记。或者从你来的地方开始。
+          </p>
+        </div>
+        <ul class="audiences">
+          {audiences.map((a, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={a.href}>
+                <span class="who">{a.who}</span>
+                <span class="start">{a.start}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ contact -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">参与进来</span>
+          <h2 class="reveal" style="--d:.05s">和我们一起学，<span class="serif">或者纠正我们。</span></h2>
+          <p class="reveal" style="--d:.1s">
+            发现与原书不符的定义、跑不起来的 Julia 标签页，或缺了的概念？开一个 issue 或拉取请求。如果你想为机器学习、数据库或编译器学范畴论，告诉我们你在哪里迷了路：那就是我们先重建的地方。
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.issues}>提一个 issue <span class="arrow">→</span></a>
+            <a class="btn" href={links.authoring}>笔记怎么写</a>
+          </div>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href={links.lenticulum} style="--d:.06s">
+            <span class="mono sib-k">模型 · 轨道 E</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">因子图上的关系学习器。它的理论笔记库在贝叶斯透镜、统计博弈与自由能处链接至此。</span>
+          </a>
+          <a class="sib reveal" href={links.sophia} style="--d:.1s">
+            <span class="mono sib-k">代码 · 轨道 F</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">内容寻址的代码存储。它的设计笔记在 e-graph、Datalog 与范畴语义处链接至此。</span>
+          </a>
+          <a class="sib reveal" href={links.moonkale} style="--d:.14s">
+            <span class="mono sib-k">界面 · 查看器</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">图原生编辑器，准备把维基、各项目笔记库与它们的代码显示成一张图。</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .fact-flag {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+    margin-top: -2px;
+  }
+  .hero-copy,
+  .hero-art {
+    min-width: 0;
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    color: var(--fg);
+  }
+  .hero-art figcaption,
+  .north-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* ----------------------------------------------------------- note card */
+  .notecard {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .nc-bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px;
+    font-size: 11.5px;
+    color: var(--fg);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+  }
+  .nc-tags {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nc-body {
+    padding: 18px 22px 20px;
+  }
+  .nc-def {
+    margin: 0;
+    font-size: 15px;
+    color: var(--fg-2);
+  }
+  .nc-def i,
+  .nc-math i {
+    font-family: var(--font-serif);
+    font-size: 1.12em;
+  }
+  .nc-link {
+    border-bottom: 1px solid var(--fg);
+    color: var(--fg);
+  }
+  .nc-math {
+    margin: 10px 0;
+    text-align: center;
+    font-size: 18px;
+  }
+  .nc-cd {
+    display: block;
+    width: 200px;
+    margin: 10px auto 4px;
+    height: auto;
+  }
+  .nc-cd text {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    fill: var(--fg);
+  }
+  .nc-cd text.sm {
+    font-size: 13px;
+    font-style: italic;
+  }
+  .nc-cd path {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.1;
+  }
+  .nc-src,
+  .nc-used {
+    margin: 12px 0 0;
+    font-size: 11.5px;
+    color: var(--fg-2);
+    padding: 8px 12px;
+    border-left: 2px solid var(--fg);
+    background: var(--bg-sunken);
+  }
+  .nc-src span,
+  .nc-used span {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 8px;
+  }
+  .nc-used {
+    border-left-style: dashed;
+  }
+  .nc-tabs {
+    display: flex;
+    gap: 2px;
+    margin-top: 14px;
+    font-size: 11.5px;
+  }
+  .nc-tabs span {
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    color: var(--muted);
+  }
+  .nc-tabs .on {
+    color: var(--fg);
+    border-color: var(--line-strong);
+    background: var(--bg-sunken);
+  }
+  .nc-code {
+    margin: 0;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line-strong);
+    border-radius: 0 8px 8px 8px;
+    overflow-x: auto;
+  }
+
+  /* -------------------------------------------------------------- band */
+  .band {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+    padding: 22px 0;
+  }
+  .band-text {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    max-width: 96ch;
+  }
+  .band-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+    margin-top: 32px;
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 12px 16px 12px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--fg);
+    width: 34%;
+    white-space: nowrap;
+  }
+  .compare td {
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+
+  /* -------------------------------------------------------------- format */
+  .north {
+    border-top: 1px solid var(--line);
+  }
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .north-art {
+    margin: 0;
+  }
+  .north-art svg {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .layer rect {
+    fill: var(--bg-raised);
+    stroke: var(--line-strong);
+  }
+  .layer.plan rect {
+    stroke-dasharray: 4 4;
+    fill: transparent;
+  }
+  .lk {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    fill: var(--muted);
+  }
+  .lk2 {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    fill: var(--fg-2);
+  }
+  .north-art .e {
+    stroke: var(--fg);
+    stroke-width: 1.2;
+    fill: none;
+    opacity: 0.7;
+  }
+  .north-art .e.plan {
+    stroke-dasharray: 3 4;
+    opacity: 0.6;
+  }
+  .north-art .n circle,
+  .north-art .n rect {
+    fill: var(--fg);
+  }
+  .north-art .n.c circle {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-dasharray: 2 2;
+  }
+  .north-art .n text {
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    fill: var(--fg-2);
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .road {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 700px) {
+    .road {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .road {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .road li {
+    background: var(--bg);
+    padding: 24px 24px 28px 0;
+  }
+  @media (min-width: 700px) {
+    .road li {
+      padding: 24px 28px 28px 0;
+    }
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  @media (min-width: 1000px) {
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 0;
+    }
+    .road li:not(:nth-child(3n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  .road-n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .road h4 {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .road p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ----------------------------------------------------------- audiences */
+  .audiences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audiences a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.3s var(--ease);
+  }
+  @media (min-width: 760px) {
+    .audiences a {
+      grid-template-columns: 340px 1fr auto;
+      align-items: baseline;
+    }
+  }
+  .audiences a:hover {
+    padding-left: 10px;
+  }
+  .who {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .start {
+    color: var(--muted);
+    font-size: 15px;
+    grid-column: 1;
+  }
+  @media (min-width: 760px) {
+    .start {
+      grid-column: 2;
+    }
+  }
+  .audiences .arrow {
+    grid-column: -2;
+    grid-row: 1;
+    transition: transform 0.3s var(--ease);
+  }
+  .audiences a:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* ------------------------------------------------------------- contact */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>

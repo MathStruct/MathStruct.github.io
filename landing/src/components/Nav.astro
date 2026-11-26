@@ -2,13 +2,29 @@
 import ThemeToggle from "./ThemeToggle.astro"
 import Wordmark from "./Wordmark.astro"
 
-const links = [
-  { href: "/#projects", label: "Projects" },
-  { href: "/#approach", label: "Approach" },
-  { href: "/blog/", label: "Blog" },
-  { href: "/about", label: "About" },
-  { href: "/people/", label: "People" },
-]
+// The Chinese pages in src/pages/zh/ mirror the English ones one to one, so the same header
+// serves both: the labels switch, the links gain their /zh/ prefix, and the language switch
+// points at the other language's copy of the page.
+const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").replace(/\/*$/, "") || "/"
+const zh = path === "/zh" || path.startsWith("/zh/")
+const other = zh ? path.replace(/^\/zh/, "") || "/" : path === "/" ? "/zh" : "/zh" + path
+
+const links = zh
+  ? [
+      { href: "/zh/#projects", label: "项目" },
+      { href: "/zh/#approach", label: "方法" },
+      { href: "/blog/", label: "博客" },
+      { href: "/zh/about", label: "关于" },
+      { href: "/people/index-zh.html", label: "成员" },
+    ]
+  : [
+      { href: "/#projects", label: "Projects" },
+      { href: "/#approach", label: "Approach" },
+      { href: "/blog/", label: "Blog" },
+      { href: "/about", label: "About" },
+      { href: "/people/", label: "People" },
+    ]
+const switchLabel = zh ? "English" : "中文"
 ---
 
 <header class="nav">
@@ -19,6 +35,9 @@ const links = [
     <nav aria-label="Main">
       <ul>
         {links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
+        <li class="lang">
+          <a href={other} lang={zh ? "en" : "zh"}>{switchLabel}</a>
+        </li>
       </ul>
     </nav>
     <div class="actions">
@@ -37,6 +56,7 @@ const links = [
         </summary>
         <ul class="menu-panel">
           {links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
+          <li><a href={other} lang={zh ? "en" : "zh"}>{switchLabel}</a></li>
           <li><a href="https://github.com/MathStruct">GitHub</a></li>
         </ul>
       </details>
@@ -95,6 +115,15 @@ const links = [
   ul a:hover {
     color: var(--fg);
     background: var(--bg-sunken);
+  }
+  .lang a {
+    color: var(--fg);
+    border: 1px solid var(--line);
+    padding: 7px 12px;
+  }
+  .lang a:hover {
+    border-color: var(--line-strong);
+    background: var(--bg-raised);
   }
   .actions {
     display: flex;

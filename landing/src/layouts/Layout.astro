@@ -4,17 +4,19 @@ import "../styles/global.css"
 interface Props {
   title: string
   description: string
+  /** the page's language, e.g. "zh" for the Chinese pages in src/pages/zh/ */
+  lang?: string
   /** the page's address without ".html" (as GitHub Pages serves it), e.g. "/projects/lenticulum-jl" */
   path?: string
   /** social preview image, from the site root */
   image?: string
 }
-const { title, description, path = "/", image = "/static/og-image.png" } = Astro.props
+const { title, description, lang = "en", path = "/", image = "/static/og-image.png" } = Astro.props
 const url = new URL(path, Astro.site)
 ---
 
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang={lang} class="no-js">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

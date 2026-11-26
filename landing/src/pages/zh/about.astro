@@ -1,0 +1,947 @@
+---
+// /zh/about：关于页的中文版，与 ../about.astro 保持一致；链接指向中文页面（尚无中文版的保持英文链接）。
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+
+const links = {
+  lenticulum: "/zh/projects/lenticulum-jl",
+  sophia: "/zh/projects/sophia",
+  sophiaVault: "https://mathstruct.org/Sophia/",
+  moonkale: "/zh/projects/moonkale",
+  wiki: "/zh/projects/category-theory-ml-wiki",
+  projects: "/zh/#projects",
+  blog: "/blog/",
+  people: "/people/index-zh.html",
+  authoring: "/guides/authoring",
+  discussions: "https://github.com/MathStruct/MathStruct.github.io/discussions",
+  github: "https://github.com/MathStruct",
+  contributing: "https://github.com/MathStruct/Lenticulum.jl/blob/master/CONTRIBUTING.md",
+  finiteFields: "https://github.com/MathStruct/FiniteFields",
+  zenodo: "https://doi.org/10.5281/zenodo.23314723",
+}
+
+// 首屏：同一种结构，三个项目
+const graphs = [
+  { what: "统计模型", is: "一张因子图", project: "Lenticulum.jl", href: links.lenticulum, does: "可向任意方向查询，而非单向运行" },
+  { what: "程序", is: "一张定义图", project: "Sophia", href: links.sophia, does: "证明与测试就附在它们所针对的对象上" },
+  { what: "知识体系", is: "一张笔记图", project: "Moonkale", href: links.moonkale, does: "代码、笔记与数据同在一张图里" },
+]
+
+// 2025 年的构想：当时缺少的东西
+const gaps = [
+  { k: "传播", t: "论文是封闭的", d: "成果要经由出版商和一轮缓慢的同行评审才能传播，其形态是无法链接、无法就地更正、也无法直接在其上继续构建的文档。" },
+  { k: "万维网", t: "超链接与维基，无人问津", d: "链接式的、集体维护的知识在几乎所有其他领域都成了常态。在数学中，它或被半心半意地使用，或被忽视，或被轻视。" },
+  { k: "确定性", t: "被冷落的精益", d: "一条命题成立的机器检验保证，是任何期刊都无法提供的。多年来，社区中的多数人对它几乎不闻不问。" },
+  { k: "学习", t: "没有个人化的路径", d: "给定你已经知道什么、想去哪里，穿越知识图谱的路线本是一道可计算的题。没有人去算。" },
+  { k: "数据", t: "没有可训练的数据", d: "无论是自动形式化还是它的逆，都缺少好的数据。把每个非形式化陈述和它的形式化对应放在同一张图里，恰好就是这种数据。" },
+]
+
+// Lenticulum.jl 是如何成形的
+const pieces = [
+  { k: "问题", t: "可学习的因子图", d: "用 GTSAM 做一个传感器融合问题时发现：因子图优雅地组合了测量，但它们是高斯的、线性化的、手工搭建的。如果它们是非高斯的、非线性的、并且是学习出来的呢？当时并没有显而易见的办法。", href: "https://gtsam.org", src: "GTSAM" },
+  { k: "部件 1", t: "隐式层与伴随", d: "对方程的解求导，而不是对求解器的各步求导。", href: "http://implicit-layers-tutorial.org", src: "隐式层教程" },
+  { k: "部件 2", t: "基于能量的模型", d: "给构型打分而非计算输出的模型——这正是一个因子所做的事。", href: "https://yann.lecun.com/exdb/publis/pdf/lecun-06.pdf", src: "LeCun 等，《基于能量的学习教程》" },
+  { k: "部件 3", t: "参数透镜", d: "好奇心把我们带到了范畴论，在那里找到了带参数的前向-后向计算的组合式刻画。", href: "https://arxiv.org/abs/2103.01931", src: "Cruttwell 等，《基于梯度的学习的范畴基础》" },
+  { k: "部件 4", t: "作为先验的扩散模型", d: "先用条件采样（DiffPIR、RED-Diff、近端扩散方法）正则化逆问题，然后是其背后的理论：习得的先验与数据项是如何一步步结合的。" },
+  { k: "部件 5", t: "统计博弈", d: "前面所有部件指向的那个范畴：带损失的贝叶斯透镜。", href: "https://arxiv.org/abs/2503.18608", src: "St Clere Smithe 与 Perin，《AutoBayes》" },
+]
+
+const principles = [
+  { t: "默认开放", d: "代码、笔记、设计决策与阴性结果全部公开。软件采用 MIT 许可。" },
+  { t: "每个项目都是一个笔记库", d: "用 Quartz 发布的 Obsidian 笔记库：概念、推导与设计笔记彼此链接，也链接到代码，包括代码做不到的事和一路上的失败。" },
+  { t: "对照已知结果检验", d: "凡有解析形式可用之处，代码都与解析形式核对。近似方法都明确说明，状态页写明哪些尚未完成。" },
+  { t: "异步协作，在 GitHub 上", d: "Issue、拉取请求与讨论。对任何笔记库任何页面的评论都会直接进入 GitHub Discussions。" },
+  { t: "AI 在明处", d: "我们使用 AI 编码代理，并公开说明。每个仓库都有一份 AGENTS.md，对代理和人的规则一视同仁。" },
+]
+
+const stance = [
+  { n: "01", t: "我们不在学术界", d: "我们的笔记库可能有错，这没关系。我们宁愿尽早发布、被人更正，也不愿私下打磨。发现了错误？在页面上评论，更好的做法是提一个拉取请求把它修掉。" },
+  { n: "02", t: "我们没有可以委托的下属", d: "教授有博士生，公司有员工；我们两者都没有——暂时如此。我们有能跑实验、查推导、追失败的测试的代理。让这件事变得可靠，本身就是研究的一部分。" },
+  { n: "03", t: "创造型的性情占了上风", d: "过去的研究长期奖励勤奋者：谁能把实现和第一百次实验磨完。AI 把天平拨向点子比手多的人——其中不乏多动症患者。算得上一次大逆转。" },
+  { n: "04", t: "现在就去登月", d: "一年前，MathStruct 这个量级的项目对我们这样规模的团队来说不可想象。如果你抽屉里躺着一个登月计划，现在正是把它拿出来的时候。" },
+  { n: "05", t: "另一种研究形态", d: "开放的笔记库代替封闭的论文，阴性结果写下来而不是扔掉。有些项目会失败，Sophia 自己的风险清单也说了它可能会。一旦失败，笔记库会写明原因，让下一个尝试的人站得更高。" },
+  { n: "06", t: "不在技术债上盖楼", d: "代理让重写变得便宜，所以我们选设计更好的技术栈：Julia 而非 Python、C++ 与 PyTorch；Rust 而非 JavaScript 与 React，或后端 C++。实践证明 Rust 特别适合与代理一起编程，它严格的编译器能及早抓住代理的错误。糟糕的性能和巨大的内存占用都算 bug。" },
+]
+
+const slop = [
+  { t: "人的研究代码从来就不是金标准", d: "论文代码的常见命运，是在论文被接收的那天就被抛弃的仓库，而对它的评审很少让人愉快。如今的模型学到了成熟的工程实践，它们写出的多数代码比我们多数人手写的更干净。" },
+  { t: "我们在流程上下功夫，而不只在提示词上", d: "我们跟进并试验 AI 代码的新兴最佳实践：规格驱动开发、精心的脚手架设计、独立的评审链。代码经过测试、基准测试与性能分析。" },
+  { t: "正确性可以被证明，而不只是被测试", d: "形式化软件验证能表明一个实现满足其规格。我们打算使用它，FiniteFields 是第一步。", href: links.finiteFields, link: "GitHub 上的 FiniteFields" },
+  { t: "我们读代码", d: "早在这一切之前，我们就写过 Julia、Python、C++、Rust、Pascal 和 JavaScript，我们仍然评审代理产出的代码。生产力上的这一收益太大，不能白白放弃。" },
+]
+const languages = ["Julia", "Python", "C++", "Rust", "Pascal", "JavaScript"]
+
+const applications = ["仿真", "交易", "组学", "语言模型", "机器人", "你的问题"]
+
+const bibtex = `@software{lenticulum,
+  author    = {{MathStruct}},
+  title     = {Lenticulum.jl},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23314723},
+  url       = {https://mathstruct.org/Lenticulum.jl/}
+}`
+---
+
+<Layout
+  title="关于 · MathStruct"
+  description="MathStruct 是谁，这些项目从何而来，我们如何工作，以及为什么用 AI 来快速推进：一个构建数学、科学计算与 AI/ML 工具的开源研究集体。"
+  path="/zh/about"
+  lang="zh"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow reveal">关于 MathStruct</span>
+          <h1 class="reveal" style="--d:.05s">
+            同一种结构，<br /><span class="serif">认真对待。</span>
+          </h1>
+          <p class="lede reveal" style="--d:.1s">
+            MathStruct 是一个开源研究集体，构建面向数学、科学计算与 AI/ML 的工具。我们的工作假设是：这三个领域不断产出同一种东西——由带类型接口的部件组成、以组合相连的系统。范畴论恰好是这种组合的数学，认真对待它，就能做出比寻常对手做得更多的工具。
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#origins">这一切从何而来 <span class="arrow">→</span></a>
+            <a class="btn" href="#ai">我们如何用 AI</a>
+            <a class="btn" href="#work">与我们合作</a>
+          </div>
+        </div>
+
+        <ol class="graphs reveal" style="--d:.1s" aria-label="同一种结构在三个项目中">
+          {graphs.map((g, i) => (
+            <li>
+              <a href={g.href}>
+                <svg class="g-art" viewBox="0 0 64 40" aria-hidden="true">
+                  {i === 0 && (
+                    <g>
+                      <line x1="10" y1="20" x2="32" y2="10" /><line x1="10" y1="20" x2="32" y2="30" />
+                      <line x1="32" y1="10" x2="54" y2="20" /><line x1="32" y1="30" x2="54" y2="20" />
+                      <circle cx="10" cy="20" r="4" /><circle cx="54" cy="20" r="4" />
+                      <rect x="28.5" y="6.5" width="7" height="7" class="f" /><rect x="28.5" y="26.5" width="7" height="7" class="f" />
+                    </g>
+                  )}
+                  {i === 1 && (
+                    <g>
+                      <line x1="32" y1="8" x2="14" y2="32" /><line x1="32" y1="8" x2="50" y2="32" /><line x1="32" y1="8" x2="32" y2="32" />
+                      <circle cx="32" cy="8" r="4" /><circle cx="14" cy="32" r="4" /><circle cx="32" cy="32" r="4" /><circle cx="50" cy="32" r="4" class="f" />
+                    </g>
+                  )}
+                  {i === 2 && (
+                    <g>
+                      <line x1="10" y1="12" x2="30" y2="28" /><line x1="30" y1="28" x2="54" y2="10" /><line x1="10" y1="12" x2="54" y2="10" /><line x1="30" y1="28" x2="50" y2="34" />
+                      <circle cx="10" cy="12" r="4" /><circle cx="30" cy="28" r="4" class="f" /><circle cx="54" cy="10" r="4" /><circle cx="50" cy="34" r="3" />
+                    </g>
+                  )}
+                </svg>
+                <span class="g-text">
+                  <span class="g-what">{g.what}就是<span class="serif">{g.is}</span></span>
+                  <span class="g-does mono">{g.project} · {g.does}</span>
+                </span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- origins -->
+    <section class="section" id="origins">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">这一切从何而来 · 2025 年 1 月</span>
+            <h2 class="reveal" style="--d:.05s">它始于<span class="serif">一次路演。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            MathStruct 最初是一个创业点子：数学知识的一种新格式——一张由定义、命题与证明构成的图，同时又是代码的图。它源于对数学传播方式的不满，也源于对多少更好的工具已经存在却被闲置的不满。
+          </p>
+        </div>
+
+        <ul class="gaps">
+          {gaps.map((g, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <span class="k mono">{g.k}</span>
+              <h3>{g.t}</h3>
+              <p>{g.d}</p>
+            </li>
+          ))}
+        </ul>
+
+        <div class="outcome reveal">
+          <p>
+            我们曾想围绕它建一个平台。当时没有做成；后来有别的团队追求过这幅图景的一部分，Axiom Math
+            是其中之一，并拿到了可观的风险投资。这些想法留了下来，活在
+            <a class="il" href={links.sophia}>Sophia</a>、<a class="il" href={links.moonkale}>Moonkale</a> 和
+            <a class="il" href={links.wiki}>范畴论与机器学习维基</a>中。
+          </p>
+        </div>
+
+        <h3 class="sub reveal" id="library">这个库是如何成形的</h3>
+        <div class="lib">
+        <div class="pieces-head">
+          <p class="reveal">
+            <a class="il" href={links.lenticulum}>Lenticulum.jl</a> 的渊源更早：一个问题等了多年才等到答案，而答案是一件一件到来的。
+          </p>
+          <p class="pieces-note mono reveal">从一个传感器融合问题到一个库，共六步。</p>
+        </div>
+        <ol class="pieces">
+          {pieces.map((p, i) => (
+            <li class="reveal" style={`--d:${0.03 * i}s`}>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="k mono">{p.k}</span>
+              <h4>{p.t}</h4>
+              <p>{p.d}</p>
+              {p.href && <a class="src mono" href={p.href}>{p.src} ↗</a>}
+            </li>
+          ))}
+          <li class="reveal pieces-end">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="k mono">组装完成</span>
+            <h4><a href={links.lenticulum}>Lenticulum.jl <span class="arrow">→</span></a></h4>
+            <p>Julia 写就的因子图上的关系学习器：学习关系，而非函数。</p>
+          </li>
+        </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- statement -->
+    <section class="statement" id="ai">
+      <div class="wrap">
+        <span class="eyebrow">我们的座右铭</span>
+        <p class="reveal">
+          快速行动，打破常规。<span class="dim">然后把打破的和原因写下来。</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------------- stance -->
+    <section class="section">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">关于 AI</span>
+            <h2 class="reveal" style="--d:.05s">乐观者，<span class="serif">带着测试。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            我们认为 AI 时代对研究是好消息，也想示范如何把它做好：快、公开、并且经过检验。
+          </p>
+        </div>
+        <ol class="stance">
+          {stance.map((s, i) => (
+            <li class="reveal" style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="n mono">{s.n}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
+
+        <div class="faq" id="slop">
+          <div class="faq-q">
+            <span class="eyebrow reveal">那个直白的问题</span>
+            <h3 class="reveal" style="--d:.05s">“这不就是<span class="serif">AI 垃圾</span>吗？”</h3>
+            <p class="reveal" style="--d:.1s">问得好。以下是我们的回答。</p>
+            <ul class="langs mono reveal" style="--d:.14s" aria-label="我们在 AI 之前写过的语言">
+              {languages.map((l) => <li>{l}</li>)}
+            </ul>
+            <p class="langs-cap mono reveal" style="--d:.14s">早已手写多年，远在代理出现之前</p>
+          </div>
+          <ul class="faq-a">
+            {slop.map((s, i) => (
+              <li class="reveal" style={`--d:${0.04 * i}s`}>
+                <h4>{s.t}</h4>
+                <p>
+                  {s.d}
+                  {s.href && <> <a class="il" href={s.href}>{s.link} ↗</a></>}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- how we work -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">我们的工作方式</span>
+            <h2 class="reveal" style="--d:.05s">研究，<span class="serif">写下来。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            快并不意味着可以对我们声称的东西粗心。每个项目都写明哪些可用、哪些不可用、以及计划是什么。
+          </p>
+        </div>
+        <ul class="principles">
+          {principles.map((p, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <span class="n mono">{String(i + 1).padStart(2, "0")}</span>
+              <h3>{p.t}</h3>
+              <p>{p.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ commercial -->
+    <section class="section" id="work">
+      <div class="wrap work">
+        <div>
+          <span class="eyebrow reveal">与我们合作</span>
+          <h2 class="reveal" style="--d:.05s">有问题？<span class="serif">带来便是。</span></h2>
+        </div>
+        <div>
+          <p class="lede reveal" style="--d:.08s">
+            隐式学习——学习关系而非函数——还需要一段时间才会成为人们熟悉的概念。如果你希望把它用到你的问题上，或者隐约觉得合适却看不清怎么做：来和我们聊聊，我们可以和你一起设计与实现解决方案。
+          </p>
+          <ul class="apps mono reveal" style="--d:.12s">
+            {applications.map((a) => <li>{a}</li>)}
+          </ul>
+          <p class="fine reveal" style="--d:.14s">
+            核心项目现在是、将来也是开源的。在我们或他人的手中，可以在其下游构建商业产品，而核心保持开放。
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href={links.discussions}>开始交流 <span class="arrow">→</span></a>
+            <a class="btn" href={links.lenticulum}>Lenticulum.jl 能做什么</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------- collaborate & cite -->
+    <section class="cite-band" id="collaborate">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">协作</span>
+          <h2 class="reveal" style="--d:.05s">每一层<span class="serif">都算数。</span></h2>
+          <p class="reveal" style="--d:.1s">
+            指出错误的评论、一篇笔记、一个测试、一个功能、一个可以一起做的研究问题：一律欢迎。最好的第一步是在相关页面上评论，或在 GitHub 上发起一个<a href={links.discussions}>讨论</a>。贡献都会署名；<a href={links.contributing}>CONTRIBUTING.md</a>说明了具体方式，包括在正式发布中署名作者。
+          </p>
+          <ul class="where reveal" style="--d:.14s">
+            <li><a href={links.projects}><span>项目</span><span class="mono">软件与笔记库</span></a></li>
+            <li><a href={links.blog}><span>博客</span><span class="mono">随笔、结果、发布</span></a></li>
+            <li><a href={links.people}><span>成员</span><span class="mono">我们是谁</span></a></li>
+            <li><a href={links.authoring}><span>写作指南</span><span class="mono">为本站写一个页面</span></a></li>
+          </ul>
+        </div>
+        <figure class="code reveal" style="--d:.08s">
+          <figcaption class="mono">引用我们 · 概念 DOI，始终指向最新版本</figcaption>
+          <pre><code>{bibtex}</code></pre>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.1fr 1fr;
+    }
+  }
+  .hero-copy {
+    min-width: 0;
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .graphs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .graphs li + li {
+    border-top: 1px solid var(--line);
+  }
+  .graphs a {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 22px;
+    transition: background-color 0.2s var(--ease);
+  }
+  .graphs a:hover {
+    background: var(--bg-sunken);
+  }
+  .g-art {
+    width: 64px;
+    height: 40px;
+  }
+  .g-art line {
+    stroke: var(--line-strong);
+    stroke-width: 1.4;
+  }
+  .g-art circle,
+  .g-art rect {
+    fill: var(--bg-raised);
+    stroke: var(--fg);
+    stroke-width: 1.4;
+  }
+  .g-art .f {
+    fill: var(--fg);
+  }
+  .g-text {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .g-what {
+    font-size: 18px;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+  }
+  .g-what .serif {
+    font-size: 1.12em;
+  }
+  .g-does {
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .graphs .arrow {
+    color: var(--muted);
+    transition: transform 0.25s var(--ease), color 0.2s var(--ease);
+  }
+  .graphs a:hover .arrow {
+    color: var(--fg);
+    transform: translateX(3px);
+  }
+  @media (max-width: 480px) {
+    .graphs a {
+      grid-template-columns: 1fr auto;
+      padding: 18px;
+    }
+    .g-art {
+      display: none;
+    }
+  }
+
+  /* ------------------------------------------------------------- origins */
+  .k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .gaps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 720px) {
+    .gaps {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1080px) {
+    .gaps {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+  .gaps li {
+    background: var(--bg);
+    padding: 26px 22px 28px;
+  }
+  .gaps h3 {
+    margin: 14px 0 10px;
+    font-size: 19px;
+  }
+  .gaps p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--fg-2);
+  }
+  .outcome {
+    margin-top: 32px;
+    padding: 24px 26px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+  }
+  .outcome p {
+    margin: 0;
+    max-width: 82ch;
+    color: var(--fg-2);
+  }
+
+  .sub {
+    margin-top: clamp(64px, 9vw, 104px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lib {
+    display: grid;
+    gap: 8px;
+  }
+  @media (min-width: 960px) {
+    .lib {
+      grid-template-columns: 4fr 7fr;
+      gap: 64px;
+      margin-top: 40px;
+    }
+    .pieces-head {
+      position: sticky;
+      top: 108px;
+      align-self: start;
+    }
+    .pieces-head p:first-child {
+      margin-top: 0 !important;
+    }
+    .pieces {
+      margin-top: 0 !important;
+    }
+  }
+  .pieces-note {
+    margin: 12px 0 0 !important;
+    font-size: 12px !important;
+    color: var(--muted) !important;
+  }
+  .pieces-head p {
+    margin: 24px 0 8px;
+    max-width: 60ch;
+    font-size: clamp(17px, 1.6vw, 19px);
+    color: var(--fg-2);
+  }
+  .pieces {
+    list-style: none;
+    margin: 32px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+  }
+  .pieces li {
+    position: relative;
+    padding: 0 0 36px 40px;
+    max-width: 72ch;
+  }
+  .pieces li::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    bottom: -2px;
+    width: 1px;
+    background: var(--line-strong);
+  }
+  .pieces li:last-child {
+    padding-bottom: 0;
+  }
+  .pieces li:last-child::before {
+    display: none;
+  }
+  .dot {
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 15px;
+    height: 15px;
+    border-radius: 999px;
+    border: 1.5px solid var(--fg);
+    background: var(--bg);
+  }
+  .pieces li:first-child .dot {
+    border-style: dashed;
+  }
+  .pieces-end .dot {
+    background: var(--fg);
+  }
+  .pieces h4 {
+    margin: 6px 0 6px;
+    font-size: 21px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+  .pieces-end h4 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 30px;
+  }
+  .pieces-end h4 .arrow {
+    display: inline-block;
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 0.7em;
+    transition: transform 0.25s var(--ease);
+  }
+  .pieces-end h4 a:hover .arrow {
+    transform: translateX(4px);
+  }
+  .pieces p {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+  .src {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  .src:hover {
+    color: var(--fg);
+    border-bottom-color: var(--fg);
+  }
+
+  /* ----------------------------------------------------------- statement */
+  .statement {
+    padding: clamp(72px, 10vw, 128px) 0;
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .statement .eyebrow {
+    color: inherit;
+    opacity: 0.6;
+  }
+  .statement p {
+    margin: 22px 0 0;
+    max-width: 20ch;
+    font-family: var(--font-serif);
+    font-size: clamp(38px, 6vw, 80px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .statement .dim {
+    opacity: 0.5;
+  }
+
+  /* ---------------------------------------------------------------- stance */
+  .stance {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 40px 48px;
+  }
+  @media (min-width: 760px) {
+    .stance {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1080px) {
+    .stance {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .stance li {
+    border-top: 1px solid var(--line-strong);
+    padding-top: 20px;
+  }
+  .n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stance h3,
+  .principles h3 {
+    margin: 12px 0 10px;
+  }
+  .stance p,
+  .principles p {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+
+  .faq {
+    margin-top: clamp(72px, 10vw, 120px);
+    display: grid;
+    gap: 40px;
+    padding: clamp(28px, 4vw, 48px);
+    border: 1px solid var(--line-strong);
+    border-radius: calc(var(--radius) + 4px);
+    background: var(--bg-raised);
+  }
+  @media (min-width: 960px) {
+    .faq {
+      grid-template-columns: 5fr 7fr;
+      gap: 64px;
+    }
+  }
+  .faq-q h3 {
+    margin-top: 18px;
+    font-size: clamp(32px, 4vw, 48px);
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
+  .faq-q > p {
+    margin: 16px 0 0;
+    color: var(--fg-2);
+  }
+  .langs {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .langs li,
+  .apps li {
+    font-size: 12px;
+    padding: 5px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--fg-2);
+  }
+  .langs-cap {
+    margin: 10px 0 0 !important;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--muted) !important;
+  }
+  .faq-a {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 28px;
+    counter-reset: a;
+  }
+  .faq-a li {
+    padding-left: 36px;
+    position: relative;
+    counter-increment: a;
+  }
+  .faq-a li::before {
+    content: counter(a);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .faq-a h4 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+  }
+  .faq-a p {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+
+  /* ------------------------------------------------------------ principles */
+  .principles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 720px) {
+    .principles {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1080px) {
+    .principles {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+  .principles li {
+    background: var(--bg);
+    padding: 26px 22px 28px;
+  }
+  .principles h3 {
+    font-size: 19px;
+  }
+  .principles p {
+    font-size: 15px;
+  }
+
+  /* ------------------------------------------------------------------ work */
+  .work {
+    display: grid;
+    gap: 32px;
+  }
+  @media (min-width: 900px) {
+    .work {
+      grid-template-columns: 5fr 6fr;
+      gap: 64px;
+    }
+  }
+  .apps {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .apps li:last-child {
+    border-style: dashed;
+    color: var(--fg);
+  }
+  .fine {
+    margin: 24px 0 0;
+    max-width: 56ch;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* ------------------------------------------------------------- cite band */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+    margin: 0;
+  }
+  .cite-band p a,
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .cite-band p a:hover,
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .where {
+    list-style: none;
+    margin: 32px 0 0;
+    padding: 0;
+    max-width: 54ch;
+  }
+  .where a {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    transition: padding 0.2s var(--ease);
+  }
+  .where li:last-child a {
+    border-bottom: 1px solid var(--line);
+  }
+  .where a:hover {
+    padding-left: 6px;
+  }
+  .where .mono {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .code {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .code figcaption {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .code pre {
+    margin: 0;
+    padding: 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--fg);
+  }
+</style>

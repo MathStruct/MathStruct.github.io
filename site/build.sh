@@ -40,4 +40,7 @@ LANDING="$HERE/../landing"
 if [[ -z "${SKIP_LANDING:-}" ]]; then
   (cd "$LANDING" && { [[ -d node_modules ]] || npm ci --no-audit --no-fund; } && npx astro build --silent)
   cp -r "$LANDING/dist/." "$OUT/"
+  # Astro builds landing/src/pages/zh/index.astro to zh.html (build.format is "file"); the Chinese
+  # front page belongs at /zh/, so move it to where GitHub Pages serves it from
+  mv "$OUT/zh.html" "$OUT/zh/index.html"
 fi
