@@ -3,6 +3,9 @@ title: About MathStruct
 description: Who we are, where the projects came from, how we work, and how we use AI.
 ---
 
+%% On mathstruct.org this page is replaced by landing/src/pages/about.astro (built with Astro).
+This note still feeds the site's search, graph and link previews: keep the two in step. %%
+
 ## Mission
 
 MathStruct is an open-source research collective developing tooling for mathematics,
