@@ -30,6 +30,8 @@ const links = {
   trinity: note("vault/Theory/Computational-Trinitarianism"),
   binaries: note("vault/Design/Minimal-Binaries"),
   query: note("vault/Languages/Sophia-Query/Sophia-Query-Overview"),
+  compression: note("vault/Research/Compression-and-Canonical-Form"),
+  llms: note("vault/Research/LLMs-and-Mixed-Language-Code"),
   sophia: "/projects/sophia",
   moonkale: "/projects/moonkale",
   lenticulum: "/projects/lenticulum-jl",
@@ -45,6 +47,15 @@ const compare: [string, string, string][] = [
   ["Runtime", "Always there (GC, JIT), or never", "Linked only for the aspects some section leaves to the system"],
   ["What a function is", "Text in a file, at a line", "A definition keyed by the hash of its normalised structure; names are labels on it"],
   ["After an edit", "Rebuild and re-test by file, crate or package", "Exactly the changed ids and what depends on them"],
+]
+
+// ---------------------------------------------------------------- a system, not a syntax
+// From Compression and Canonical Form §1, SPEC-005 Rendering Profiles and LLMs and Mixed-Language
+// Code §1, §4. Agents on the graph are planned; today models reach the store through a profile.
+const system = [
+  { k: "Stored", t: "Normalised and compressed", d: "No names, no variables, no whitespace: de Bruijn indices, references as 32-byte hashes, shared structure stored once. It is not meant to be read by anyone." },
+  { k: "Shown", t: "In the syntax you choose", d: "Julia-like, Rust-like, Lean-like or one you configure: a profile is a setting, stored like any other. Two people can read one definition in two syntaxes and edit the same id." },
+  { k: "Planned", t: "Agents on the graph", d: "Today models work through a profile, Julia-like text, and every write is parsed back. We want agents that work on the graph itself: core terms and mined abstractions, with no frontend language in between." },
 ]
 
 // ---------------------------------------------------------------- the trinity
@@ -98,6 +109,7 @@ const roadmap = [
   { n: "M5", t: "It compiles", d: "Lowering through MLIR to LLVM, minimal binaries, and a JIT cache keyed by content id and argument types." },
   { n: "M6", t: "It hosts itself", d: "The printer in sophialang, then the compile DSL and the dependent checker; the Rust code becomes a small bootstrap kernel." },
   { n: "B-037", t: "Type systems as data", d: "A language for defining type systems, so a checker is a stored, versioned thing a build can ask for." },
+  { n: "Later", t: "Agents on the graph", d: "Models that read and write core terms and mined abstractions directly, instead of working through a frontend language like Julia." },
   { n: "B-045", t: "In the browser", d: "sophialang compiled to WebAssembly, and Sophia's crates opened and queried in a browser." },
   { n: "P0 · 3", t: "Reproducible dispatch", d: "A method table changes, and an earlier world still reproduces the original calls. It passes in the store; end to end it needs M4's interpreter." },
 ]
@@ -154,6 +166,41 @@ const roadmap = [
           <span class="mono band-k">Status</span>
           sophialang is a plan with a first core. It can be written, printed, parsed and stored;
           it cannot run. Whether it can meet all of its specifications is what the experiment is for.
+        </p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- system -->
+    <section class="section" id="system">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Not a text format</span>
+            <h2 class="reveal" style="--d:.05s">A programming system, <span class="serif">not a programming language.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            sophialang is not stored as text, and it is not meant to be read. What the store holds is
+            the normalised, compressed core term. What you read is a projection of it, in the syntax
+            your configuration asks for. So sophialang is less a programming language than a
+            programming system: one store of definitions, with as many surfaces as its users want.
+          </p>
+        </div>
+        <ul class="features features--3 reveal">
+          {system.map((f) => (
+            <li class="feature">
+              <span class="mono feature-k">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="fineprint mono">
+          From Sophia's notes <a class="il" href={links.compression}>Compression and Canonical Form</a>
+          and <a class="il" href={links.llms}>LLMs and Mixed-Language Code</a>. Compression here is
+          structural sharing, which exists; mining a corpus for abstractions is planned, as a derived
+          layer that never changes ids. Julia and Rust profiles exist; Lean is planned. Sophia's agent
+          server already lets models query and read the store; agents that edit the graph directly
+          are for the future.
         </p>
       </div>
     </section>
@@ -745,6 +792,9 @@ proves(:memory, step!, Ownership(w.arena))</code></pre>
   @media (min-width: 1000px) {
     .features {
       grid-template-columns: repeat(4, 1fr);
+    }
+    .features--3 {
+      grid-template-columns: repeat(3, 1fr);
     }
   }
   .feature {
