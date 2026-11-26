@@ -9,6 +9,7 @@ import Footer from "../../components/Footer.astro"
 import FactorGraph from "../../components/FactorGraph.astro"
 import RelationExplorer from "../../components/lenticulum/RelationExplorer.astro"
 import HowItWorks from "../../components/lenticulum/HowItWorks.astro"
+import FreeEnergy from "../../components/lenticulum/FreeEnergy.astro"
 import { demos } from "../../lib/lenticulum-demos"
 
 const links = {
@@ -326,6 +327,25 @@ const bibtex = `@software{lenticulum,
         <div class="compose-art reveal" style="--d:.1s">
           <FactorGraph />
         </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- free energy -->
+    <section class="section" id="free-energy">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Free energy</span>
+            <h2 class="reveal" style="--d:.05s">Why it converges, <span class="serif">and when it does not.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Inference, learning and, in active inference, acting are all descents on one number: the
+            graph's free energy. Lenticulum.jl computes it on any graph as the Bethe free energy. Whether a
+            descent arrives depends on the shape of the graph, on whether the beliefs carry their own
+            motion, and on how the loops that do the descending are put together.
+          </p>
+        </div>
+        <FreeEnergy />
       </div>
     </section>
 

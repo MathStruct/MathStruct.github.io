@@ -1,0 +1,801 @@
+---
+// "Free energy" on /projects/lenticulum-jl: two small labs that run in the browser, and three notes.
+// Lab 1 runs loopy Gaussian belief propagation on a ring and plots its Bethe free energy per sweep
+// against the exact -log p(y). Lab 2 tracks a moving target with a belief over position only and with
+// one that also carries a velocity (generalised coordinates of order 1). The maths is in
+// src/lib/free-energy.ts. The claims in the notes come from Lenticulum.jl's vault (Gaussian Graphs/
+// Bethe Free Energy, Gaussian Graphs/Composing Optimisers, Design/Time as a Base), as of 2026-11-24
+// (MathStruct/Lenticulum.jl@7037623); the labs reproduce them qualitatively, not the vault's numbers.
+const vault = "https://mathstruct.org/Lenticulum.jl/"
+const notes = {
+  bethe: vault + "Gaussian-Graphs/Bethe-Free-Energy",
+  compose: vault + "Gaussian-Graphs/Composing-Optimisers",
+  time: vault + "Design/Time-as-a-Base",
+  factor: vault + "Gaussian-Graphs/Everything-is-a-Factor",
+}
+const N = 6
+const C = 170
+const RV = 108 // variables
+const RF = 108 * Math.cos(Math.PI / N) // couplings, between them
+const RO = 158 // observations, outside
+const ang = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / N
+const vars = Array.from({ length: N }, (_, i) => ({ i, x: C + RV * Math.cos(ang(i)), y: C + RV * Math.sin(ang(i)) }))
+const cps = Array.from({ length: N }, (_, i) => ({ i, x: C + RF * Math.cos(ang(i + 0.5)), y: C + RF * Math.sin(ang(i + 0.5)) }))
+const obs = Array.from({ length: N }, (_, i) => ({ i, x: C + RO * Math.cos(ang(i)), y: C + RO * Math.sin(ang(i)) }))
+const f = (n: number) => +n.toFixed(1)
+---
+
+<div class="fe">
+  <!-- -------------------------------------------------------------- lab 1 -->
+  <div class="lab reveal" data-fe-lab>
+    <div class="lab-graph">
+      <div class="lab-bar mono">
+        <span>Six beliefs on a loop</span>
+        <span class="lab-legend"><i class="lg-v"></i>variable <i class="lg-f"></i>factor</span>
+      </div>
+      <svg viewBox="0 0 340 340" role="img" aria-label="A ring of six variables joined by coupling factors, each with an observation factor. Messages light up the wires as they are sent; the halo of each variable shows how uncertain its belief is.">
+        {obs.map((o) => (
+          <line class="w w-obs" x1={f(o.x)} y1={f(o.y)} x2={f(vars[o.i].x)} y2={f(vars[o.i].y)} />
+        ))}
+        {cps.map((c) => (
+          <g class={`cp${c.i === N - 1 ? " cp-last" : ""}`} data-cp={c.i}>
+            <line class="w" data-w={`bwd-${c.i}`} x1={f(c.x)} y1={f(c.y)} x2={f(vars[c.i].x)} y2={f(vars[c.i].y)} />
+            <line class="w" data-w={`fwd-${c.i}`} x1={f(c.x)} y1={f(c.y)} x2={f(vars[(c.i + 1) % N].x)} y2={f(vars[(c.i + 1) % N].y)} />
+            <rect class="fac" x={f(c.x - 8)} y={f(c.y - 8)} width="16" height="16" rx="2" />
+          </g>
+        ))}
+        {obs.map((o) => (
+          <rect class="fac fac-obs" x={f(o.x - 6)} y={f(o.y - 6)} width="12" height="12" rx="2" />
+        ))}
+        {vars.map((v) => (
+          <g>
+            <circle class="halo" data-halo={v.i} cx={f(v.x)} cy={f(v.y)} r="26" />
+            <circle class="var" cx={f(v.x)} cy={f(v.y)} r="15" />
+            <text class="vl" x={f(v.x)} y={f(v.y + 4.5)}>x<tspan dy="3" font-size="9">{v.i + 1}</tspan></text>
+          </g>
+        ))}
+        <text class="cut-x" x={f(cps[N - 1].x)} y={f(cps[N - 1].y - 14)}>cut</text>
+      </svg>
+      <div class="controls">
+        <div class="ctl">
+          <span class="ctl-k mono">Schedule</span>
+          <div class="seg" role="group" aria-label="Schedule">
+            <button type="button" data-sched="flood" aria-pressed="true">Flooding</button>
+            <button type="button" data-sched="loop" aria-pressed="false">Round the loop</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="ctl-k mono">Modifier</span>
+          <div class="seg" role="group" aria-label="Modifier">
+            <button type="button" data-mod="none" aria-pressed="true">None</button>
+            <button type="button" data-mod="damp" aria-pressed="false">Damping ½</button>
+            <button type="button" data-mod="mom" aria-pressed="false">Momentum 0.3</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <label class="ctl-k mono" for="fe-lam">Coupling λ = <span data-lam-out>5</span></label>
+          <input id="fe-lam" type="range" min="0" max="100" value="47" data-lam />
+        </div>
+        <div class="ctl ctl-row">
+          <label class="check"><input type="checkbox" data-cut /> Cut one wire (a tree)</label>
+          <div class="btns">
+            <button type="button" class="btn btn--solid btn-sm" data-run>Run <span class="arrow">→</span></button>
+            <button type="button" class="btn btn-sm" data-step>Step</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lab-plot">
+      <div class="lab-bar mono">
+        <span>Free energy, sweep by sweep</span>
+        <span class="status" data-status>ready</span>
+      </div>
+      <svg class="plot" viewBox="0 0 520 300" preserveAspectRatio="none" data-plot aria-hidden="true">
+        <g data-grid></g>
+        <line class="exact" data-exact x1="0" x2="520" y1="0" y2="0" />
+        <path class="curve" data-curve d="" />
+      </svg>
+      <div class="plot-axis mono"><span data-ylab>F</span><span>sweeps →</span></div>
+      <dl class="readout">
+        <div><dt>sweeps</dt><dd data-k>0</dd></div>
+        <div><dt>Bethe F</dt><dd data-f>–</dd></div>
+        <div><dt>exact −log p(y)</dt><dd data-ex>–</dd></div>
+        <div><dt>change in last sweep</dt><dd data-res>–</dd></div>
+      </dl>
+      <p class="formula">
+        <i>F</i><sub>Bethe</sub> = Σ<sub><i>f</i></sub> ( 𝔼<sub><i>b<sub>f</sub></i></sub>[−log <i>f</i>] − <i>H</i>[<i>b<sub>f</sub></i>] )
+        + Σ<sub><i>v</i></sub> (<i>d<sub>v</sub></i> − 1) <i>H</i>[<i>b<sub>v</sub></i>]
+      </p>
+      <p class="hint">
+        Try: flooding at λ = 5, then <em>round the loop</em>. Then push λ to 30 and add momentum, once
+        with each schedule. Then cut a wire and watch the gap to the dashed line close.
+      </p>
+    </div>
+  </div>
+
+  <!-- -------------------------------------------------------------- notes -->
+  <ol class="fe-notes">
+    <li class="reveal">
+      <span class="n mono">01</span>
+      <h3>The Bethe free energy</h3>
+      <p>
+        Energies add over the factors. Entropies add with a correction: a variable seen by
+        <i>d</i> factors appears in <i>d</i> factor beliefs, so <i>d</i> − 1 copies of its entropy
+        come off. On a tree, at the fixed point, this is exactly −log <i>p</i>(<i>y</i>): cut a wire
+        and the curve lands on the dashed line. On a loop it is an approximation, and the fixed
+        points of belief propagation are exactly its stationary points. Belief propagation is
+        <em>not</em> gradient descent on it, though: under flooding the curve goes up before it comes
+        down.
+      </p>
+      <a class="more mono" href={notes.bethe}>Bethe Free Energy, in the vault ↗</a>
+    </li>
+    <li class="reveal" style="--d:.06s">
+      <span class="n mono">02</span>
+      <h3>Inferencers and optimisers compose. Convergence does not.</h3>
+      <p>
+        A sweep of messages is an inferencer, a step on the parameters is an optimiser, and damping,
+        momentum or Anderson acceleration are modifiers wrapped round either. In Lenticulum.jl the
+        optimisers are themselves nodes in the graph, next to the data and the priors. Every such stack keeps the same fixed points, so if it
+        arrives, it arrives at the same answer. Whether it arrives depends on the composite: above,
+        momentum on a flooding sweep diverges at strong coupling and converges on a sweep that goes
+        round the loop. Measured in the vault: the right schedule takes a loop from 326 sweeps to 38,
+        and Anderson acceleration on top of it turns 297 000 message evaluations into 414.
+      </p>
+      <a class="more mono" href={notes.compose}>Composing Optimisers, in the vault ↗</a>
+    </li>
+    <li class="reveal" style="--d:.12s">
+      <span class="n mono">03</span>
+      <h3>Higher orders: beliefs that carry their own motion</h3>
+      <p>
+        A free energy over positions alone is minimised by a belief that is always behind a moving
+        world: plain descent follows a steady motion at a constant lag (speed ÷ gain). Give the belief
+        a velocity, the generalised coordinates of motion of active inference, and descend in a frame
+        that moves with it, and the lag goes away. The same holds one level up: momentum is a
+        velocity on the parameters, and it helps or hurts depending on the spectrum it meets.
+      </p>
+      <a class="more mono" href={notes.time}>Time as a Base, in the vault ↗</a>
+    </li>
+  </ol>
+
+  <!-- -------------------------------------------------------------- lab 2 -->
+  <div class="lab lab2 reveal" data-track>
+    <div class="lab2-text">
+      <span class="ctl-k mono">A moving target</span>
+      <h3>One step behind, or on it</h3>
+      <p>
+        A target moves at steady speeds and is seen with noise. Both beliefs descend the same
+        prediction error with the same gain. The one over position only trails each slope by a
+        constant gap; the one that also carries a velocity catches up, and overshoots only where
+        the motion turns.
+      </p>
+      <dl class="readout readout--2">
+        <div><dt>position only · RMS error</dt><dd data-rms0>–</dd></div>
+        <div><dt>with velocity · RMS error</dt><dd data-rms1>–</dd></div>
+      </dl>
+      <button type="button" class="btn btn-sm" data-replay>Replay</button>
+    </div>
+    <div class="lab2-plot">
+      <svg class="plot" viewBox="0 0 640 260" preserveAspectRatio="none" aria-hidden="true">
+        <path class="t-obs" data-tobs d="" />
+        <path class="t-true" data-ttrue d="" />
+        <path class="t-o0" data-to0 d="" />
+        <path class="t-o1" data-to1 d="" />
+      </svg>
+      <div class="key mono">
+        <span><i class="k-true"></i>target</span>
+        <span><i class="k-obs"></i>observations</span>
+        <span><i class="k-o0"></i>position only</span>
+        <span><i class="k-o1"></i>position and velocity</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="fe-fine mono">
+    What runs where: the Bethe free energy, belief propagation with flooding, sequential and
+    spanning-tree schedules, damping, momentum and Anderson acceleration are in Lenticulum.jl
+    (Mycelium.jl), tested against closed forms. Channels that carry derivatives (jets) are a design
+    note, not code yet. Both labs on this page are small re-implementations that run in your
+    browser.
+  </p>
+</div>
+
+<script>
+  import { init, sweep, bethe, beliefs, exact, track, type Model, type State, type Schedule } from "../../lib/free-energy"
+
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+
+  // ------------------------------------------------------------------ lab 1
+  for (const root of document.querySelectorAll<HTMLElement>("[data-fe-lab]")) {
+    const Y = [1.2, -0.4, 0.8, 2.0, -1.1, 0.3]
+    const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!
+    const lamIn = $<HTMLInputElement>("[data-lam]")
+    const cutIn = $<HTMLInputElement>("[data-cut]")
+    const curve = $<SVGPathElement>("[data-curve]")
+    const exLine = $<SVGLineElement>("[data-exact]")
+    const grid = $<SVGGElement>("[data-grid]")
+    const status = $<HTMLElement>("[data-status]")
+    const runBtn = $<HTMLButtonElement>("[data-run]")
+    let sched: Schedule = "flood"
+    let mod: "none" | "damp" | "mom" = "none"
+    let M: Model, S: State, prev: State | null, Fs: number[], res: number, ex: number, timer = 0, state: "ready" | "running" | "done" | "diverged" | "paused" = "ready"
+
+    const lam = () => +(Math.exp(Math.log(1) + (Math.log(30) / 100) * +lamIn.value)).toFixed(1)
+    const fmt = (x: number) => (isFinite(x) && Math.abs(x) < 1e6 ? x.toFixed(3) : "∞")
+
+    function reset() {
+      clearInterval(timer)
+      M = { n: 6, lam: lam(), tau: 1, y: Y, cut: cutIn.checked }
+      S = init(M)
+      prev = null
+      Fs = [bethe(M, S)]
+      res = NaN
+      ex = exact(M)
+      root.classList.toggle("is-cut", M.cut)
+      $("[data-lam-out]").textContent = String(M.lam)
+      setState("ready")
+      draw()
+    }
+    function setState(s: typeof state) {
+      state = s
+      status.textContent = s === "done" ? `converged · ${Fs.length - 1} sweeps` : s
+      status.dataset.s = s
+      runBtn.innerHTML = s === "running" ? "Pause" : 'Run <span class="arrow">→</span>'
+    }
+    function step() {
+      const o = sweep(M, S, sched, mod === "damp" ? 0.5 : 0, mod === "mom" ? 0.3 : 0, prev)
+      S = o.S
+      prev = o.prev
+      res = o.res
+      Fs.push(bethe(M, S))
+      flash(o.order)
+      if (!isFinite(res) || !isFinite(Fs[Fs.length - 1]) || res > 1e8 || Fs.length > 600) {
+        clearInterval(timer)
+        setState(res > 1e8 || !isFinite(res) ? "diverged" : "paused")
+      } else if (res < 1e-9) {
+        clearInterval(timer)
+        setState("done")
+      }
+      draw()
+    }
+    function flash(order: [string, number][]) {
+      if (reduced) return
+      const per = sched === "loop" ? 22 : 0
+      order.forEach(([k, i], j) => {
+        const w = root.querySelector(`[data-w="${k}-${i}"]`)
+        if (!w) return
+        setTimeout(() => {
+          w.classList.remove("hot")
+          void (w as SVGElement).getBoundingClientRect()
+          w.classList.add("hot")
+        }, j * per)
+      })
+    }
+    function draw() {
+      const W = 520, H = 300, pad = 18
+      const ok = Fs.filter((v) => isFinite(v) && Math.abs(v) < 1e6)
+      const tail = ok.slice(Math.min(2, ok.length - 1))
+      let lo = Math.min(ex, ...tail), hi = Math.max(ex, ...tail)
+      if (hi - lo < 0.5) { const m = (hi + lo) / 2; lo = m - 0.25; hi = m + 0.25 }
+      const span = hi - lo
+      lo -= span * 0.15; hi += span * 0.15
+      const nx = Math.max(40, Fs.length - 1)
+      const X = (k: number) => (k / nx) * W
+      const Yp = (v: number) => pad + (1 - (Math.min(Math.max(v, lo - span), hi + span) - lo) / (hi - lo)) * (H - 2 * pad)
+      curve.setAttribute("d", Fs.map((v, k) => (isFinite(v) ? `${k === 0 ? "M" : "L"}${X(k).toFixed(1)},${Yp(v).toFixed(1)}` : "")).join(""))
+      const ey = Yp(ex).toFixed(1)
+      exLine.setAttribute("y1", ey)
+      exLine.setAttribute("y2", ey)
+      grid.innerHTML = [0.25, 0.5, 0.75].map((q) => `<line x1="0" x2="${W}" y1="${q * H}" y2="${q * H}"/>`).join("")
+      const last = Fs[Fs.length - 1]
+      $("[data-k]").textContent = String(Fs.length - 1)
+      $("[data-f]").textContent = Fs.length > 1 ? fmt(last) : "–"
+      $("[data-ex]").textContent = fmt(ex)
+      $("[data-res]").textContent = isFinite(res) ? res.toExponential(1) : state === "diverged" ? "∞" : "–"
+      const b = Fs.length > 1 && state !== "diverged" ? beliefs(M, S) : null
+      root.querySelectorAll<SVGCircleElement>("[data-halo]").forEach((h, i) => {
+        const v = b ? b[i].v : 1
+        h.setAttribute("r", (15 + 26 * Math.sqrt(Math.min(Math.max(v, 0), 1))).toFixed(1))
+      })
+    }
+    function run() {
+      if (state === "running") { clearInterval(timer); setState("paused"); return }
+      if (state === "done" || state === "diverged") reset()
+      setState("running")
+      const tick = () => { step(); if (state === "running" && Fs.length > 40) { clearInterval(timer); timer = window.setInterval(() => { for (let r = 0; r < 4 && state === "running"; r++) step() }, 60) } }
+      timer = window.setInterval(tick, reduced ? 30 : sched === "loop" ? 330 : 180)
+    }
+
+    root.querySelectorAll<HTMLButtonElement>("[data-sched]").forEach((b) =>
+      b.addEventListener("click", () => {
+        sched = b.dataset.sched as Schedule
+        root.querySelectorAll("[data-sched]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)))
+        reset()
+      }),
+    )
+    root.querySelectorAll<HTMLButtonElement>("[data-mod]").forEach((b) =>
+      b.addEventListener("click", () => {
+        mod = b.dataset.mod as typeof mod
+        root.querySelectorAll("[data-mod]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)))
+        reset()
+      }),
+    )
+    lamIn.addEventListener("input", reset)
+    cutIn.addEventListener("change", reset)
+    runBtn.addEventListener("click", run)
+    $("[data-step]").addEventListener("click", () => {
+      if (state === "running") { clearInterval(timer); setState("paused") }
+      if (state === "done" || state === "diverged") reset()
+      step()
+      if (state === "ready") setState("paused")
+    })
+    reset()
+  }
+
+  // ------------------------------------------------------------------ lab 2
+  for (const root of document.querySelectorAll<HTMLElement>("[data-track]")) {
+    const T = track(14)
+    const W = 640, H = 260, pad = 16
+    const X = (t: number) => (t / T.t[T.t.length - 1]) * W
+    const Yp = (v: number) => pad + (1 - (v + 2.2) / 4.4) * (H - 2 * pad)
+    const line = (vs: number[], upto: number) => vs.slice(0, upto).map((v, k) => `${k ? "L" : "M"}${X(T.t[k]).toFixed(1)},${Yp(v).toFixed(1)}`).join("")
+    const dots = (upto: number) => T.y.slice(0, upto).map((v, k) => `M${X(T.t[k]).toFixed(1)},${Yp(v).toFixed(1)}h0.01`).join("")
+    const el = (s: string) => root.querySelector(s)!
+    let raf = 0
+    const draw = (n: number) => {
+      el("[data-ttrue]").setAttribute("d", line(T.x, n))
+      el("[data-tobs]").setAttribute("d", dots(n))
+      el("[data-to0]").setAttribute("d", line(T.o0, n))
+      el("[data-to1]").setAttribute("d", line(T.o1, n))
+    }
+    el("[data-rms0]").textContent = T.rms0.toFixed(2)
+    el("[data-rms1]").textContent = T.rms1.toFixed(2)
+    const play = () => {
+      cancelAnimationFrame(raf)
+      if (reduced) return draw(T.t.length)
+      const t0 = performance.now(), dur = 6000
+      const frame = (now: number) => {
+        const n = Math.min(T.t.length, Math.ceil(((now - t0) / dur) * T.t.length))
+        draw(n)
+        if (n < T.t.length) raf = requestAnimationFrame(frame)
+      }
+      raf = requestAnimationFrame(frame)
+    }
+    el("[data-replay]").addEventListener("click", play)
+    draw(T.t.length)
+    new IntersectionObserver((es, io) => {
+      if (es.some((e) => e.isIntersecting)) { play(); io.disconnect() }
+    }, { threshold: 0.3 }).observe(root)
+  }
+</script>
+
+<style>
+  .fe {
+    display: grid;
+    gap: clamp(40px, 6vw, 64px);
+  }
+  .lab {
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 960px) {
+    .lab {
+      grid-template-columns: 5fr 6fr;
+    }
+  }
+  .lab > div {
+    background: var(--bg-raised);
+    min-width: 0;
+  }
+  .lab-bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px;
+    font-size: 11.5px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+  }
+  .lab-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+  .lab-legend i {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border: 1.3px solid var(--fg);
+    margin-left: 6px;
+  }
+  .lg-v {
+    border-radius: 99px;
+  }
+  .lg-f {
+    background: var(--fg);
+    border-radius: 2px;
+  }
+  .lab-graph svg {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    margin: 8px auto 0;
+  }
+  .w {
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+  }
+  .w.hot {
+    animation: hot 0.55s var(--ease);
+  }
+  @keyframes hot {
+    0% {
+      stroke: var(--fg);
+      stroke-width: 3.5;
+    }
+    100% {
+      stroke: var(--line-strong);
+      stroke-width: 1.5;
+    }
+  }
+  .w-obs {
+    stroke-dasharray: 2 3;
+  }
+  .fac {
+    fill: var(--fg);
+  }
+  .fac-obs {
+    fill: var(--bg-raised);
+    stroke: var(--fg);
+    stroke-width: 1.4;
+  }
+  .var {
+    fill: var(--bg-raised);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+  }
+  .halo {
+    fill: var(--glow);
+    stroke: var(--line-strong);
+    stroke-dasharray: 3 3;
+    transition: r 0.35s var(--ease);
+  }
+  .vl {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 15px;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .cut-x {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-anchor: middle;
+    fill: var(--muted);
+    opacity: 0;
+  }
+  .is-cut .cp-last {
+    opacity: 0.15;
+  }
+  .is-cut .cut-x {
+    opacity: 1;
+  }
+  .controls {
+    display: grid;
+    gap: 14px;
+    padding: 14px 18px 20px;
+  }
+  .ctl {
+    display: grid;
+    gap: 6px;
+  }
+  .ctl-row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+  .ctl-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .seg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .seg button {
+    font: inherit;
+    font-size: 13.5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg-2);
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--fg);
+  }
+  .check {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 14px;
+    color: var(--fg-2);
+    cursor: pointer;
+  }
+  .check input {
+    accent-color: var(--fg);
+  }
+  .btns {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-sm {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
+    background: transparent;
+    color: var(--fg);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn-sm.btn--solid {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .btn-sm.btn--solid:hover {
+    background: transparent;
+    color: var(--fg);
+  }
+  .status {
+    color: var(--muted);
+  }
+  .status[data-s="done"] {
+    color: var(--fg);
+  }
+  .status[data-s="diverged"] {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 0 8px;
+  }
+  .lab-plot {
+    display: flex;
+    flex-direction: column;
+  }
+  .plot {
+    display: block;
+    width: 100%;
+    height: 220px;
+    padding: 0 18px;
+    margin-top: 14px;
+    overflow: visible;
+  }
+  .plot :global(line) {
+    stroke: var(--line);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .plot .exact {
+    stroke: var(--muted);
+    stroke-dasharray: 5 4;
+  }
+  .curve {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+  .plot-axis {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 18px 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .readout {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    margin: 14px 18px 0;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  @media (min-width: 560px) {
+    .readout {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .readout div {
+    background: var(--bg-raised);
+    padding: 10px 12px;
+  }
+  .readout dt {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .readout dd {
+    margin: 2px 0 0;
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+  }
+  .readout--2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    margin: 20px 0;
+  }
+  .formula {
+    margin: 16px 18px 0;
+    font-size: 15px;
+    color: var(--fg);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .formula i {
+    font-family: var(--font-serif);
+    font-size: 1.12em;
+  }
+  .hint {
+    margin: 10px 18px 20px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .hint em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+    color: var(--fg);
+  }
+
+  .fe-notes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 40px 48px;
+  }
+  @media (min-width: 900px) {
+    .fe-notes {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .fe-notes li {
+    border-top: 1px solid var(--line-strong);
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  .fe-notes .n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .fe-notes h3 {
+    margin: 12px 0 10px;
+  }
+  .fe-notes p {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+  .fe-notes i {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .fe-notes em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .more {
+    margin-top: 14px;
+    align-self: flex-start;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  .more:hover {
+    color: var(--fg);
+    border-bottom-color: var(--fg);
+  }
+
+  .lab2-text {
+    padding: 22px 22px 24px;
+  }
+  .lab2-text h3 {
+    margin: 10px 0 10px;
+  }
+  .lab2-text p {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+  .lab2-plot {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 18px 0;
+  }
+  .lab2-plot .plot {
+    height: 240px;
+    margin: 0;
+  }
+  .t-true {
+    fill: none;
+    stroke: var(--faint);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.55;
+    vector-effect: non-scaling-stroke;
+  }
+  .t-obs {
+    stroke: var(--muted);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0.5;
+    vector-effect: non-scaling-stroke;
+  }
+  .t-o0 {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+    vector-effect: non-scaling-stroke;
+  }
+  .t-o1 {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2.2;
+    vector-effect: non-scaling-stroke;
+  }
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 10px 18px 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .key i {
+    display: inline-block;
+    width: 18px;
+    height: 0;
+    margin-right: 6px;
+    vertical-align: middle;
+    border-top: 2px solid var(--fg);
+  }
+  .key .k-true {
+    border-top: 5px solid var(--faint);
+  }
+  .key .k-obs {
+    width: 4px;
+    height: 4px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--muted);
+  }
+  .key .k-o0 {
+    border-top-style: dashed;
+  }
+  .fe-fine {
+    margin: 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
