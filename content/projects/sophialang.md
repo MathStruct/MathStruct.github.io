@@ -29,6 +29,17 @@ types as an exchangeable checker, and one governing principle, *autoresolve → 
 - **Safe.** Add a proof in that aspect's DSL (ownership, race freedom, no surprise
   compilation); a checker discharges the mark. Proofs never change a definition's content id.
 
+## A programming system, not a programming language
+
+sophialang is not stored as text and is not meant to be read. The store holds the normalised,
+compressed core term: no names, de Bruijn indices, references as hashes, shared structure stored
+once. How it is displayed (Julia-like, Rust-like, Lean-like, …) is the reader's configuration, a
+rendering profile. So it is less a programming language than a programming system.
+
+**Planned:** agents that work directly on the graph (core terms and mined abstractions) instead
+of through a frontend language such as Julia. Today models reach the store through a profile,
+and every write is parsed back.
+
 ## Why it might be worth it
 
 - **One language from prototype to proof**, instead of choosing between a dynamic language and
