@@ -1,0 +1,1053 @@
+---
+// /projects/category-theory-ml-wiki: the page of the Category Theory & ML Wiki, in the style of the
+// other project pages. It replaces the Quartz page built from content/projects/category-theory-ml-wiki.md
+// (which stays, for the site's search and link previews).
+//
+// It presents the wiki as what it is becoming: MathStruct's shared knowledge graph, the format every
+// project documents itself in, and a place to learn from. What exists today and what is planned are
+// kept apart, and the page says which is which.
+//
+// Facts come from the vault as of 2026-11-26 (MathStruct/CategoryTheory-ML-Wiki, default branch):
+// README, wiki/Start Here.md, Planned.txt, and counts over wiki/ (347 concept notes at the top level,
+// 30 exercise and 30 solution notes with about 490 exercise headings, 67 paper notes, 287–299 notes
+// with Julia/Lean/Haskell tabs, 52 with TikZ diagrams). The link counts are the notes of
+// Lenticulum.jl's vault (121) and Sophia's vault (67) that link to mathstruct.org/CategoryTheory-ML-Wiki/.
+// Update them from there, not from memory.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../../components/Nav.astro"
+import Footer from "../../components/Footer.astro"
+import LearningMap from "../../components/ctml/LearningMap.astro"
+
+const wiki = "https://mathstruct.org/CategoryTheory-ML-Wiki/"
+const note = (path: string) => wiki + path
+const links = {
+  wiki,
+  source: "https://github.com/MathStruct/CategoryTheory-ML-Wiki",
+  issues: "https://github.com/MathStruct/CategoryTheory-ML-Wiki/issues",
+  start: note("Start-Here"),
+  map: note("Map-of-Content"),
+  catlab: note("Catlab"),
+  adjunction: note("Adjunction"),
+  bayesianLens: note("Bayesian-Lens"),
+  backprop: note("Backprop-as-Functor"),
+  eGraph: note("E-Graph"),
+  exercises: note("Exercises/7S-Chapter-3-Exercises"),
+  lenticulum: "/projects/lenticulum-jl",
+  lenticulumVault: "https://mathstruct.org/Lenticulum.jl/",
+  sophia: "/projects/sophia",
+  sophiaVault: "https://mathstruct.org/Sophia/",
+  moonkale: "/projects/moonkale",
+  authoring: "/guides/authoring",
+}
+
+const inVault = [
+  { k: "Concepts", t: "347 concept notes", d: "One per definition, theorem or construction, from sets and preorders to Kan extensions, Markov categories and e-graphs." },
+  { k: "Sources", t: "Four books, 67 papers", d: "Seven Sketches, Category Theory for Scientists, The Dao of Functional Programming and the Kittenlab.jl lectures; each paper has its own note." },
+  { k: "Reconciled", t: "Exact references", d: "Every note ends its definition with a Sources line: section, definition and exercise numbers, book by book." },
+  { k: "Exercises", t: "About 490, with solutions", d: "Thirty chapter notes, one heading per exercise, each linked to a worked solution and back." },
+  { k: "Code", t: "Julia, Lean 4, Haskell", d: "Tabs in nearly 300 notes. The Julia was run against Catlab 0.16; Lean gives the Mathlib names; Haskell the idiom." },
+  { k: "Diagrams", t: "Commutative diagrams", d: "tikz-cd in 52 notes, compiled to SVG when the site is built, with a dark variant of each." },
+  { k: "Order", t: "A study plan", d: "Stages 0–4 for the core, then six tracks: applied, programming, dependent types, advanced, machine learning, compilers and databases." },
+  { k: "Linked", t: "188 project notes link here", d: "121 notes of Lenticulum.jl’s vault and 67 of Sophia’s cite these notes for the theory and keep only what is their own." },
+]
+
+const anatomy = [
+  ["#definition #theorem", "a tag line: what kind of note this is"],
+  ["the definition", "in the notation of the vault, with links to what it uses"],
+  ["the bullets", "what each source adds, reconciled in one place"],
+  ["> Sources:", "section, definition and exercise numbers in each book or paper"],
+  ["```tikz", "a commutative diagram, compiled when the site is built"],
+  ["````tabs", "Julia, Lean 4 and Haskell; a Builds on: line names the notes whose code must run first"],
+]
+
+const works = [
+  "One note per concept, with the sources reconciled and cited to the exercise",
+  "Exercises and worked solutions, linked both ways",
+  "Julia tabs run against Catlab 0.16; Lean tabs name Mathlib declarations",
+  "A study order: Stages 0–4, then Tracks A–F towards Lenticulum.jl and Sophia",
+  "Published with TikZ, tabs and KaTeX; the project vaults link into it",
+]
+const limits = [
+  "A first draft: the notes were written with an AI from the sources, and not every claim has been checked against the books and papers yet",
+  "Links say that two notes are related, not how: prerequisite, generalisation, example and implementation look the same",
+  "The code is not run by CI; Lean tabs are mostly #check lines, not proofs",
+  "One flat folder of notes, in one subject; ML, databases and compilers appear only through category theory",
+]
+const plan = [
+  { n: "01", t: "Typed links", d: "Front matter that says why two notes are linked: needs, generalises, example of, implemented by, tested by. The learning map above is drawn from such links, here by hand." },
+  { n: "02", t: "Code that is checked", d: "Every Julia tab run in CI against a pinned Catlab, every Lean tab compiled against Mathlib, every Haskell tab with GHC. A note whose code breaks says so." },
+  { n: "03", t: "One graph in Moonkale", d: "The wiki, the project vaults and the projects’ code opened as one graph: a concept, the design note that uses it and the function that implements it, side by side." },
+  { n: "04", t: "Learning paths", d: "Routes through the prerequisite graph to a goal, exercises as review cards, and progress kept as a map: what you know, what you can read next." },
+  { n: "05", t: "Beyond category theory", d: "Machine learning, databases and compiler engineering in the same format: one note per concept, sources cited, code that runs." },
+  { n: "06", t: "Learning software", d: "Small tools built on the graph: exercises with checked answers, diagrams to complete, the code of a note to run and change in the browser." },
+]
+
+// Start Here, "Three ways in, depending on who you are"
+const audiences = [
+  { who: "Coming from programming", start: "Category, Functor, Natural Transformation, then Track B with the Haskell tabs", href: note("Start-Here#three-ways-in-depending-on-who-you-are") },
+  { who: "Coming from mathematics", start: "Stages 1–4 in order, then Track A; the Lean tabs name what to formalise", href: note("Start-Here#suggested-order-of-study") },
+  { who: "Coming from the sciences", start: "Stage 0, then database schemas, C-sets, data migration, sheaves and Markov chains", href: note("Start-Here#stage-0--sets-and-ologs-as-a-warm-up-ctfs-ch-2") },
+  { who: "Coming from machine learning", start: "Stage 2 quickly, then Track E: lenses, Markov categories, statistical games", href: note("Start-Here#track-e--category-theory-for-machine-learning-arxiv-papers-the-road-to-lenticulumjl") },
+  { who: "Coming from compilers or databases", start: "Stage 2, Track B, then Track F: e-graphs, conjunctive queries, Datalog", href: note("Start-Here#track-f--category-theory-for-compilers-and-databases-arxiv-papers-the-road-to-sophia") },
+  { who: "Wanting to compute", start: "Install Catlab 0.16, then the Julia tabs of C-Set, Data Migration and Colimit", href: links.catlab },
+]
+---
+
+<Layout
+  title="Category Theory & ML Wiki: knowledge you can run · MathStruct"
+  description="MathStruct's shared knowledge graph: one note per concept of category theory where it shows up in learning, inference, databases and compilers, with sources cited to the exercise and code in Julia, Lean 4 and Haskell. Every MathStruct project documents itself in the same format and links here for the theory."
+  path="/projects/category-theory-ml-wiki"
+>
+  <Nav />
+
+  <main>
+    <!-- ------------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="crumb mono reveal" href="/#projects">← Projects · Foundation</a>
+          <h1 class="reveal popover-hint" style="--d:.05s">
+            Knowledge<br /><span class="serif">you can run.</span>
+          </h1>
+          <p class="lede reveal popover-hint" style="--d:.1s">
+            The <strong>Category Theory & ML Wiki</strong> is where MathStruct keeps what it knows: one
+            note per concept, its sources cited to the exercise, a diagram where one helps, and code in
+            Julia, Lean 4 and Haskell. <a href={links.lenticulum}>Lenticulum.jl</a> and
+            <a href={links.sophia}>Sophia</a> document themselves in the same format and link here for
+            the theory, so the notes of every project form <em>one graph</em> of knowledge and code.
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href={links.start}>Start here <span class="arrow">→</span></a>
+            <a class="btn" href="#learn">Try the learning map</a>
+            <a class="btn" href={links.source}>Source on GitHub</a>
+          </div>
+          <ul class="facts mono reveal" style="--d:.2s">
+            <li>347 concepts</li>
+            <li>~490 exercises, solved</li>
+            <li>67 papers</li>
+            <li>Obsidian vault</li>
+            <li class="fact-flag">First draft</li>
+          </ul>
+        </div>
+
+        <figure class="hero-art reveal" style="--d:.1s" aria-label="The parts of a note, shown on the note Adjunction">
+          <div class="notecard">
+            <div class="nc-bar mono">
+              <span>Adjunction.md</span>
+              <span class="nc-tags">#definition #example #theorem #proof</span>
+            </div>
+            <div class="nc-body">
+              <p class="nc-def">
+                <span class="nc-link">Functors</span> <i>L</i> : 𝒞 → 𝒟 and <i>R</i> : 𝒟 → 𝒞 are
+                <strong>adjoint</strong>, <i>L</i> ⊣ <i>R</i>, if there is a bijection
+              </p>
+              <p class="nc-math"><i>𝒞</i>(<i>c</i>, <i>R d</i>) ≅ <i>𝒟</i>(<i>L c</i>, <i>d</i>)</p>
+              <p class="nc-def">natural in <i>c</i> and <i>d</i>.</p>
+              <svg class="nc-cd" viewBox="0 0 220 64" aria-hidden="true">
+                <text x="30" y="38">𝒞</text>
+                <text x="178" y="38">𝒟</text>
+                <path d="M50 26 Q105 2 168 26" />
+                <path d="M168 40 Q105 64 50 40" />
+                <path class="ah" d="M162 20 L168 26 L160 28" />
+                <path class="ah" d="M56 46 L50 40 L58 38" />
+                <text class="sm" x="102" y="12">L</text>
+                <text class="sm" x="102" y="62">R</text>
+                <text class="sm" x="101" y="37">⊥</text>
+              </svg>
+              <p class="nc-src mono">
+                <span>Sources</span> 7 Sketches §3.4.2, Def. 3.70 · DaoFP Ch. 10 · CTfS §5.1
+              </p>
+              <div class="nc-tabs mono" role="presentation">
+                <span>Julia</span><span class="on">Lean</span><span>Haskell</span>
+              </div>
+              <pre class="nc-code"><code>#check CategoryTheory.Adjunction
+#check CategoryTheory.Adjunction.toMonad
+#check CategoryTheory.exp.adjunction</code></pre>
+              <p class="nc-used mono">
+                <span>Opens</span> Monad · Kleisli category · Data migration
+              </p>
+            </div>
+          </div>
+          <figcaption class="mono">A note, shortened: definition, diagram, sources, code, and where it leads</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- band -->
+    <section class="band" aria-label="Status">
+      <div class="wrap">
+        <p class="band-text">
+          <span class="band-k mono">First draft</span>
+          The notes were drafted with an AI from four books and lecture series and some seventy papers,
+          and are being checked against them. This page shows the vault as it is, and the knowledge graph
+          it is being turned into.
+        </p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- learn -->
+    <section class="section" id="learn">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Try it</span>
+            <h2 class="reveal" style="--d:.05s">Pick a goal, <span class="serif">light the way.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Twenty-two notes of the wiki and the two projects that rest on them, drawn as a prerequisite
+            graph. Click a note to read about it and mark it as known: whatever you can read next lights up.
+            Choose a goal and the route to it is drawn, shortest first.
+          </p>
+        </div>
+        <div class="reveal">
+          <LearningMap />
+        </div>
+        <p class="fineprint mono">
+          The notes, their sources, their first Lean lines and the link counts are the vault’s; the
+          prerequisites follow Start Here’s order of study and are drawn by hand. Your progress stays in
+          this browser. In the wiki itself, links do not yet say which note comes first: that is the first
+          item of the plan below.
+        </p>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- in vault -->
+    <section class="section" id="today">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">In the vault today</span>
+            <h2 class="reveal" style="--d:.05s">Several hundred notes, <span class="serif">linked.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            An Obsidian vault, published at <a href={links.wiki}>mathstruct.org/CategoryTheory-ML-Wiki</a>
+            with the same Quartz as every MathStruct site. Read it in the browser, or clone it and open it
+            in Obsidian or Moonkale.
+          </p>
+        </div>
+        <ul class="features">
+          {inVault.map((f, i) => (
+            <li class="feature reveal" style={`--d:${0.03 * (i % 4)}s`}>
+              <span class="feature-k mono">{f.k}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ format -->
+    <section class="section north" id="format">
+      <div class="wrap north-grid">
+        <div>
+          <span class="eyebrow reveal">One format</span>
+          <h2 class="reveal" style="--d:.05s">Every project <span class="serif">writes this way.</span></h2>
+          <p class="lede reveal" style="--d:.1s">
+            A concept note in the wiki, a design note in Lenticulum.jl’s vault and a specification in
+            Sophia’s share one shape. A project note keeps what is its own and links to the wiki for the
+            general concept, so the theory is written once and every project can find it.
+          </p>
+          <div class="table-wrap reveal" style="--d:.14s">
+            <table class="compare anatomy">
+              <thead><tr><th scope="col">In the note</th><th scope="col">What it holds</th></tr></thead>
+              <tbody>
+                {anatomy.map(([k, v]) => (
+                  <tr><th scope="row">{k}</th><td>{v}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <figure class="north-art reveal" style="--d:.1s" aria-label="Three layers: the wiki's concepts, the projects' notes, and their code, linked into one graph">
+          <svg viewBox="0 0 560 320" role="img">
+            <g class="layer">
+              <text class="lk" x="0" y="54">THE WIKI</text>
+              <text class="lk2" x="0" y="70">concepts</text>
+              <rect x="140" y="14" width="410" height="84" rx="12" />
+            </g>
+            <g class="layer">
+              <text class="lk" x="0" y="158">PROJECT VAULTS</text>
+              <text class="lk2" x="0" y="174">design, decisions</text>
+              <rect x="140" y="118" width="410" height="84" rx="12" />
+            </g>
+            <g class="layer plan">
+              <text class="lk" x="0" y="262">CODE</text>
+              <text class="lk2" x="0" y="278">in Sophia, planned</text>
+              <rect x="140" y="222" width="410" height="84" rx="12" />
+            </g>
+            <path class="e" d="M178 160 L178 56" />
+            <path class="e" d="M300 160 L300 56" />
+            <path class="e" d="M422 160 L422 56" />
+            <path class="e plan" d="M178 264 L178 160" />
+            <path class="e plan" d="M300 264 L300 160" />
+            <path class="e plan" d="M422 264 L422 160" />
+            <g class="n "><circle cx="178" cy="56" r="6" /><text x="190" y="60">Bayesian lens</text></g>
+            <g class="n "><circle cx="300" cy="56" r="6" /><text x="312" y="60">Statistical game</text></g>
+            <g class="n "><circle cx="422" cy="56" r="6" /><text x="434" y="60">E-graph</text></g>
+            <g class="n p"><rect x="172" y="154" width="12" height="12" rx="2" /><text x="190" y="164">Lenticulum note</text></g>
+            <g class="n p"><rect x="294" y="154" width="12" height="12" rx="2" /><text x="312" y="164">Lenticulum note</text></g>
+            <g class="n p"><rect x="416" y="154" width="12" height="12" rx="2" /><text x="434" y="164">Sophia spec</text></g>
+            <g class="n c"><circle cx="178" cy="264" r="6" /><text x="190" y="268">Julia function</text></g>
+            <g class="n c"><circle cx="300" cy="264" r="6" /><text x="312" y="268">a test</text></g>
+            <g class="n c"><circle cx="422" cy="264" r="6" /><text x="434" y="268">Rust module</text></g>
+          </svg>
+          <figcaption class="mono">
+            Solid: linked today · dashed: planned, through Sophia’s content ids and Moonkale’s graph
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ status -->
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Where it stands</span>
+            <h2 class="reveal" style="--d:.05s">A first draft, <span class="serif">being rebuilt.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            The vault already works as a reference and is linked from the projects. It is not yet the
+            knowledge graph it is meant to be, and not yet a good place to learn from on your own.
+          </p>
+        </div>
+        <div class="status">
+          <div class="col reveal">
+            <h3 class="col-h mono">Solid today</h3>
+            <ul class="ticks">{works.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.06s">
+            <h3 class="col-h mono">Known limits</h3>
+            <ul class="ticks ticks--limit">{limits.map((w) => <li>{w}</li>)}</ul>
+          </div>
+          <div class="col reveal" style="--d:.12s">
+            <h3 class="col-h mono">Planned</h3>
+            <ul class="ticks ticks--next">{plan.slice(0, 4).map((p) => <li><a href={`#p${p.n}`}>{p.t}</a></li>)}</ul>
+          </div>
+        </div>
+
+        <h3 class="sub reveal" id="plan">Where it goes</h3>
+        <ol class="road">
+          {plan.map((p, i) => (
+            <li class="reveal" id={`p${p.n}`} style={`--d:${0.04 * (i % 3)}s`}>
+              <span class="road-n mono">{p.n}</span>
+              <h4>{p.t}</h4>
+              <p>{p.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- get started -->
+    <section class="section" id="get-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Read it</span>
+            <h2 class="reveal" style="--d:.05s">Six ways in, <span class="serif">one vault.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            <a href={links.start}>Start Here</a> explains the conventions and proposes an order of study;
+            the <a href={links.map}>Map of Content</a> lists every note by topic. Or begin from where you
+            come from.
+          </p>
+        </div>
+        <ul class="audiences">
+          {audiences.map((a, i) => (
+            <li class="reveal" style={`--d:${0.04 * i}s`}>
+              <a href={a.href}>
+                <span class="who">{a.who}</span>
+                <span class="start">{a.start}</span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ contact -->
+    <section class="cite-band">
+      <div class="wrap cite-grid">
+        <div>
+          <span class="eyebrow reveal">Get involved</span>
+          <h2 class="reveal" style="--d:.05s">Learn with us, <span class="serif">or correct us.</span></h2>
+          <p class="reveal" style="--d:.1s">
+            Found a definition that does not match its source, a Julia tab that no longer runs, or a
+            concept that is missing? Open an issue or a pull request. If you want to learn category theory
+            for machine learning, databases or compilers, tell us where the vault lost you: that is the
+            part we rebuild first.
+          </p>
+          <div class="cta reveal" style="--d:.14s">
+            <a class="btn btn--solid" href={links.issues}>Open an issue <span class="arrow">→</span></a>
+            <a class="btn" href={links.authoring}>How notes are written</a>
+          </div>
+        </div>
+        <div class="siblings">
+          <a class="sib reveal" href={links.lenticulum} style="--d:.06s">
+            <span class="mono sib-k">Models · Track E</span>
+            <span class="sib-t">Lenticulum.jl</span>
+            <span class="sib-d">Relation learners on factor graphs. Its theory vault links here for Bayesian lenses, statistical games and free energy.</span>
+          </a>
+          <a class="sib reveal" href={links.sophia} style="--d:.1s">
+            <span class="mono sib-k">Code · Track F</span>
+            <span class="sib-t">Sophia</span>
+            <span class="sib-d">A content-addressed store for code. Its design notes link here for e-graphs, Datalog and categorical semantics.</span>
+          </a>
+          <a class="sib reveal" href={links.moonkale} style="--d:.14s">
+            <span class="mono sib-k">Interface · the viewer</span>
+            <span class="sib-t">Moonkale</span>
+            <span class="sib-d">The graph-native editor meant to show the wiki, the project vaults and their code as one graph.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .crumb {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .crumb:hover {
+    color: var(--fg);
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  h1 .serif {
+    letter-spacing: -0.03em;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  :is(.lede, p) em {
+    font-family: var(--font-serif);
+    font-size: 1.1em;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .fact-flag {
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+    margin-top: -2px;
+  }
+  .hero-copy,
+  .hero-art {
+    min-width: 0;
+  }
+  .hero-art {
+    margin: 0;
+    width: 100%;
+    color: var(--fg);
+  }
+  .hero-art figcaption,
+  .north-art figcaption {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .lede a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .lede a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .fineprint {
+    margin: 28px 0 0;
+    max-width: 92ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* ----------------------------------------------------------- note card */
+  .notecard {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .nc-bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px;
+    font-size: 11.5px;
+    color: var(--fg);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+  }
+  .nc-tags {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nc-body {
+    padding: 18px 22px 20px;
+  }
+  .nc-def {
+    margin: 0;
+    font-size: 15px;
+    color: var(--fg-2);
+  }
+  .nc-def i,
+  .nc-math i {
+    font-family: var(--font-serif);
+    font-size: 1.12em;
+  }
+  .nc-link {
+    border-bottom: 1px solid var(--fg);
+    color: var(--fg);
+  }
+  .nc-math {
+    margin: 10px 0;
+    text-align: center;
+    font-size: 18px;
+  }
+  .nc-cd {
+    display: block;
+    width: 200px;
+    margin: 10px auto 4px;
+    height: auto;
+  }
+  .nc-cd text {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    fill: var(--fg);
+  }
+  .nc-cd text.sm {
+    font-size: 13px;
+    font-style: italic;
+  }
+  .nc-cd path {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.1;
+  }
+  .nc-src,
+  .nc-used {
+    margin: 12px 0 0;
+    font-size: 11.5px;
+    color: var(--fg-2);
+    padding: 8px 12px;
+    border-left: 2px solid var(--fg);
+    background: var(--bg-sunken);
+  }
+  .nc-src span,
+  .nc-used span {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 8px;
+  }
+  .nc-used {
+    border-left-style: dashed;
+  }
+  .nc-tabs {
+    display: flex;
+    gap: 2px;
+    margin-top: 14px;
+    font-size: 11.5px;
+  }
+  .nc-tabs span {
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    color: var(--muted);
+  }
+  .nc-tabs .on {
+    color: var(--fg);
+    border-color: var(--line-strong);
+    background: var(--bg-sunken);
+  }
+  .nc-code {
+    margin: 0;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line-strong);
+    border-radius: 0 8px 8px 8px;
+    overflow-x: auto;
+  }
+
+  /* -------------------------------------------------------------- band */
+  .band {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+    padding: 22px 0;
+  }
+  .band-text {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    max-width: 96ch;
+  }
+  .band-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg);
+    border: 1px dashed var(--fg);
+    border-radius: 999px;
+    padding: 1px 10px;
+  }
+
+  /* -------------------------------------------------------------- tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid var(--line-strong);
+    margin-top: 32px;
+  }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    text-align: left;
+    padding: 12px 16px 12px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare tbody th {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--fg);
+    width: 34%;
+    white-space: nowrap;
+  }
+  .compare td {
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+
+  /* -------------------------------------------------------------- format */
+  .north {
+    border-top: 1px solid var(--line);
+  }
+  .north-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .north-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .north h2 {
+    margin: 20px 0 24px;
+  }
+  .north-art {
+    margin: 0;
+  }
+  .north-art svg {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .layer rect {
+    fill: var(--bg-raised);
+    stroke: var(--line-strong);
+  }
+  .layer.plan rect {
+    stroke-dasharray: 4 4;
+    fill: transparent;
+  }
+  .lk {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    fill: var(--muted);
+  }
+  .lk2 {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    fill: var(--fg-2);
+  }
+  .north-art .e {
+    stroke: var(--fg);
+    stroke-width: 1.2;
+    fill: none;
+    opacity: 0.7;
+  }
+  .north-art .e.plan {
+    stroke-dasharray: 3 4;
+    opacity: 0.6;
+  }
+  .north-art .n circle,
+  .north-art .n rect {
+    fill: var(--fg);
+  }
+  .north-art .n.c circle {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-dasharray: 2 2;
+  }
+  .north-art .n text {
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    fill: var(--fg-2);
+  }
+
+  /* ------------------------------------------------------------ features */
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .features {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .features {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .feature {
+    background: var(--bg);
+    padding: 24px;
+    transition: background-color 0.3s var(--ease);
+  }
+  .feature:hover {
+    background: var(--bg-raised);
+  }
+  .feature-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .feature h3 {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .feature p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* -------------------------------------------------------------- status */
+  .ticks {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 14px;
+  }
+  .ticks li::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.58em;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .ticks--limit li::before {
+    background: transparent;
+    border: 1px solid var(--fg);
+  }
+  .ticks--next li::before {
+    background: transparent;
+    border: 1px dashed var(--fg);
+    border-radius: 50%;
+    transform: none;
+  }
+  .ticks a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--line-strong);
+  }
+  .ticks a:hover {
+    text-decoration-color: var(--fg);
+  }
+  .status {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .status {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+  }
+  .col-h {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--fg);
+  }
+  .status .ticks {
+    margin-top: 20px;
+  }
+  .sub {
+    margin-top: clamp(56px, 8vw, 88px);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .road {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 700px) {
+    .road {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1000px) {
+    .road {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .road li {
+    background: var(--bg);
+    padding: 24px 24px 28px 0;
+  }
+  @media (min-width: 700px) {
+    .road li {
+      padding: 24px 28px 28px 0;
+    }
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  @media (min-width: 1000px) {
+    .road li:not(:nth-child(2n + 1)) {
+      padding-left: 0;
+    }
+    .road li:not(:nth-child(3n + 1)) {
+      padding-left: 24px;
+    }
+  }
+  .road-n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .road h4 {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .road p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ----------------------------------------------------------- audiences */
+  .audiences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audiences a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.3s var(--ease);
+  }
+  @media (min-width: 760px) {
+    .audiences a {
+      grid-template-columns: 340px 1fr auto;
+      align-items: baseline;
+    }
+  }
+  .audiences a:hover {
+    padding-left: 10px;
+  }
+  .who {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .start {
+    color: var(--muted);
+    font-size: 15px;
+    grid-column: 1;
+  }
+  @media (min-width: 760px) {
+    .start {
+      grid-column: 2;
+    }
+  }
+  .audiences .arrow {
+    grid-column: -2;
+    grid-row: 1;
+    transition: transform 0.3s var(--ease);
+  }
+  .audiences a:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* ------------------------------------------------------------- contact */
+  .cite-band {
+    padding: clamp(80px, 12vw, 140px) 0;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 60% 80% at 100% 0%, var(--glow), transparent 70%),
+      var(--bg-sunken);
+  }
+  .cite-grid {
+    display: grid;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .cite-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .cite-band h2 {
+    margin: 20px 0 20px;
+  }
+  .cite-band p {
+    color: var(--fg-2);
+    max-width: 54ch;
+  }
+  .siblings {
+    display: grid;
+    gap: 16px;
+  }
+  .sib {
+    display: grid;
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: border-color 0.3s var(--ease);
+  }
+  .sib:hover {
+    border-color: var(--fg);
+  }
+  .sib-k {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sib-t {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .sib-d {
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>

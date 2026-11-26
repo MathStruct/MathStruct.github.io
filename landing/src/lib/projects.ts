@@ -88,15 +88,15 @@ export const projects: Project[] = [
     layer: "foundation",
     name: "Category Theory & ML Wiki",
     page: "/projects/category-theory-ml-wiki",
-    tagline: "The mathematics underneath.",
+    tagline: "Knowledge you can run.",
     description:
-      "Category theory where it actually shows up in learning, inference and programming: one note per concept, with code in Julia, Lean 4 and Haskell.",
-    status: "Living wiki",
+      "MathStruct's shared knowledge graph: category theory where it shows up in learning, inference, databases and compilers, one note per concept, with code in Julia, Lean 4 and Haskell.",
+    status: "Living wiki · first draft",
     stack: "Obsidian vault",
     highlights: [
-      "Several hundred linked notes, reconciled across four sources",
-      "Exercises with worked solutions",
-      "Bayesian lenses, backpropagation as a functor",
+      "347 concept notes, reconciled across four sources and 67 papers",
+      "About 490 exercises with worked solutions",
+      "The theory 188 notes of Lenticulum.jl and Sophia link to",
     ],
     links: [
       { label: "Wiki", href: "https://mathstruct.org/CategoryTheory-ML-Wiki/" },
