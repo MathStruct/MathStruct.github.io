@@ -23,6 +23,94 @@ const vars = Array.from({ length: N }, (_, i) => ({ i, x: C + RV * Math.cos(ang(
 const cps = Array.from({ length: N }, (_, i) => ({ i, x: C + RF * Math.cos(ang(i + 0.5)), y: C + RF * Math.sin(ang(i + 0.5)) }))
 const obs = Array.from({ length: N }, (_, i) => ({ i, x: C + RO * Math.cos(ang(i)), y: C + RO * Math.sin(ang(i)) }))
 const f = (n: number) => +n.toFixed(1)
+// The Chinese page (/zh/projects/lenticulum-jl) shows the same labs in Chinese (Nav.astro tells
+// the two languages apart the same way).
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const t = zh
+  ? {
+      loopTitle: "环上的六个信念",
+      legend: "变量",
+      legend2: "因子",
+      cut: "剪断",
+      sched: "调度表",
+      flood: "泛洪",
+      roundLoop: "沿环一周",
+      mod: "修正项",
+      none: "无",
+      damp: "阻尼 ½",
+      mom: "动量 0.3",
+      coupling: "耦合",
+      cutOne: "剪断一根连线（成为树）",
+      run: "运行",
+      step: "单步",
+      ready: "就绪",
+      plotTitle: "自由能，逐轮扫描",
+      sweeps: "轮数",
+      betheF: "Bethe F",
+      exact: "精确 −log p(y)",
+      change: "上一轮的变化",
+      sweepsAxis: "轮数 →",
+      hint: "试试：λ = 5 时泛洪，然后改为<em>沿环一周</em>。再把 λ 推到 30 并加动量，两种调度表各试一次。然后剪断一根连线，看曲线与虚线的差距合拢。",
+      note1: { title: "Bethe 自由能", body: "能量在因子上相加。熵的相加要加一个修正：被 <i>d</i> 个因子看见的变量出现在 <i>d</i> 个因子信念里，所以要减去 <i>d</i> − 1 份它的熵。在树上、在不动点处，它恰好是 −log <i>p</i>(<i>y</i>)：剪断一根连线，曲线就落在虚线上。在有环的图上它是近似，而信念传播的不动点恰好是它的驻点。但信念传播<em>不是</em>沿它做梯度下降：在泛洪之下，曲线先上后下。" },
+      note2: { title: "推断器与优化器可以组合，收敛不能。", body: "一轮消息是一个推断器，参数上的一步是一个优化器，阻尼、动量或 Anderson 加速是包在两者之上的修正项。在 Lenticulum.jl 里，优化器本身就是图中的节点，紧邻数据与先验。任何这样的叠加都保持同样的不动点，所以只要它到达，就到达同一个答案。它是否到达取决于叠加：上面，泛洪一轮上的动量在强耦合下发散，而在沿环一周的扫描上收敛。笔记库中的测量：正确的调度表把一个环从 326 轮降到 38 轮，再加 Anderson 加速，把 297 000 次消息求值变成 414 次。" },
+      note3: { title: "更高阶：自带运动的信念", body: "只关于位置的自由能，会被一个总是落在运动世界之后的信念最小化：朴素下降以固定的滞后（速度 ÷ 增益）跟随匀速运动。给信念一个速度——主动推断的运动广义坐标——并在随它运动的参考系中下降，滞后就消失了。往上一层同样成立：动量是参数上的一个速度，它帮忙与否取决于它遇到的谱。" },
+      inVault: (n: string) => `笔记库中的 ${n} ↗`,
+      track: "一个移动的目标",
+      trackTitle: "慢一步，还是正落在其上",
+      trackBody: "目标以匀速运动，观测带噪声。两个信念以同样的增益下降同一个预测误差。只关于位置的那个与每段斜率保持固定的差距；同时携带速度的那个能追上，只在运动拐弯处过头。",
+      posOnly: "仅位置 · RMS 误差",
+      withVel: "带速度 · RMS 误差",
+      replay: "重放",
+      target: "目标",
+      observations: "观测",
+      posOnlyKey: "仅位置",
+      posVel: "位置与速度",
+      fine: "什么在哪里运行：Bethe 自由能、带泛洪的信念传播、顺序与生成树调度表、阻尼、动量与 Anderson 加加速都在 Lenticulum.jl（Mycelium.jl）里，与解析形式核对。携带导数的通道（jet）还是一篇设计笔记，不是代码。本页两个实验室是运行在你浏览器里的小型重实现。",
+      converged: (n: number) => `已收敛 · ${n} 轮`,
+      pause: "暂停",
+    }
+  : {
+      loopTitle: "Six beliefs on a loop",
+      legend: "variable",
+      legend2: "factor",
+      cut: "cut",
+      sched: "Schedule",
+      flood: "Flooding",
+      roundLoop: "Round the loop",
+      mod: "Modifier",
+      none: "None",
+      damp: "Damping ½",
+      mom: "Momentum 0.3",
+      coupling: "Coupling",
+      cutOne: "Cut one wire (a tree)",
+      run: "Run",
+      step: "Step",
+      ready: "ready",
+      plotTitle: "Free energy, sweep by sweep",
+      sweeps: "sweeps",
+      betheF: "Bethe F",
+      exact: "exact −log p(y)",
+      change: "change in last sweep",
+      sweepsAxis: "sweeps →",
+      hint: "Try: flooding at λ = 5, then <em>round the loop</em>. Then push λ to 30 and add momentum, once with each schedule. Then cut a wire and watch the gap to the dashed line close.",
+      note1: { title: "The Bethe free energy", body: "Energies add over the factors. Entropies add with a correction: a variable seen by <i>d</i> factors appears in <i>d</i> factor beliefs, so <i>d</i> − 1 copies of its entropy come off. On a tree, at the fixed point, this is exactly −log <i>p</i>(<i>y</i>): cut a wire and the curve lands on the dashed line. On a loop it is an approximation, and the fixed points of belief propagation are exactly its stationary points. Belief propagation is <em>not</em> gradient descent on it, though: under flooding the curve goes up before it comes down." },
+      note2: { title: "Inferencers and optimisers compose. Convergence does not.", body: "A sweep of messages is an inferencer, a step on the parameters is an optimiser, and damping, momentum or Anderson acceleration are modifiers wrapped round either. In Lenticulum.jl the optimisers are themselves nodes in the graph, next to the data and the priors. Every such stack keeps the same fixed points, so if it arrives, it arrives at the same answer. Whether it arrives depends on the composite: above, momentum on a flooding sweep diverges at strong coupling and converges on a sweep that goes round the loop. Measured in the vault: the right schedule takes a loop from 326 sweeps to 38, and Anderson acceleration on top of it turns 297 000 message evaluations into 414." },
+      note3: { title: "Higher orders: beliefs that carry their own motion", body: "A free energy over positions alone is minimised by a belief that is always behind a moving world: plain descent follows a steady motion at a constant lag (speed ÷ gain). Give the belief a velocity, the generalised coordinates of motion of active inference, and descend in a frame that moves with it, and the lag goes away. The same holds one level up: momentum is a velocity on the parameters, and it helps or hurts depending on the spectrum it meets." },
+      inVault: (n: string) => `${n}, in the vault ↗`,
+      track: "A moving target",
+      trackTitle: "One step behind, or on it",
+      trackBody: "A target moves at steady speeds and is seen with noise. Both beliefs descend the same prediction error with the same gain. The one over position only trails each slope by a constant gap; the one that also carries a velocity catches up, and overshoots only where the motion turns.",
+      posOnly: "position only · RMS error",
+      withVel: "with velocity · RMS error",
+      replay: "Replay",
+      target: "target",
+      observations: "observations",
+      posOnlyKey: "position only",
+      posVel: "position and velocity",
+      fine: "What runs where: the Bethe free energy, belief propagation with flooding, sequential and spanning-tree schedules, damping, momentum and Anderson acceleration are in Lenticulum.jl (Mycelium.jl), tested against closed forms. Channels that carry derivatives (jets) are a design note, not code yet. Both labs on this page are small re-implementations that run in your browser.",
+      converged: (n: number) => `converged · ${n} sweeps`,
+      pause: "Pause",
+    }
 ---
 
 <div class="fe">
@@ -30,8 +118,8 @@ const f = (n: number) => +n.toFixed(1)
   <div class="lab reveal" data-fe-lab>
     <div class="lab-graph">
       <div class="lab-bar mono">
-        <span>Six beliefs on a loop</span>
-        <span class="lab-legend"><i class="lg-v"></i>variable <i class="lg-f"></i>factor</span>
+        <span>{t.loopTitle}</span>
+        <span class="lab-legend"><i class="lg-v"></i>{t.legend} <i class="lg-f"></i>{t.legend2}</span>
       </div>
       <svg viewBox="0 0 340 340" role="img" aria-label="A ring of six variables joined by coupling factors, each with an observation factor. Messages light up the wires as they are sent; the halo of each variable shows how uncertain its belief is.">
         {obs.map((o) => (
@@ -54,33 +142,33 @@ const f = (n: number) => +n.toFixed(1)
             <text class="vl" x={f(v.x)} y={f(v.y + 4.5)}>x<tspan dy="3" font-size="9">{v.i + 1}</tspan></text>
           </g>
         ))}
-        <text class="cut-x" x={f(cps[N - 1].x)} y={f(cps[N - 1].y - 14)}>cut</text>
+        <text class="cut-x" x={f(cps[N - 1].x)} y={f(cps[N - 1].y - 14)}>{t.cut}</text>
       </svg>
       <div class="controls">
         <div class="ctl">
-          <span class="ctl-k mono">Schedule</span>
-          <div class="seg" role="group" aria-label="Schedule">
-            <button type="button" data-sched="flood" aria-pressed="true">Flooding</button>
-            <button type="button" data-sched="loop" aria-pressed="false">Round the loop</button>
+          <span class="ctl-k mono">{t.sched}</span>
+          <div class="seg" role="group" aria-label={t.sched}>
+            <button type="button" data-sched="flood" aria-pressed="true">{t.flood}</button>
+            <button type="button" data-sched="loop" aria-pressed="false">{t.roundLoop}</button>
           </div>
         </div>
         <div class="ctl">
-          <span class="ctl-k mono">Modifier</span>
-          <div class="seg" role="group" aria-label="Modifier">
-            <button type="button" data-mod="none" aria-pressed="true">None</button>
-            <button type="button" data-mod="damp" aria-pressed="false">Damping ½</button>
-            <button type="button" data-mod="mom" aria-pressed="false">Momentum 0.3</button>
+          <span class="ctl-k mono">{t.mod}</span>
+          <div class="seg" role="group" aria-label={t.mod}>
+            <button type="button" data-mod="none" aria-pressed="true">{t.none}</button>
+            <button type="button" data-mod="damp" aria-pressed="false">{t.damp}</button>
+            <button type="button" data-mod="mom" aria-pressed="false">{t.mom}</button>
           </div>
         </div>
         <div class="ctl">
-          <label class="ctl-k mono" for="fe-lam">Coupling λ = <span data-lam-out>5</span></label>
+          <label class="ctl-k mono" for="fe-lam">{t.coupling} λ = <span data-lam-out>5</span></label>
           <input id="fe-lam" type="range" min="0" max="100" value="47" data-lam />
         </div>
         <div class="ctl ctl-row">
-          <label class="check"><input type="checkbox" data-cut /> Cut one wire (a tree)</label>
+          <label class="check"><input type="checkbox" data-cut /> {t.cutOne}</label>
           <div class="btns">
-            <button type="button" class="btn btn--solid btn-sm" data-run>Run <span class="arrow">→</span></button>
-            <button type="button" class="btn btn-sm" data-step>Step</button>
+            <button type="button" class="btn btn--solid btn-sm" data-run>{t.run} <span class="arrow">→</span></button>
+            <button type="button" class="btn btn-sm" data-step>{t.step}</button>
           </div>
         </div>
       </div>
@@ -88,29 +176,26 @@ const f = (n: number) => +n.toFixed(1)
 
     <div class="lab-plot">
       <div class="lab-bar mono">
-        <span>Free energy, sweep by sweep</span>
-        <span class="status" data-status>ready</span>
+        <span>{t.plotTitle}</span>
+        <span class="status" data-status>{t.ready}</span>
       </div>
       <svg class="plot" viewBox="0 0 520 300" preserveAspectRatio="none" data-plot aria-hidden="true">
         <g data-grid></g>
         <line class="exact" data-exact x1="0" x2="520" y1="0" y2="0" />
         <path class="curve" data-curve d="" />
       </svg>
-      <div class="plot-axis mono"><span data-ylab>F</span><span>sweeps →</span></div>
+      <div class="plot-axis mono"><span data-ylab>F</span><span>{t.sweepsAxis}</span></div>
       <dl class="readout">
-        <div><dt>sweeps</dt><dd data-k>0</dd></div>
-        <div><dt>Bethe F</dt><dd data-f>–</dd></div>
-        <div><dt>exact −log p(y)</dt><dd data-ex>–</dd></div>
-        <div><dt>change in last sweep</dt><dd data-res>–</dd></div>
+        <div><dt>{t.sweeps}</dt><dd data-k>0</dd></div>
+        <div><dt>{t.betheF}</dt><dd data-f>–</dd></div>
+        <div><dt>{t.exact}</dt><dd data-ex>–</dd></div>
+        <div><dt>{t.change}</dt><dd data-res>–</dd></div>
       </dl>
       <p class="formula">
         <i>F</i><sub>Bethe</sub> = Σ<sub><i>f</i></sub> ( 𝔼<sub><i>b<sub>f</sub></i></sub>[−log <i>f</i>] − <i>H</i>[<i>b<sub>f</sub></i>] )
         + Σ<sub><i>v</i></sub> (<i>d<sub>v</sub></i> − 1) <i>H</i>[<i>b<sub>v</sub></i>]
       </p>
-      <p class="hint">
-        Try: flooding at λ = 5, then <em>round the loop</em>. Then push λ to 30 and add momentum, once
-        with each schedule. Then cut a wire and watch the gap to the dashed line close.
-      </p>
+      <p class="hint" set:html={t.hint} />
     </div>
   </div>
 
@@ -118,62 +203,35 @@ const f = (n: number) => +n.toFixed(1)
   <ol class="fe-notes">
     <li class="reveal">
       <span class="n mono">01</span>
-      <h3>The Bethe free energy</h3>
-      <p>
-        Energies add over the factors. Entropies add with a correction: a variable seen by
-        <i>d</i> factors appears in <i>d</i> factor beliefs, so <i>d</i> − 1 copies of its entropy
-        come off. On a tree, at the fixed point, this is exactly −log <i>p</i>(<i>y</i>): cut a wire
-        and the curve lands on the dashed line. On a loop it is an approximation, and the fixed
-        points of belief propagation are exactly its stationary points. Belief propagation is
-        <em>not</em> gradient descent on it, though: under flooding the curve goes up before it comes
-        down.
-      </p>
-      <a class="more mono" href={notes.bethe}>Bethe Free Energy, in the vault ↗</a>
+      <h3>{t.note1.title}</h3>
+      <p set:html={t.note1.body} />
+      <a class="more mono" href={notes.bethe}>{t.inVault("Bethe Free Energy")}</a>
     </li>
     <li class="reveal" style="--d:.06s">
       <span class="n mono">02</span>
-      <h3>Inferencers and optimisers compose. Convergence does not.</h3>
-      <p>
-        A sweep of messages is an inferencer, a step on the parameters is an optimiser, and damping,
-        momentum or Anderson acceleration are modifiers wrapped round either. In Lenticulum.jl the
-        optimisers are themselves nodes in the graph, next to the data and the priors. Every such stack keeps the same fixed points, so if it
-        arrives, it arrives at the same answer. Whether it arrives depends on the composite: above,
-        momentum on a flooding sweep diverges at strong coupling and converges on a sweep that goes
-        round the loop. Measured in the vault: the right schedule takes a loop from 326 sweeps to 38,
-        and Anderson acceleration on top of it turns 297 000 message evaluations into 414.
-      </p>
-      <a class="more mono" href={notes.compose}>Composing Optimisers, in the vault ↗</a>
+      <h3>{t.note2.title}</h3>
+      <p>{t.note2.body}</p>
+      <a class="more mono" href={notes.compose}>{t.inVault("Composing Optimisers")}</a>
     </li>
     <li class="reveal" style="--d:.12s">
       <span class="n mono">03</span>
-      <h3>Higher orders: beliefs that carry their own motion</h3>
-      <p>
-        A free energy over positions alone is minimised by a belief that is always behind a moving
-        world: plain descent follows a steady motion at a constant lag (speed ÷ gain). Give the belief
-        a velocity, the generalised coordinates of motion of active inference, and descend in a frame
-        that moves with it, and the lag goes away. The same holds one level up: momentum is a
-        velocity on the parameters, and it helps or hurts depending on the spectrum it meets.
-      </p>
-      <a class="more mono" href={notes.time}>Time as a Base, in the vault ↗</a>
+      <h3>{t.note3.title}</h3>
+      <p>{t.note3.body}</p>
+      <a class="more mono" href={notes.time}>{t.inVault("Time as a Base")}</a>
     </li>
   </ol>
 
   <!-- -------------------------------------------------------------- lab 2 -->
   <div class="lab lab2 reveal" data-track>
     <div class="lab2-text">
-      <span class="ctl-k mono">A moving target</span>
-      <h3>One step behind, or on it</h3>
-      <p>
-        A target moves at steady speeds and is seen with noise. Both beliefs descend the same
-        prediction error with the same gain. The one over position only trails each slope by a
-        constant gap; the one that also carries a velocity catches up, and overshoots only where
-        the motion turns.
-      </p>
+      <span class="ctl-k mono">{t.track}</span>
+      <h3>{t.trackTitle}</h3>
+      <p>{t.trackBody}</p>
       <dl class="readout readout--2">
-        <div><dt>position only · RMS error</dt><dd data-rms0>–</dd></div>
-        <div><dt>with velocity · RMS error</dt><dd data-rms1>–</dd></div>
+        <div><dt>{t.posOnly}</dt><dd data-rms0>–</dd></div>
+        <div><dt>{t.withVel}</dt><dd data-rms1>–</dd></div>
       </dl>
-      <button type="button" class="btn btn-sm" data-replay>Replay</button>
+      <button type="button" class="btn btn-sm" data-replay>{t.replay}</button>
     </div>
     <div class="lab2-plot">
       <svg class="plot" viewBox="0 0 640 260" preserveAspectRatio="none" aria-hidden="true">
@@ -183,21 +241,15 @@ const f = (n: number) => +n.toFixed(1)
         <path class="t-o1" data-to1 d="" />
       </svg>
       <div class="key mono">
-        <span><i class="k-true"></i>target</span>
-        <span><i class="k-obs"></i>observations</span>
-        <span><i class="k-o0"></i>position only</span>
-        <span><i class="k-o1"></i>position and velocity</span>
+        <span><i class="k-true"></i>{t.target}</span>
+        <span><i class="k-obs"></i>{t.observations}</span>
+        <span><i class="k-o0"></i>{t.posOnlyKey}</span>
+        <span><i class="k-o1"></i>{t.posVel}</span>
       </div>
     </div>
   </div>
 
-  <p class="fe-fine mono">
-    What runs where: the Bethe free energy, belief propagation with flooding, sequential and
-    spanning-tree schedules, damping, momentum and Anderson acceleration are in Lenticulum.jl
-    (Mycelium.jl), tested against closed forms. Channels that carry derivatives (jets) are a design
-    note, not code yet. Both labs on this page are small re-implementations that run in your
-    browser.
-  </p>
+  <p class="fe-fine mono">{t.fine}</p>
 </div>
 
 <script>
@@ -215,6 +267,7 @@ const f = (n: number) => +n.toFixed(1)
     const exLine = $<SVGLineElement>("[data-exact]")
     const grid = $<SVGGElement>("[data-grid]")
     const status = $<HTMLElement>("[data-status]")
+    const zh = location.pathname.startsWith("/zh")
     const runBtn = $<HTMLButtonElement>("[data-run]")
     let sched: Schedule = "flood"
     let mod: "none" | "damp" | "mom" = "none"
@@ -238,9 +291,10 @@ const f = (n: number) => +n.toFixed(1)
     }
     function setState(s: typeof state) {
       state = s
-      status.textContent = s === "done" ? `converged · ${Fs.length - 1} sweeps` : s
+      const zhState: Record<string, string> = { ready: "就绪", running: "运行中", diverged: "发散", paused: "已暂停" }
+      status.textContent = s === "done" ? (zh ? `已收敛 · ${Fs.length - 1} 轮` : `converged · ${Fs.length - 1} sweeps`) : zh ? zhState[s] : s
       status.dataset.s = s
-      runBtn.innerHTML = s === "running" ? "Pause" : 'Run <span class="arrow">→</span>'
+      runBtn.innerHTML = s === "running" ? (zh ? "暂停" : "Pause") : zh ? '运行 <span class="arrow">→</span>' : 'Run <span class="arrow">→</span>'
     }
     function step() {
       const o = sweep(M, S, sched, mod === "damp" ? 0.5 : 0, mod === "mom" ? 0.3 : 0, prev)

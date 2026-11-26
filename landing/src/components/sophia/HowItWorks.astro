@@ -3,6 +3,56 @@
 // Identity, Naming and Change Propagation, Tests and Documentation as Nodes, Equivalence and
 // Witnesses), each with a small looping drawing. The drawings start when the step scrolls into
 // view (the page's .reveal → .in).
+// The Chinese page (/zh/projects/sophia) shows the same steps in Chinese (Nav.astro tells the two
+// languages apart the same way).
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const t = zh
+  ? {
+      steps: [
+        {
+          title: "定义的 id 是其结构的哈希",
+          body: "每个定义先被解析并规范化：绑定的名字变成位置，版式消失。剩下的部分自叶向上哈希，每个节点折入子节点的哈希。结构相等，id 就相等：在任何机器上、在任何时候。",
+        },
+        {
+          title: "名字只是它身上的标签",
+          body: "名字指向 id；代码以 id 引用其他代码。改名只是挪动一个标签，一行代码都不碰。编辑一个定义产生新 id 并挪动名字；旧版本仍在，用它的一切仍保持着原来的含义。",
+        },
+        {
+          title: "其余一切都附在它身上",
+          body: "测试、测试结果、证明、文档与注释不被编译；它们是某个 id 上的注解与派生事实。测试结果属于它运行于其上的那个 id，所以恰好在那份代码存在期间有效，对改动后的版本永不成立。",
+        },
+        {
+          title: "相同是一个带证据的断言",
+          body: "两个做同一件事但结构不同的定义保持各自的 id。存储用一条等价边把它们连起来，边上写着断言有多强——从“一个测试一致”到“一个证明经过检查”——以及它忽略了什么。这是用来取代 FFI 的。",
+        },
+      ],
+      untouched: "不受影响",
+      howSure: "这个断言有多确定？",
+      rungs: ["tested", "rewrite", "proved"],
+    }
+  : {
+      steps: [
+        {
+          title: "A definition's id is the hash of its structure",
+          body: "Every definition is parsed and normalised: bound names become positions, layout disappears. What remains is hashed from the leaves up, each node folding in its children's hashes. Equal structure, equal id: on any machine, at any time.",
+        },
+        {
+          title: "Names are labels on it",
+          body: "A name points at an id; code refers to other code by id. Renaming moves a label and touches no code. Editing a definition makes a new id and moves the name; the old version stays, and everything that used it still means what it meant.",
+        },
+        {
+          title: "Everything else is attached to it",
+          body: "Tests, test results, proofs, documentation and comments are not compiled; they are annotations and derived facts on an id. A test result belongs to the id it ran on, so it holds for exactly as long as that code exists, and never for a changed version.",
+        },
+        {
+          title: "Sameness is a claim, with evidence",
+          body: "Two definitions that do the same thing but differ in structure keep their two ids. The store relates them by an equivalence edge that says how strong the claim is, from \u201ca test agreed\u201d to \u201ca proof was checked\u201d, and what it ignores. That is meant to replace an FFI.",
+        },
+      ],
+      untouched: "untouched",
+      howSure: "how sure is the claim?",
+      rungs: ["tested", "rewrite", "proved"],
+    }
 ---
 
 <ol class="hiw">
@@ -28,12 +78,8 @@
       </svg>
     </div>
     <span class="num mono">01</span>
-    <h3>A definition's id is the hash of its structure</h3>
-    <p>
-      Every definition is parsed and normalised: bound names become positions, layout disappears.
-      What remains is hashed from the leaves up, each node folding in its children's hashes. Equal
-      structure, equal id: on any machine, at any time.
-    </p>
+    <h3>{t.steps[0].title}</h3>
+    <p>{t.steps[0].body}</p>
   </li>
 
   <li class="step reveal" style="--d:.06s">
@@ -55,16 +101,12 @@
         <rect class="caller" x="22" y="98" width="58" height="24" rx="6"></rect>
         <text x="51" y="114" class="tagb">caller</text>
         <path class="ptr solid" d="M80 110 C 100 110, 108 92, 120 84"></path>
-        <text x="159" y="114" class="tag">untouched</text>
+        <text x="159" y="114" class="tag">{t.untouched}</text>
       </svg>
     </div>
     <span class="num mono">02</span>
-    <h3>Names are labels on it</h3>
-    <p>
-      A name points at an id; code refers to other code by id. Renaming moves a label and touches
-      no code. Editing a definition makes a new id and moves the name; the old version stays, and
-      everything that used it still means what it meant.
-    </p>
+    <h3>{t.steps[1].title}</h3>
+    <p>{t.steps[1].body}</p>
   </li>
 
   <li class="step reveal" style="--d:.12s">
@@ -95,12 +137,8 @@
       </svg>
     </div>
     <span class="num mono">03</span>
-    <h3>Everything else is attached to it</h3>
-    <p>
-      Tests, test results, proofs, documentation and comments are not compiled; they are
-      annotations and derived facts on an id. A test result belongs to the id it ran on, so it
-      holds for exactly as long as that code exists, and never for a changed version.
-    </p>
+    <h3>{t.steps[2].title}</h3>
+    <p>{t.steps[2].body}</p>
   </li>
 
   <li class="step reveal" style="--d:.18s">
@@ -116,20 +154,16 @@
         <text x="110" y="64" class="lbl small">≈</text>
         <g class="rung">
           <rect x="70" y="100" width="80" height="22" rx="11"></rect>
-          <text x="110" y="115" class="tagb rung-t r1">tested</text>
-          <text x="110" y="115" class="tagb rung-t r2">rewrite</text>
-          <text x="110" y="115" class="tagb rung-t r3">proved</text>
+          <text x="110" y="115" class="tagb rung-t r1">{t.rungs[0]}</text>
+          <text x="110" y="115" class="tagb rung-t r2">{t.rungs[1]}</text>
+          <text x="110" y="115" class="tagb rung-t r3">{t.rungs[2]}</text>
         </g>
-        <text x="110" y="140" class="tag">how sure is the claim?</text>
+        <text x="110" y="140" class="tag">{t.howSure}</text>
       </svg>
     </div>
     <span class="num mono">04</span>
-    <h3>Sameness is a claim, with evidence</h3>
-    <p>
-      Two definitions that do the same thing but differ in structure keep their two ids. The store
-      relates them by an equivalence edge that says how strong the claim is, from “a test agreed”
-      to “a proof was checked”, and what it ignores. That is meant to replace an FFI.
-    </p>
+    <h3>{t.steps[3].title}</h3>
+    <p>{t.steps[3].body}</p>
   </li>
 </ol>
 

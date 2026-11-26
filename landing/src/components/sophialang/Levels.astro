@@ -7,56 +7,106 @@
 // - the audit lists every `unsafe` section in main's closure whose proof is missing (§2);
 // - adding a proof never changes a definition's content id (§2, SR-53).
 // The story steps are an illustration; nothing here compiles or measures anything.
-const rows = [
-  { name: "main", note: "the entry point" },
-  { name: "load", note: "reads the configuration" },
-  { name: "simulate!", note: "runs the steps" },
-  { name: "step!", note: "the hot loop" },
-  { name: "save", note: "writes the results" },
-]
-const aspects = [
-  { key: "memory", label: "memory", auto: "GC", unsafe: "alloc / free", safe: "ownership proof" },
-  { key: "concurrency", label: "threads", auto: "scheduler", unsafe: "threads, locks", safe: "race-freedom proof" },
-  { key: "compilation", label: "compile", auto: "JIT", unsafe: "AOT list", safe: "no-JIT proof" },
-]
+// The Chinese page (/zh/projects/sophialang) shows the same toy in Chinese (Nav.astro tells the
+// two languages apart the same way); the script below switches with location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const rows = zh
+  ? [
+      { name: "main", note: "入口" },
+      { name: "load", note: "读取配置" },
+      { name: "simulate!", note: "跑各步" },
+      { name: "step!", note: "热循环" },
+      { name: "save", note: "写出结果" },
+    ]
+  : [
+      { name: "main", note: "the entry point" },
+      { name: "load", note: "reads the configuration" },
+      { name: "simulate!", note: "runs the steps" },
+      { name: "step!", note: "the hot loop" },
+      { name: "save", note: "writes the results" },
+    ]
+const aspects = zh
+  ? [
+      { key: "memory", label: "内存", auto: "GC", unsafe: "alloc / free", safe: "所有权证明" },
+      { key: "concurrency", label: "线程", auto: "调度器", unsafe: "线程、锁", safe: "无数据竞争证明" },
+      { key: "compilation", label: "编译", auto: "JIT", unsafe: "AOT 清单", safe: "无 JIT 证明" },
+    ]
+  : [
+      { key: "memory", label: "memory", auto: "GC", unsafe: "alloc / free", safe: "ownership proof" },
+      { key: "concurrency", label: "threads", auto: "scheduler", unsafe: "threads, locks", safe: "race-freedom proof" },
+      { key: "compilation", label: "compile", auto: "JIT", unsafe: "AOT list", safe: "no-JIT proof" },
+    ]
 // 0 autoresolve, 1 unsafe, 2 safe; rows × aspects
-const story = [
-  {
-    t: "A prototype",
-    d: "Nothing is specified. The system picks garbage collection, a work-stealing scheduler and compilation on demand, and records what it picked. Like Julia.",
-    g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  },
-  {
-    t: "The hot loop",
-    d: "The profiler points at step!. Its memory goes into an explicit arena and it is compiled ahead of time. That is exactly what was asked, foot-guns included, and the section is now marked unsafe in every view.",
-    g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 1], [0, 0, 0]],
-  },
-  {
-    t: "Explicit threads",
-    d: "simulate! spreads the steps over threads it starts itself, with locks. Another unsafe section, and the audit lists it.",
-    g: [[0, 0, 0], [0, 0, 0], [0, 1, 0], [1, 0, 1], [0, 0, 0]],
-  },
-  {
-    t: "Proofs arrive",
-    d: "An ownership proof for step!’s arena, a race-freedom proof for simulate!. The checker accepts them and the unsafe marks are discharged. The code is the same, and so is its content id.",
-    g: [[0, 0, 0], [0, 0, 0], [0, 2, 0], [2, 0, 1], [0, 0, 0]],
-  },
-  {
-    t: "No surprise compilation",
-    d: "A proof from main down: every call site resolves to code compiled ahead of time. The JIT is no longer linked, and the program can run under real-time constraints.",
-    g: [[0, 0, 2], [0, 0, 2], [0, 2, 2], [2, 0, 2], [0, 0, 2]],
-  },
-  {
-    t: "A small target",
-    d: "Every aspect explicit, everywhere. No GC, no scheduler, no JIT: no runtime beyond what C would need. The audit still finds the one section nobody has proved yet.",
-    g: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-  },
-]
+const story = zh
+  ? [
+      {
+        t: "一个原型",
+        d: "什么都不指定。系统选定垃圾回收、工作窃取式调度器与按需编译，并记录它的选择。像 Julia 那样。",
+        g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+      },
+      {
+        t: "热循环",
+        d: "性能分析指向 step!。它的内存进入一个显式 arena，并提前编译。这正是所要求的，包括所有的隐患；这个区段在每个视图里都标为 unsafe。",
+        g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 1], [0, 0, 0]],
+      },
+      {
+        t: "显式线程",
+        d: "simulate! 把各步分给它自己启动的线程，加锁。又一个 unsafe 区段，审计把它列了出来。",
+        g: [[0, 0, 0], [0, 0, 0], [0, 1, 0], [1, 0, 1], [0, 0, 0]],
+      },
+      {
+        t: "证明到来",
+        d: "step! 的 arena 一份所有权证明，simulate! 一份无数据竞争证明。检查器接受它们，unsafe 标记就此销案。代码没变，内容 id 也没变。",
+        g: [[0, 0, 0], [0, 0, 0], [0, 2, 0], [2, 0, 1], [0, 0, 0]],
+      },
+      {
+        t: "不再意外编译",
+        d: "一份从 main 向下的证明：每个调用点都解析到提前编译的代码。JIT 不再链接，程序可以在实时约束下运行。",
+        g: [[0, 0, 2], [0, 0, 2], [0, 2, 2], [2, 0, 2], [0, 0, 2]],
+      },
+      {
+        t: "一个小的目标",
+        d: "每个侧面、处处显式。没有 GC、没有调度器、没有 JIT：没有 C 之外还需要的运行时。审计仍找出那个还没人证明的区段。",
+        g: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+      },
+    ]
+  : [
+      {
+        t: "A prototype",
+        d: "Nothing is specified. The system picks garbage collection, a work-stealing scheduler and compilation on demand, and records what it picked. Like Julia.",
+        g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+      },
+      {
+        t: "The hot loop",
+        d: "The profiler points at step!. Its memory goes into an explicit arena and it is compiled ahead of time. That is exactly what was asked, foot-guns included, and the section is now marked unsafe in every view.",
+        g: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 1], [0, 0, 0]],
+      },
+      {
+        t: "Explicit threads",
+        d: "simulate! spreads the steps over threads it starts itself, with locks. Another unsafe section, and the audit lists it.",
+        g: [[0, 0, 0], [0, 0, 0], [0, 1, 0], [1, 0, 1], [0, 0, 0]],
+      },
+      {
+        t: "Proofs arrive",
+        d: "An ownership proof for step!’s arena, a race-freedom proof for simulate!. The checker accepts them and the unsafe marks are discharged. The code is the same, and so is its content id.",
+        g: [[0, 0, 0], [0, 0, 0], [0, 2, 0], [2, 0, 1], [0, 0, 0]],
+      },
+      {
+        t: "No surprise compilation",
+        d: "A proof from main down: every call site resolves to code compiled ahead of time. The JIT is no longer linked, and the program can run under real-time constraints.",
+        g: [[0, 0, 2], [0, 0, 2], [0, 2, 2], [2, 0, 2], [0, 0, 2]],
+      },
+      {
+        t: "A small target",
+        d: "Every aspect explicit, everywhere. No GC, no scheduler, no JIT: no runtime beyond what C would need. The audit still finds the one section nobody has proved yet.",
+        g: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+      },
+    ]
 const LEVEL = ["auto", "unsafe", "safe"]
 ---
 
 <div class="lv" data-lv>
-  <ol class="lv-steps" aria-label="A program, step by step">
+  <ol class="lv-steps" aria-label={zh ? "一个程序，一步一步" : "A program, step by step"}>
     {story.map((s, i) => (
       <li>
         <button type="button" data-step={i} aria-pressed={i === 0 ? "true" : "false"}>
@@ -68,9 +118,9 @@ const LEVEL = ["auto", "unsafe", "safe"]
   <p class="lv-cap" data-cap aria-live="polite">{story[0].d}</p>
 
   <div class="lv-body">
-    <div class="lv-grid" role="grid" aria-label="Each section's level for each aspect; click a cell to change it">
+    <div class="lv-grid" role="grid" aria-label={zh ? "每个区段在每个侧面的级别；点一个格子可更改" : "Each section's level for each aspect; click a cell to change it"}>
       <div class="lv-row lv-head mono" role="row">
-        <span role="columnheader">section</span>
+        <span role="columnheader">{zh ? "区段" : "section"}</span>
         {aspects.map((a) => <span role="columnheader">{a.label}</span>)}
       </div>
       {rows.map((r, i) => (
@@ -88,31 +138,31 @@ const LEVEL = ["auto", "unsafe", "safe"]
         </div>
       ))}
       <p class="lv-legend mono">
-        <span><i class="sw l0"></i>autoresolve: the system chooses</span>
-        <span><i class="sw l1"></i>unsafe: explicit, marked</span>
-        <span><i class="sw l2"></i>safe: explicit, proved</span>
+        <span><i class="sw l0"></i>{zh ? "autoresolve：系统选择" : "autoresolve: the system chooses"}</span>
+        <span><i class="sw l1"></i>{zh ? "unsafe：显式，有标记" : "unsafe: explicit, marked"}</span>
+        <span><i class="sw l2"></i>{zh ? "safe：显式，有证明" : "safe: explicit, proved"}</span>
       </p>
     </div>
 
     <div class="lv-side">
       <div class="lv-box">
-        <h4 class="mono">Runtime linked into the binary</h4>
+        <h4 class="mono">{zh ? "链接进二进制的运行时" : "Runtime linked into the binary"}</h4>
         <ul class="lv-rt">
           {aspects.map((a, j) => (
-            <li data-rt={j}><span class="lv-rt-n">{a.auto}</span><span class="lv-rt-s mono" data-rts>linked</span></li>
+            <li data-rt={j}><span class="lv-rt-n">{a.auto}</span><span class="lv-rt-s mono" data-rts>{zh ? "已链接" : "linked"}</span></li>
           ))}
         </ul>
-        <p class="lv-none mono" data-none>nothing beyond what C needs</p>
+        <p class="lv-none mono" data-none>{zh ? "没有 C 之外还需要的东西" : "nothing beyond what C needs"}</p>
       </div>
       <div class="lv-box">
-        <h4 class="mono">Audit: unproved unsafe sections reachable from main</h4>
+        <h4 class="mono">{zh ? "审计：从 main 可达却未证明的 unsafe 区段" : "Audit: unproved unsafe sections reachable from main"}</h4>
         <ul class="lv-audit mono" data-audit></ul>
-        <p class="lv-clean mono" data-clean>none</p>
+        <p class="lv-clean mono" data-clean>{zh ? "无" : "none"}</p>
       </div>
       <div class="lv-box lv-ids">
-        <h4 class="mono">Content ids changed by proofs</h4>
+        <h4 class="mono">{zh ? "被证明改变的内容 id" : "Content ids changed by proofs"}</h4>
         <span class="lv-big">0</span>
-        <p class="mono">proofs are annotations, never part of the id</p>
+        <p class="mono">{zh ? "证明是注解，永远不在 id 里" : "proofs are annotations, never part of the id"}</p>
       </div>
     </div>
   </div>
@@ -121,6 +171,7 @@ const LEVEL = ["auto", "unsafe", "safe"]
 
 <script>
   type A = { key: string; label: string; auto: string; unsafe: string; safe: string }
+  const zh = location.pathname.startsWith("/zh")
   for (const root of document.querySelectorAll<HTMLElement>("[data-lv]")) {
     const { story, aspects, rows, LEVEL } = JSON.parse(root.querySelector("[data-data]")!.textContent!) as {
       story: { d: string; g: number[][] }[]
@@ -162,7 +213,7 @@ const LEVEL = ["auto", "unsafe", "safe"]
         const on = grid.some((r) => r[j] === 0)
         any ||= on
         li.classList.toggle("off", !on)
-        li.querySelector("[data-rts]")!.textContent = on ? "linked" : "not linked"
+        li.querySelector("[data-rts]")!.textContent = on ? (zh ? "已链接" : "linked") : zh ? "未链接" : "not linked"
       })
       none.classList.toggle("on", !any)
       const open: string[] = []
@@ -190,7 +241,9 @@ const LEVEL = ["auto", "unsafe", "safe"]
         const j = Number(c.dataset.a)
         grid[i][j] = (grid[i][j] + 1) % 3
         steps.forEach((s) => s.setAttribute("aria-pressed", "false"))
-        cap.textContent = "Your own program: click any cell to cycle it through autoresolve, unsafe and safe."
+        cap.textContent = zh
+          ? "你自己的程序：点任意格子，让它在 autoresolve、unsafe 与 safe 之间循环。"
+          : "Your own program: click any cell to cycle it through autoresolve, unsafe and safe."
         render()
       }),
     )

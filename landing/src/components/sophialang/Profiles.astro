@@ -10,6 +10,27 @@
 // Its id is the definition's because a profile is only a view of the stored term (SPEC-005).
 const ADD = "8bcfc885631dfc75a61dafd537f94c8acaab807e304641914cbb891aeee82c76"
 const EDITED = "8806a207045dc0d35e6eb9ffbe7a29274a452db9ca71fbb06bf6c142d913b8c0"
+// The Chinese page (/zh/projects/sophialang) shows the same frames in Chinese (Nav.astro tells
+// the two languages apart the same way); the script below switches with location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const zhNotes = [
+  "编辑器默认显示的样子",
+  "同一个定义的另一个视图",
+  "计划中，面向来自证明的读者 · 手写，尚未能打印",
+  "计划中，面向 Unison 的读者 · 手写，尚未能打印",
+  "add → plus，a、b → m、n",
+  "succ 施加两次：另一个函数",
+]
+const enNotes = [
+  "as the editor shows it by default",
+  "another view of the same definition",
+  "planned, for readers from proofs · written by hand, not printed yet",
+  "planned, for readers from Unison · written by hand, not printed yet",
+  "add → plus, a, b → m, n",
+  "succ applied twice: a different function",
+]
+const zhTags = ["Julia profile", "Rust profile", "Lean profile", "Unison profile", "已改名", "改了函数体"]
+const enTags = ["Julia profile", "Rust profile", "Lean profile", "Unison profile", "Renamed", "Body changed"]
 const frames = [
   {
     tag: "Julia profile",
@@ -75,11 +96,13 @@ end`,
   },
 ]
 const short = (id: string) => `${id.slice(0, 8)} ${id.slice(8, 16)} ${id.slice(16, 24)}…`
+const zhFrame = (i: number) => ({ ...frames[i], tag: (zh ? zhTags : enTags)[i], note: (zh ? zhNotes : enNotes)[i] })
+const shown = frames.map((_, i) => zhFrame(i))
 ---
 
 <div class="pf" data-pf>
-  <div class="pf-tabs mono" role="tablist" aria-label="Six texts of one definition">
-    {frames.map((f, i) => (
+  <div class="pf-tabs mono" role="tablist" aria-label={zh ? "同一个定义的六段文本" : "Six texts of one definition"}>
+    {shown.map((f, i) => (
       <button type="button" role="tab" aria-selected={i === 0 ? "true" : "false"} data-i={i}>
         {f.tag}
       </button>
@@ -92,17 +115,17 @@ const short = (id: string) => `${id.slice(0, 8)} ${id.slice(8, 16)} ${id.slice(1
       ))}
     </div>
     <div class="pf-id">
-      <span class="pf-k mono">content id</span>
-      {frames.map((f, i) => (
+      <span class="pf-k mono">{zh ? "内容 id" : "content id"}</span>
+      {shown.map((f, i) => (
         <span class:list={["pf-hash mono", { on: i === 0, changed: f.id !== ADD }]} data-hash={i}>
           {short(f.id)}
         </span>
       ))}
-      <span class="pf-verdict mono" data-verdict aria-live="polite">same id</span>
+      <span class="pf-verdict mono" data-verdict aria-live="polite">{zh ? "同一个 id" : "same id"}</span>
     </div>
   </div>
-  <p class="pf-note mono" data-note>{frames[0].note}</p>
-  <script type="application/json" data-notes set:html={JSON.stringify(frames.map((f) => ({ note: f.note, same: f.id === ADD })))} />
+  <p class="pf-note mono" data-note>{shown[0].note}</p>
+  <script type="application/json" data-notes set:html={JSON.stringify(shown.map((f) => ({ note: f.note, same: f.id === ADD })))} />
 </div>
 
 <script>
@@ -124,7 +147,18 @@ const short = (id: string) => `${id.slice(0, 8)} ${id.slice(8, 16)} ${id.slice(1
         c.setAttribute("aria-hidden", String(k !== i))
       })
       hashes.forEach((h, k) => h.classList.toggle("on", k === i))
-      verdict.textContent = notes[i].same ? (i === 0 ? "the definition's id" : "same id") : "new id"
+      const zh = location.pathname.startsWith("/zh")
+      verdict.textContent = notes[i].same
+        ? zh
+          ? i === 0
+            ? "定义的 id"
+            : "同一个 id"
+          : i === 0
+            ? "the definition's id"
+            : "same id"
+        : zh
+          ? "新 id"
+          : "new id"
       verdict.classList.toggle("changed", !notes[i].same)
       note.textContent = notes[i].note
     }

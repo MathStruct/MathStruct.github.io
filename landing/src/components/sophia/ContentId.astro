@@ -14,13 +14,24 @@ interface Props {
 }
 const { mode = "interactive" } = Astro.props
 
-const presets = [
-  { id: "rename", label: "Rename it" },
-  { id: "syntax", label: "Other syntax" },
-  { id: "format", label: "Reformat it" },
-  { id: "commute", label: "Swap the operands" },
-  { id: "change", label: "Change it" },
-]
+// The Chinese page (/zh/projects/sophia) shows the same toy in Chinese (Nav.astro tells the two
+// languages apart the same way); the script below switches with location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const presets = zh
+  ? [
+      { id: "rename", label: "改个名" },
+      { id: "syntax", label: "换种语法" },
+      { id: "format", label: "换个排版" },
+      { id: "commute", label: "交换操作数" },
+      { id: "change", label: "改改它" },
+    ]
+  : [
+      { id: "rename", label: "Rename it" },
+      { id: "syntax", label: "Other syntax" },
+      { id: "format", label: "Reformat it" },
+      { id: "commute", label: "Swap the operands" },
+      { id: "change", label: "Change it" },
+    ]
 ---
 
 {
@@ -28,24 +39,24 @@ const presets = [
     <div class="cid cid--cycle" data-mode="cycle">
       <div class="cyc-card">
         <div class="cyc-head mono">
-          <span class="cyc-step">source</span>
-          <span class="cyc-what" aria-live="polite">written</span>
+          <span class="cyc-step">{zh ? "源码" : "source"}</span>
+          <span class="cyc-what" aria-live="polite">{zh ? "写下的" : "written"}</span>
         </div>
         <pre class="cyc-src"><code>add2(x, y) = x + y * 2</code></pre>
       </div>
       <div class="cyc-arrow" aria-hidden="true">
         <svg viewBox="0 0 24 40"><path d="M12 2 V34 M5 27 L12 35 L19 27" /></svg>
-        <span class="mono">normalise · hash</span>
+        <span class="mono">{zh ? "规范化 · 哈希" : "normalise · hash"}</span>
       </div>
       <div class="cyc-id">
-        <span class="cyc-k mono">content id</span>
+        <span class="cyc-k mono">{zh ? "内容 id" : "content id"}</span>
         <span class="cyc-v mono">#············</span>
-        <span class="cyc-badge mono">same id</span>
+        <span class="cyc-badge mono">{zh ? "同一个 id" : "same id"}</span>
       </div>
     </div>
   ) : (
     <div class="cid cid--interactive" data-mode="interactive">
-      <div class="cid-controls" role="group" aria-label="Examples">
+      <div class="cid-controls" role="group" aria-label={zh ? "示例" : "Examples"}>
         {presets.map((p, i) => (
           <button type="button" class:list={["cid-p", { "is-on": i === 0 }]} data-p={p.id}>
             {p.label}
@@ -56,15 +67,15 @@ const presets = [
         {["A", "B"].map((side) => (
           <div class="cid-card" data-side={side}>
             <label class="cid-label mono" for={`cid-${side}`}>
-              definition {side}
+              {zh ? "定义" : "definition"} {side}
             </label>
             <textarea id={`cid-${side}`} class="cid-src" spellcheck="false" autocomplete="off" rows="4" />
             <div class="cid-row">
-              <span class="cid-k mono">as the store sees it</span>
+              <span class="cid-k mono">{zh ? "存储眼中的它" : "as the store sees it"}</span>
               <code class="cid-canon" />
             </div>
             <div class="cid-row">
-              <span class="cid-k mono">content id</span>
+              <span class="cid-k mono">{zh ? "内容 id" : "content id"}</span>
               <code class="cid-hash" />
             </div>
           </div>
@@ -78,7 +89,7 @@ const presets = [
         </div>
       </div>
       <div class="cid-prints">
-        <span class="cid-k mono">definition A, printed back by the store</span>
+        <span class="cid-k mono">{zh ? "定义 A，由存储打印回来" : "definition A, printed back by the store"}</span>
         <div class="cid-print-grid">
           <figure>
             <figcaption class="mono">julia profile</figcaption>
@@ -357,28 +368,52 @@ const presets = [
 
   // ------------------------------------------------------------------ presets
   const BASE = "add2(x, y) = x + y * 2"
-  const PRESETS: Record<string, { b: string; title?: string; note: string }> = {
-    rename: {
-      b: "plus(a, b) = a + b * 2",
-      note: "Names do not reach the hash: not the definition's own name, not its parameters'. Renaming moves a label; the code, and everything that refers to it, stays as it was.",
-    },
-    syntax: {
-      b: "fn add2(x, y) {\n    x + y * 2\n}",
-      note: "The store does not record which syntax wrote a definition. Julia-flavoured and Rust-flavoured text are two printings of one stored term, and each reader can choose theirs.",
-    },
-    format: {
-      b: "function add2(x, y)\n    # doubles y first\n    x + (y*2)\nend",
-      note: "Layout, redundant parentheses and comments are gone by the time the structure is hashed. In Sophia a comment is kept beside the definition, as an annotation, not inside its id.",
-    },
-    commute: {
-      b: "add2(x, y) = y * 2 + x",
-      note: "The same value, but a different id, on purpose. The normaliser applies no algebraic laws: deciding in general when two programs are equal is impossible, and a normaliser that guessed wrong would merge different programs silently. Such sameness is stored as an equivalence edge instead, with its evidence.",
-    },
-    change: {
-      b: "add2(x, y) = x + y * 3",
-      note: "A different computation is a different definition. The old one stays in the store; the name add2 moves to the new one. Code that referred to the old id still means exactly what it meant.",
-    },
-  }
+  const zh = location.pathname.startsWith("/zh")
+  const PRESETS: Record<string, { b: string; title?: string; note: string }> = zh
+    ? {
+        rename: {
+          b: "plus(a, b) = a + b * 2",
+          note: "名字进不了哈希：既不是定义自己的名字，也不是参数的名字。改名只是挪动一个标签；代码和引用它的一切原样不动。",
+        },
+        syntax: {
+          b: "fn add2(x, y) {\n    x + y * 2\n}",
+          note: "存储不记录一个定义是用哪种语法写下的。类 Julia 与类 Rust 的文本是同一个存储项的两种打印，读者各选各的。",
+        },
+        format: {
+          b: "function add2(x, y)\n    # doubles y first\n    x + (y*2)\nend",
+          note: "在结构被哈希之前，版式、多余的括号与注释就已消失。在 Sophia 里，注释作为注解保存在定义旁边，而不在它的 id 里。",
+        },
+        commute: {
+          b: "add2(x, y) = y * 2 + x",
+          note: "值相同，id 却不同——故意的。规范化器不施加任何代数定律：一般地判定两个程序是否相等是不可能的，而猜错的规范化器会把不同的程序悄悄合并。这样的相同改由一条等价边存储，连同它的证据。",
+        },
+        change: {
+          b: "add2(x, y) = x + y * 3",
+          note: "不同的计算就是不同的定义。旧的留在存储里；名字 add2 挪到新的上。引用旧 id 的代码含义分毫不差。",
+        },
+      }
+    : {
+        rename: {
+          b: "plus(a, b) = a + b * 2",
+          note: "Names do not reach the hash: not the definition's own name, not its parameters'. Renaming moves a label; the code, and everything that refers to it, stays as it was.",
+        },
+        syntax: {
+          b: "fn add2(x, y) {\n    x + y * 2\n}",
+          note: "The store does not record which syntax wrote a definition. Julia-flavoured and Rust-flavoured text are two printings of one stored term, and each reader can choose theirs.",
+        },
+        format: {
+          b: "function add2(x, y)\n    # doubles y first\n    x + (y*2)\nend",
+          note: "Layout, redundant parentheses and comments are gone by the time the structure is hashed. In Sophia a comment is kept beside the definition, as an annotation, not inside its id.",
+        },
+        commute: {
+          b: "add2(x, y) = y * 2 + x",
+          note: "The same value, but a different id, on purpose. The normaliser applies no algebraic laws: deciding in general when two programs are equal is impossible, and a normaliser that guessed wrong would merge different programs silently. Such sameness is stored as an equivalence edge instead, with its evidence.",
+        },
+        change: {
+          b: "add2(x, y) = x + y * 3",
+          note: "A different computation is a different definition. The old one stays in the store; the name add2 moves to the new one. Code that referred to the old id still means exactly what it meant.",
+        },
+      }
 
   // ------------------------------------------------------------------ interactive mode
   function initInteractive(root: HTMLElement) {
@@ -420,19 +455,30 @@ const presets = [
       verdict.classList.remove("is-same", "is-diff", "is-err")
       if (!a.ok || !b.ok) {
         verdict.classList.add("is-err")
-        title.textContent = "Not a definition the toy can read"
-        note.textContent =
-          "It reads one definition: name(x, y) = …, function name(x, y) … end, or fn name(x, y) { … }, with numbers, + − * / ^, parentheses and calls."
+        title.textContent = zh ? "不是这个玩具能读的定义" : "Not a definition the toy can read"
+        note.textContent = zh
+          ? "它只读一个定义：name(x, y) = …、function name(x, y) … end 或 fn name(x, y) { … }，支持数字、+ − * / ^、括号与调用。"
+          : "It reads one definition: name(x, y) = …, function name(x, y) … end, or fn name(x, y) { … }, with numbers, + − * / ^, parentheses and calls."
         return
       }
       const same = a.hash === b.hash
       verdict.classList.add(same ? "is-same" : "is-diff")
-      title.textContent = same ? "Same id: one definition in the store" : "Different ids: two definitions in the store"
+      title.textContent = zh
+        ? same
+          ? "同一个 id：存储里只有一个定义"
+          : "不同的 id：存储里有两个定义"
+        : same
+          ? "Same id: one definition in the store"
+          : "Different ids: two definitions in the store"
       note.textContent = preset
         ? PRESETS[preset].note
-        : same
-          ? "Whatever you changed did not reach the structure: the store keeps one definition, under one id."
-          : "The structures differ, so the ids do. If the two compute the same thing, that is a claim for an equivalence edge, not for the hash."
+        : zh
+          ? same
+            ? "你改的东西没有触及结构：存储只保留一个定义、一个 id。"
+            : "结构不同，id 就不同。如果两者计算的是同一件事，那是一条等价边的断言，轮不到哈希来管。"
+          : same
+            ? "Whatever you changed did not reach the structure: the store keeps one definition, under one id."
+            : "The structures differ, so the ids do. If the two compute the same thing, that is a claim for an equivalence edge, not for the hash."
     }
 
     function choose(id: string) {
@@ -454,13 +500,22 @@ const presets = [
   }
 
   // ------------------------------------------------------------------ cycle mode
-  const CYCLE = [
-    { src: "add2(x, y) = x + y * 2", what: "written" },
-    { src: "plus(a, b) = a + b * 2", what: "renamed" },
-    { src: "fn plus(a, b) {\n    a + b * 2\n}", what: "Rust-flavoured" },
-    { src: "function plus(a, b)\n    # doubles b first\n    a + (b*2)\nend", what: "reformatted, commented" },
-    { src: "plus(a, b) = a + b * 3", what: "changed: 2 → 3" },
-  ]
+  const zhCycle = location.pathname.startsWith("/zh")
+  const CYCLE = zhCycle
+    ? [
+        { src: "add2(x, y) = x + y * 2", what: "写下的" },
+        { src: "plus(a, b) = a + b * 2", what: "改了名" },
+        { src: "fn plus(a, b) {\n    a + b * 2\n}", what: "Rust 风格" },
+        { src: "function plus(a, b)\n    # doubles b first\n    a + (b*2)\nend", what: "重排版、加注释" },
+        { src: "plus(a, b) = a + b * 3", what: "改了内容：2 → 3" },
+      ]
+    : [
+        { src: "add2(x, y) = x + y * 2", what: "written" },
+        { src: "plus(a, b) = a + b * 2", what: "renamed" },
+        { src: "fn plus(a, b) {\n    a + b * 2\n}", what: "Rust-flavoured" },
+        { src: "function plus(a, b)\n    # doubles b first\n    a + (b*2)\nend", what: "reformatted, commented" },
+        { src: "plus(a, b) = a + b * 3", what: "changed: 2 → 3" },
+      ]
   async function initCycle(root: HTMLElement) {
     const code = root.querySelector<HTMLElement>(".cyc-src code")!
     const src = root.querySelector<HTMLElement>(".cyc-src")!

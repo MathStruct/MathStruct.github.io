@@ -30,6 +30,10 @@ type Node = {
   bow?: Record<string, number>
 }
 
+// The Chinese page (/zh/projects/category-theory-ml-wiki) shows the same map in Chinese
+// (Nav.astro tells the two languages apart the same way); the script below switches with
+// location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
 const n = (slug: string) => wiki + slug
 
 const nodes: Node[] = [
@@ -228,39 +232,99 @@ const path = (e: { s: string; t: string; bow: number }) => {
   const dx = (b.x - a.x) / 2
   return `M${a.x} ${a.y} C${a.x + dx} ${a.y + e.bow} ${b.x - dx} ${b.y + e.bow} ${b.x} ${b.y}`
 }
-const goals = [
-  { id: "lenticulum", label: "Lenticulum.jl" },
-  { id: "sophia", label: "Sophia" },
-  { id: "kleisli", label: "Kleisli category" },
-]
+const goals = zh
+  ? [
+      { id: "lenticulum", label: "Lenticulum.jl" },
+      { id: "sophia", label: "Sophia" },
+      { id: "kleisli", label: "Kleisli 范畴" },
+    ]
+  : [
+      { id: "lenticulum", label: "Lenticulum.jl" },
+      { id: "sophia", label: "Sophia" },
+      { id: "kleisli", label: "Kleisli category" },
+    ]
 const concepts = nodes.filter((x) => x.track !== "project").length
+
+// Concept names are translated on the map and in the card; the notes themselves (href) are in
+// English.
+const ZH_LABEL: Record<string, string[]> = {
+  category: ["范畴"], functor: ["函子"], nat: ["自然变换"], adj: ["伴随"], monad: ["单子"],
+  kleisli: ["Kleisli 范畴"], monoidal: ["幺半范畴"], string: ["弦图"], cd: ["复制-丢弃", "范畴"],
+  markov: ["马尔可夫", "范畴"], inv: ["贝叶斯", "反演"], lens: ["透镜"], plens: ["参数化", "透镜"],
+  blens: ["贝叶斯", "透镜"], statgame: ["统计博弈"], cset: ["C-集"], migr: ["数据", "迁移"],
+  cq: ["合取查询"], lfp: ["最小", "不动点"], initalg: ["初始", "代数"], congr: ["同余"], egraph: ["E-graph"],
+}
+const ZH_TAGS: Record<string, string> = {
+  "definition · example": "定义 · 例子",
+  "definition · theorem · proof · program": "定义 · 定理 · 证明 · 程序",
+  "definition · theorem · proof": "定义 · 定理 · 证明",
+  "definition · example · theorem · proof": "定义 · 例子 · 定理 · 证明",
+  "definition · theorem · example · program": "定义 · 定理 · 例子 · 程序",
+  "definition · theorem · example": "定义 · 定理 · 例子",
+  "definition · example · theorem": "定义 · 例子 · 定理",
+  "definition · example · annotation": "定义 · 例子 · 注解",
+  "definition · theorem · example · program": "定义 · 定理 · 例子 · 程序",
+  "definition · example · program": "定义 · 例子 · 程序",
+  "definition · example · theorem · program": "定义 · 例子 · 定理 · 程序",
+  "definition · theorem · algorithm · program": "定义 · 定理 · 算法 · 程序",
+  "definition · theorem · algorithm": "定义 · 定理 · 算法",
+}
+const ZH_SUM: Record<string, string> = {
+  category: "对象、对象之间的箭头，以及一个结合、含单位元的复合。笔记库称之为其余一切笔记的模板。",
+  functor: "范畴之间的映射：对象到对象、箭头到箭头，保持单位元与复合。",
+  nat: "对每个对象 c 给一条箭头 F(c) → G(c)，使每个自然性方块交换：函子之间的映射。",
+  adj: "L ⊣ R：箭头 L(c) → d 与箭头 c → R(d) 自然地一一对应。自由-遗忘、柯里化、Σ ⊣ Δ ⊣ Π。",
+  monad: "一个带单位 η 与乘法 μ 的自函子 T：自函子的幺半群，也是副作用的形状。每个伴随都给出一个。",
+  kleisli: "箭头 a → T b，用“鱼”复合；单子律恰好是它的范畴律。概率核就活在其中。",
+  monoidal: "一个带张量 ⊗ 与单位 I 的范畴，结合与单位元在相干同构的意义下成立：并排进行的过程。",
+  string: "函子画作线，自然变换画作点：关于单子与伴随的等式变成图画。",
+  cd: "一个每个对象都可复制、可丢弃的对称幺半范畴：范畴化概率的舞台。",
+  markov: "一个丢弃是自然变换的复制-丢弃范畴，因此每个过程都归一化。随机核是它的例子。",
+  inv: "给定先验 p 与似然 f : X → Y，一个从 Y 回到 X 的核，重现同一个联合分布：不用密度写的贝叶斯公式。",
+  lens: "一个 get 与一个 put：看到结构的一部分，并更新它。前向传播与反向传播，同一个形状。",
+  plens: "带参数的透镜，来自 Para 构造：神经网络的一层连同它的梯度。",
+  blens: "前向是一条通道，反向是一个依赖状态的逆变：以透镜的方式组合的贝叶斯更新。",
+  statgame: "一个带损失的贝叶斯透镜（AutoBayes，Def. 20）：变分推断，被做成组合式的。Lenticulum 的笔记引用它最多。",
+  cset: "一个从 schema 到 Set 的函子：一个数据库实例、一张图、Catlab 里的一个 ACSet。",
+  migr: "Σ ⊣ Δ ⊣ Π：沿一个函子把一个 schema 的数据搬到另一个，作为三个伴随函子。",
+  cq: "只用 ∧ 与 ∃ 从原子搭建的查询：SQL 的 select-from-where，也是笛卡尔双范畴中的弦图。",
+  lfp: "对单调的 f，x = f(x) 的最小解，从底迭代即达：Datalog 程序的含义。",
+  initalg: "初始 F-代数：把数据类型当作最小不动点 μF，其 fold（猫映射）是免费的。",
+  congr: "一个被所有运算尊重的等价关系：相等的参数给出相等的结果。",
+  egraph: "一个小结构，装着许多项及其上的一个同余；等式饱和在其中重写。",
+  lenticulum: "因子图上组合的关系学习器，不确定性以信念携带。其笔记库的 121 篇笔记链接到本维基获取理论。",
+  sophia: "一个内容寻址的代码存储，带 Datalog 查询语言与作为等价机制的 e-graph。其笔记库的 67 篇笔记链接到本维基。",
+}
+const shown = nodes.map((x) =>
+  zh ? { ...x, label: ZH_LABEL[x.id] ?? x.label, sum: ZH_SUM[x.id] ?? x.sum, tags: x.tags ? (ZH_TAGS[x.tags] ?? x.tags) : x.tags } : x,
+)
 ---
 
 <div class="lm" data-lm>
   <div class="lm-bar">
-    <div class="lm-goals" role="group" aria-label="Choose a goal">
-      <span class="mono lm-k">Goal</span>
+    <div class="lm-goals" role="group" aria-label={zh ? "选择一个目标" : "Choose a goal"}>
+      <span class="mono lm-k">{zh ? "目标" : "Goal"}</span>
       {goals.map((g) => <button type="button" class="lm-chip" data-goal={g.id} aria-pressed="false">{g.label}</button>)}
     </div>
     <div class="lm-progress">
-      <span class="mono lm-k" data-count>0 / {concepts} known</span>
+      <span class="mono lm-k" data-count>{zh ? `0 / ${concepts} 已掌握` : `0 / ${concepts} known`}</span>
       <span class="lm-meter" aria-hidden="true"><span data-meter></span></span>
-      <button type="button" class="lm-reset mono" data-reset>Reset</button>
+      <button type="button" class="lm-reset mono" data-reset>{zh ? "重置" : "Reset"}</button>
     </div>
   </div>
 
   <div class="lm-canvas">
-    <svg viewBox="0 0 1070 520" role="group" aria-label="A prerequisite graph of 22 notes of the wiki and two projects">
+    <svg viewBox="0 0 1070 520" role="group" aria-label={zh ? "维基的 22 篇笔记与两个项目的先修图" : "A prerequisite graph of 22 notes of the wiki and two projects"}>
       <g class="lm-lanes" aria-hidden="true">
-        <text x="20" y="22">Track E · towards machine learning</text>
-        <text x="20" y="246">Stages 2–4 · the core</text>
-        <text x="20" y="366">Track F · towards compilers and databases</text>
+        <text x="20" y="22">{zh ? "轨道 E · 通向机器学习" : "Track E · towards machine learning"}</text>
+        <text x="20" y="246">{zh ? "阶段 2–4 · 核心" : "Stages 2–4 · the core"}</text>
+        <text x="20" y="366">{zh ? "轨道 F · 通向编译器与数据库" : "Track F · towards compilers and databases"}</text>
       </g>
       <g class="lm-edges">
         {edges.map((e) => <path d={path(e)} data-edge data-s={e.s} data-t={e.t} />)}
       </g>
       <g class="lm-nodes">
-        {nodes.map((x) => (
+        {shown.map((x) => (
           <g
             class={`lm-node t-${x.track}`}
             data-node={x.id}
@@ -290,30 +354,30 @@ const concepts = nodes.filter((x) => x.track !== "project").length
       <h3 data-c-title></h3>
       <p class="lm-sum" data-c-sum></p>
       <dl class="lm-meta">
-        <div data-c-src-row><dt class="mono">Sources</dt><dd data-c-src></dd></div>
-        <div data-c-code-row><dt class="mono">Code</dt><dd><span class="lm-tabs mono">Julia · Lean · Haskell</span><code class="lm-code" data-c-lean></code></dd></div>
-        <div data-c-used-row><dt class="mono">Linked from</dt><dd data-c-used></dd></div>
-        <div data-c-pre-row><dt class="mono">Needs</dt><dd class="lm-refs" data-c-pre></dd></div>
-        <div data-c-next-row><dt class="mono">Opens</dt><dd class="lm-refs" data-c-next></dd></div>
+        <div data-c-src-row><dt class="mono">{zh ? "出处" : "Sources"}</dt><dd data-c-src></dd></div>
+        <div data-c-code-row><dt class="mono">{zh ? "代码" : "Code"}</dt><dd><span class="lm-tabs mono">Julia · Lean · Haskell</span><code class="lm-code" data-c-lean></code></dd></div>
+        <div data-c-used-row><dt class="mono">{zh ? "被谁链接" : "Linked from"}</dt><dd data-c-used></dd></div>
+        <div data-c-pre-row><dt class="mono">{zh ? "需要" : "Needs"}</dt><dd class="lm-refs" data-c-pre></dd></div>
+        <div data-c-next-row><dt class="mono">{zh ? "引向" : "Opens"}</dt><dd class="lm-refs" data-c-next></dd></div>
       </dl>
       <div class="lm-actions">
-        <button type="button" class="btn btn--solid" data-c-toggle>I know this</button>
-        <a class="btn" data-c-href href="#">Read the note <span class="arrow">→</span></a>
+        <button type="button" class="btn btn--solid" data-c-toggle>{zh ? "我已掌握" : "I know this"}</button>
+        <a class="btn" data-c-href href="#">{zh ? "阅读笔记" : "Read the note"} <span class="arrow">→</span></a>
       </div>
     </article>
     <aside class="lm-route">
-      <h4 class="mono lm-k">Route</h4>
-      <p data-route>Choose a goal above, or click a note in the graph.</p>
-      <ul class="lm-legend mono" aria-label="Legend">
-        <li><span class="lg known"></span>known</li>
-        <li><span class="lg ready"></span>ready: every prerequisite known</li>
-        <li><span class="lg locked"></span>not yet</li>
-        <li><span class="lg proj"></span>a project</li>
+      <h4 class="mono lm-k">{zh ? "路线" : "Route"}</h4>
+      <p data-route>{zh ? "在上方选择一个目标，或点击图中的一篇笔记。" : "Choose a goal above, or click a note in the graph."}</p>
+      <ul class="lm-legend mono" aria-label={zh ? "图例" : "Legend"}>
+        <li><span class="lg known"></span>{zh ? "已掌握" : "known"}</li>
+        <li><span class="lg ready"></span>{zh ? "可读：先修已全部掌握" : "ready: every prerequisite known"}</li>
+        <li><span class="lg locked"></span>{zh ? "尚未" : "not yet"}</li>
+        <li><span class="lg proj"></span>{zh ? "一个项目" : "a project"}</li>
       </ul>
     </aside>
   </div>
 
-  <script type="application/json" data-data set:html={JSON.stringify(nodes.map(({ x, y, label, bow, ...rest }) => rest))} />
+  <script type="application/json" data-data set:html={JSON.stringify(shown.map(({ x, y, label, bow, ...rest }) => rest))} />
 </div>
 
 <script>
@@ -330,6 +394,7 @@ const concepts = nodes.filter((x) => x.track !== "project").length
     pre: string[]
   }
   const KEY = "ctml-learning-map"
+  const zh = location.pathname.startsWith("/zh")
   for (const root of document.querySelectorAll<HTMLElement>("[data-lm]")) {
     const nodes = JSON.parse(root.querySelector("[data-data]")!.textContent!) as N[]
     const byId = new Map(nodes.map((x) => [x.id, x]))
@@ -409,7 +474,7 @@ const concepts = nodes.filter((x) => x.track !== "project").length
         e.classList.toggle("dim", !!onRoute && !(onRoute.has(t) && (onRoute.has(s) || isKnown(s))))
       }
       const k = concepts.filter((x) => known.has(x.id)).length
-      q("[data-count]").textContent = `${k} / ${concepts.length} known`
+      q("[data-count]").textContent = zh ? `${k} / ${concepts.length} 已掌握` : `${k} / ${concepts.length} known`
       q("[data-meter]").style.width = `${(100 * k) / concepts.length}%`
       for (const b of goalBtns) b.setAttribute("aria-pressed", String(b.dataset.goal === goal))
 
@@ -418,7 +483,25 @@ const concepts = nodes.filter((x) => x.track !== "project").length
       const st = state(selected)
       const proj = x.track === "project"
       q("[data-c-kind]").textContent = proj ? "project" : x.tags ?? ""
-      q("[data-c-state]").textContent = proj ? (st === "known" ? "reached" : "not reached yet") : st === "ready" ? "ready to read" : st === "locked" ? "not yet" : "known"
+      q("[data-c-state]").textContent = proj
+        ? zh
+          ? st === "known"
+            ? "已抵达"
+            : "尚未抵达"
+          : st === "known"
+            ? "reached"
+            : "not reached yet"
+        : st === "ready"
+          ? zh
+            ? "可以开读"
+            : "ready to read"
+          : st === "locked"
+            ? zh
+              ? "尚未"
+              : "not yet"
+            : zh
+              ? "已掌握"
+              : "known"
       q("[data-c-state]").dataset.s = st
       q("[data-c-title]").textContent = x.title
       q("[data-c-sum]").textContent = x.sum
@@ -436,11 +519,11 @@ const concepts = nodes.filter((x) => x.track !== "project").length
       fill("[data-c-next]", next.get(selected)!)
       const t = q<HTMLButtonElement>("[data-c-toggle]")
       t.hidden = proj
-      t.textContent = known.has(selected) ? "Forget it" : "I know this"
+      t.textContent = known.has(selected) ? (zh ? "忘了它" : "Forget it") : zh ? "我已掌握" : "I know this"
       t.classList.toggle("btn--solid", !known.has(selected))
       const a = q<HTMLAnchorElement>("[data-c-href]")
       a.href = x.href
-      a.firstChild!.textContent = proj ? "The project " : "Read the note "
+      a.firstChild!.textContent = proj ? (zh ? "该项目 " : "The project ") : zh ? "阅读笔记 " : "Read the note "
 
       // the route
       const r = q("[data-route]")
@@ -448,25 +531,40 @@ const concepts = nodes.filter((x) => x.track !== "project").length
         const left = route(goal)
         const g = byId.get(goal)!
         if (left.length === 0) {
-          r.textContent = g.track === "project" ? `You have the theory ${g.title} links to here. ` : `You know ${g.title}. `
+          r.textContent =
+            g.track === "project"
+              ? zh
+                ? `${g.title} 链接到的理论，你已经全部掌握。`
+                : `You have the theory ${g.title} links to here. `
+              : zh
+                ? `你已经掌握 ${g.title}。`
+                : `You know ${g.title}. `
           const go = document.createElement("a")
           go.href = g.href
-          go.textContent = g.track === "project" ? `Go to ${g.title} →` : "Read it again →"
+          go.textContent = g.track === "project" ? (zh ? `前往 ${g.title} →` : `Go to ${g.title} →`) : zh ? "再读一遍 →" : "Read it again →"
           r.append(go)
         } else {
           const ready = left.filter((id) => state(id) === "ready")
           r.replaceChildren(
-            `${left.length} note${left.length > 1 ? "s" : ""} to ${g.title}. Start with `,
-            ...ready.flatMap((id, i) => [i ? (i === ready.length - 1 ? " or " : ", ") : "", chip(id)]),
-            ".",
+            zh
+              ? `离 ${g.title} 还有 ${left.length} 篇笔记。从 `
+              : `${left.length} note${left.length > 1 ? "s" : ""} to ${g.title}. Start with `,
+            ...ready.flatMap((id, i) => [i ? (i === ready.length - 1 ? (zh ? "或 " : " or ") : ", ") : "", chip(id)]),
+            zh ? "开始。" : ".",
           )
         }
       } else {
         const ready = concepts.filter((c) => state(c.id) === "ready").map((c) => c.id)
         r.replaceChildren(
-          k === 0 ? "Click a note to read about it, then mark it as known. Ready now: " : "Ready now: ",
+          k === 0
+            ? zh
+              ? "点一篇笔记读一读，然后标记为已掌握。现在可读："
+              : "Click a note to read about it, then mark it as known. Ready now: "
+            : zh
+              ? "现在可读："
+              : "Ready now: ",
           ...ready.slice(0, 4).flatMap((id, i) => [i ? ", " : "", chip(id)]),
-          ready.length > 4 ? ` and ${ready.length - 4} more.` : ".",
+          ready.length > 4 ? (zh ? `，还有 ${ready.length - 4} 篇。` : ` and ${ready.length - 4} more.`) : ".",
         )
       }
     }
