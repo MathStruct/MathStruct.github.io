@@ -1,6 +1,6 @@
 # MathStruct
 
-The organisation website for [MathStruct](https://github.com/MathStruct). The front page and
+The organisation website for [MathStruct](https://github.com/MathStruct). The front page, the about page and
 a few promotional pages (`/projects/lenticulum-jl`, `/projects/lenticulumLM`, `/projects/sophia`, `/projects/sophialang`, `/projects/moonkale`, `/projects/category-theory-ml-wiki`) are a small [Astro](https://astro.build)
 site in `landing/`; everything else (blog, projects,
 people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
