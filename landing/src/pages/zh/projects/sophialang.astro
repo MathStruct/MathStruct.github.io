@@ -48,7 +48,7 @@ const compare: [string, string, string][] = [
 // ---------------------------------------------------------------- 是系统，不是语法
 const system = [
   { k: "存储的", t: "规范化并压缩", d: "没有名字、没有变量、没有空白：de Bruijn 指标、32 字节哈希的引用、共享结构只存一次。它不是给人读的。" },
-  { k: "显示的", t: "用你选的语法", d: "类 Julia、类 Rust、类 Lean，或你自定义的：一个 profile 是一项设置，像其他设置一样存储。两个人可以各用一种语法读同一个定义、编辑同一个 id。" },
+  { k: "显示的", t: "用你选的语法", d: "类 Julia、类 Rust、类 Lean、类 Unison，或你自定义的：一个 profile 是一项设置，像其他设置一样存储。两个人可以各用一种语法读同一个定义、编辑同一个 id。" },
   { k: "计划的", t: "图上的代理", d: "今天模型经由 profile（类 Julia 文本）工作，每次写回都要重新解析。我们想要直接在图上工作的代理：核心项与挖掘出的抽象，中间没有前端语言。" },
 ]
 
@@ -142,7 +142,7 @@ const roadmap = [
         <figure class="hero-art reveal" style="--d:.1s">
           <Profiles />
           <figcaption class="mono">
-            Julia 与 Rust 已由 sophialang-syntax 打印解析，Lean 在计划中；id 来自 sophialang-core
+            Julia 与 Rust 已由 sophialang-syntax 打印解析，Lean 与 Unison 在计划中；id 来自 sophialang-core
           </figcaption>
         </figure>
       </div>
@@ -181,7 +181,7 @@ const roadmap = [
         </ul>
         <p class="fineprint mono">
           取自 Sophia 的笔记 <a class="il" href={links.compression}>Compression and Canonical Form</a>
-          与 <a class="il" href={links.llms}>LLMs and Mixed-Language Code</a>。这里的压缩指结构共享，已存在；从语料挖掘抽象在计划中，作为永不改变 id 的派生层。Julia 与 Rust profile 已存在；Lean 在计划中。Sophia 的代理服务器已能让模型查询与读取存储；直接编辑图的代理属于将来。
+          与 <a class="il" href={links.llms}>LLMs and Mixed-Language Code</a>。这里的压缩指结构共享，已存在；从语料挖掘抽象在计划中，作为永不改变 id 的派生层。Julia 与 Rust profile 已存在；Lean 与 Unison 在计划中。Sophia 的代理服务器已能让模型查询与读取存储；直接编辑图的代理属于将来。
         </p>
       </div>
     </section>
