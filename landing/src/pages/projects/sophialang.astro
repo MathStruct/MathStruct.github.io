@@ -26,6 +26,10 @@ const links = {
   sp006: note("vault/Problems/SP-006-Open-method-tables-versus-content-addressing"),
   milestones: note("vault/Plans/Milestones"),
   risks: note("vault/Design/Open-Problems-and-Risks"),
+  harper: "https://existentialtype.wordpress.com/2011/03/27/the-holy-trinity/",
+  trinity: note("vault/Theory/Computational-Trinitarianism"),
+  binaries: note("vault/Design/Minimal-Binaries"),
+  query: note("vault/Languages/Sophia-Query/Sophia-Query-Overview"),
   sophia: "/projects/sophia",
   moonkale: "/projects/moonkale",
   lenticulum: "/projects/lenticulum-jl",
@@ -41,6 +45,22 @@ const compare: [string, string, string][] = [
   ["Runtime", "Always there (GC, JIT), or never", "Linked only for the aspects some section leaves to the system"],
   ["What a function is", "Text in a file, at a line", "A definition keyed by the hash of its normalised structure; names are labels on it"],
   ["After an edit", "Rebuild and re-test by file, crate or package", "Exactly the changed ids and what depends on them"],
+]
+
+// ---------------------------------------------------------------- the trinity
+// Rows from Sophia's note Computational Trinitarianism §1; each row is a theorem about specific
+// structures, not a claim that every logic is every type system.
+const trinity: [string, string, string][] = [
+  ["a proposition A", "a type A", "an object A"],
+  ["a proof of A ⊢ B", "a program x : A ⊢ t : B", "a morphism A → B"],
+  ["A ∧ B, A ∨ B", "a pair, a sum type", "a product, a coproduct"],
+  ["A ⇒ B", "a function type A → B", "an exponential object"],
+  ["a Horn clause", "a Datalog rule, a relation", "a relation in a regular category"],
+]
+const oneLanguage = [
+  { k: "The typing language", d: "A specification is a type, stored as a definition like any other. Dependent, refinement or ownership types are sophialang, not a second notation bolted on." },
+  { k: "The query language", d: "A query is a set of Horn clauses over the store's facts: logic programs, written as sophialang relation and rule definitions, hashed and named like functions." },
+  { k: "The logic", d: "A proof is a term of the type it proves. It is stored, hashed, renamed and queried like code, and erased before the program runs." },
 ]
 
 const exists = [
@@ -121,7 +141,7 @@ const roadmap = [
         <figure class="hero-art reveal" style="--d:.1s">
           <Profiles />
           <figcaption class="mono">
-            Printed and parsed by sophialang-syntax today; ids from sophialang-core
+            Julia and Rust printed and parsed by sophialang-syntax today, Lean planned; ids from sophialang-core
           </figcaption>
         </figure>
       </div>
@@ -224,6 +244,88 @@ const roadmap = [
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- trinity -->
+    <section class="section" id="trinity">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Computational trinitarianism</span>
+            <h2 class="reveal" style="--d:.05s">Three views of one subject. <span class="serif">One language.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            <a href={links.harper}>Computational trinitarianism</a> is Robert Harper's name for an
+            old observation: logic, type theory and category theory are three views of one subject.
+            A proposition is a type is an object; a proof is a program is a morphism. Each
+            correspondence is a theorem, so what is found in one view holds in the other two.
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare tri">
+            <thead>
+              <tr><th>logic</th><th>type theory</th><th>category theory</th></tr>
+            </thead>
+            <tbody>
+              {trinity.map(([l, t, c]) => (
+                <tr><td>{l}</td><td>{t}</td><td>{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tri-grid">
+          <div>
+            <h3 class="tri-h reveal">So sophialang is not three languages.</h3>
+            <p class="reveal" style="--d:.05s">
+              Most systems ship a type language, a query language and a proof language, each with
+              its own syntax, its own semantics and its own tools. Under the trinity they are the
+              same thing seen three ways, and sophialang treats them as one language over one
+              store.
+            </p>
+            <ul class="ticks reveal" style="--d:.1s">
+              {oneLanguage.map((o) => <li><span><strong>{o.k}.</strong> {o.d}</span></li>)}
+            </ul>
+          </div>
+          <figure class="code reveal" style="--d:.08s">
+            <figcaption class="mono">Compiling is a query · Sophia's query syntax</figcaption>
+            <pre><code><span class="c"># everything main depends on, statically:</span>
+<span class="c"># a graph walk over the store's refs</span>
+query closure(main::Id)
+    dep(a, b) = refs(a, b)
+    dep(a, c) = refs(a, b) && dep(b, c)
+    select d where dep(main, d)
+end
+
+<span class="c"># the binary is the compiled answer, plus the</span>
+<span class="c"># methods dispatch can reach at pinned versions</span>
+binary(main) = compile(closure(main) ∪ dispatch_closure(main))</code></pre>
+          </figure>
+        </div>
+
+        <div class="tri-band reveal">
+          <span class="eyebrow">An exact binary is a query</span>
+          <p>
+            Because a definition's id is the hash of its structure, the set of everything
+            <code>main</code> needs is not a guess: it is the answer to a recursive query over the
+            graph store. Compiling to a minimal binary is that query, compiled. No “include the
+            whole package”, no heuristic tree shaking. Types, proofs, tests and the store itself
+            are erased, and a GC, dispatcher or JIT is linked only when some section of the
+            closure asks for it.
+          </p>
+        </div>
+
+        <p class="fineprint mono">
+          From Sophia's notes <a class="il" href={links.trinity}>Computational Trinitarianism</a>
+          and <a class="il" href={links.binaries}>Minimal Binaries</a>; see also Harper,
+          <a class="il" href={links.harper}><em>The Holy Trinity</em></a> (2011). Today Sophia's
+          <a class="il" href={links.query}>query language</a> runs (it is the store's only language
+          at L5) as its own crate on shared primitives; folding it into sophialang's relations is the
+          design, not yet the code. The query above is in that syntax; <code>compile</code> and the
+          dispatch closure need M5. The binary is exact under a closed-world contract: no
+          <code>eval</code>, reflection or dynamic loading unless their runtime is linked.
+        </p>
       </div>
     </section>
 
@@ -877,5 +979,51 @@ proves(:memory, step!, Ownership(w.arena))</code></pre>
   .pill.no {
     border: 1px dashed var(--fg);
     color: var(--fg);
+  }
+  /* ------------------------------------------------------------- trinity */
+  .tri {
+    min-width: 560px;
+  }
+  .tri td {
+    width: 33.3%;
+    font-family: var(--font-serif);
+    font-size: 16.5px;
+  }
+  .tri-grid {
+    display: grid;
+    gap: 40px;
+    align-items: start;
+    margin-top: clamp(40px, 6vw, 64px);
+  }
+  @media (min-width: 960px) {
+    .tri-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+  }
+  .tri-h {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .tri-grid p {
+    color: var(--fg-2);
+    margin: 14px 0 0;
+  }
+  .tri-band {
+    margin-top: clamp(40px, 6vw, 64px);
+    padding: 24px 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-sunken);
+  }
+  .tri-band p {
+    margin: 12px 0 0;
+    color: var(--fg-2);
+    max-width: 92ch;
+  }
+  .tri-band code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
   }
 </style>
