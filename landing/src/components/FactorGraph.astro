@@ -114,9 +114,16 @@ const wires = edges.map(([f, v], i) => ({ ...wire(f, v), i }))
 
   <g class="notes" aria-hidden="true">
     <text x="322" y="58">prior</text>
-    <text x="336" y="182" class="formula">p(θ | x, y)</text>
-    <text x="436" y="400">messages ⇄ beliefs</text>
-    <line x1="434" y1="388" x2="420" y2="330" />
+    <!-- the belief at θ, attached to the θ node -->
+    <text x="356" y="112" class="formula">p(θ | x, y)</text>
+    <text x="356" y="130">belief</text>
+    <line x1="352" y1="124" x2="321" y2="157" />
+    <!-- a message travels along a wire (edge), so point at the middle of one -->
+    <text x="468" y="372">messages</text>
+    <line x1="480" y1="360" x2="457" y2="289" />
+    <!-- name one of each shape -->
+    <text x="185" y="432" text-anchor="middle">factor</text>
+    <text x="70" y="453" text-anchor="middle">variable</text>
   </g>
 </svg>
 
