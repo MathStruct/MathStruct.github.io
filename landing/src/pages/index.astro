@@ -10,11 +10,12 @@ import { latestPosts, personSlug } from "../lib/blog"
 const posts = latestPosts(3)
 const fmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
 
+// what is different, in words a first-time visitor can follow (no counts that need context)
 const stats = [
-  { value: "4", label: "projects, one idea" },
-  { value: "64 566", label: "theorems traced to their axioms" },
-  { value: "100k", label: "nodes in a GPU graph view" },
-  { value: "MIT", label: "open source, and it stays that way" },
+  { k: "Models", value: "Ask in any direction", label: "One Lenticulum model predicts outputs, recovers inputs and fills in gaps: no separate model per question.", href: "/projects/lenticulum-jl" },
+  { k: "Code", value: "Proof travels with code", label: "Sophia attaches proofs, tests and equivalences to the definition they are about.", href: "/projects/sophia" },
+  { k: "Editor", value: "Rust, not Electron", label: "Moonkale bundles no browser and no Node.js: a native Rust app on the system's own webview.", href: "/projects/moonkale#stack" },
+  { k: "Licence", value: "Open, and staying open", label: "MIT-licensed, with the notes, design decisions and negative results public too.", href: "/about" },
 ]
 
 const principles = [
@@ -87,16 +88,19 @@ const meets = [
       </div>
 
       <div class="wrap">
-        <dl class="stats">
+        <div class="stats">
           {
             stats.map((s, i) => (
-              <div class="stat reveal" style={`--d:${0.05 * i}s`}>
-                <dt>{s.label}</dt>
-                <dd>{s.value}</dd>
-              </div>
+              <a class="stat reveal" href={s.href} style={`--d:${0.05 * i}s`}>
+                <span class="stat-h">
+                  <span class="stat-k mono">{s.k}</span>
+                  <span class="stat-v">{s.value} <span class="arrow" aria-hidden="true">→</span></span>
+                </span>
+                <span class="stat-d">{s.label}</span>
+              </a>
             ))
           }
-        </dl>
+        </div>
       </div>
     </section>
 
@@ -385,9 +389,10 @@ const meets = [
   }
   .stat {
     display: flex;
-    flex-direction: column-reverse;
-    gap: 6px;
-    padding: 28px 20px 4px 0;
+    flex-direction: column;
+    gap: 8px;
+    padding: 28px 20px 8px 0;
+    transition: background-color 0.2s var(--ease);
   }
   .stat + .stat {
     padding-left: 20px;
@@ -402,18 +407,48 @@ const meets = [
       border-top: 1px solid var(--line);
     }
   }
-  .stat dd {
-    margin: 0;
-    font-size: clamp(32px, 4vw, 48px);
-    font-weight: 500;
-    letter-spacing: -0.04em;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
+  @media (max-width: 520px) {
+    .stats {
+      grid-template-columns: 1fr;
+    }
+    .stat + .stat {
+      padding-left: 0;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
   }
-  .stat dt {
+  .stat-h {
+    display: grid;
+    gap: 10px;
+  }
+  .stat-k {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stat-v {
+    font-size: clamp(21px, 2vw, 26px);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+  .stat-v .arrow {
+    display: inline-block;
+    font-size: 0.75em;
+    color: var(--muted);
+    transition: transform 0.25s var(--ease), color 0.2s var(--ease);
+  }
+  .stat:hover .stat-v .arrow {
+    color: var(--fg);
+    transform: translateX(3px);
+  }
+  .stat-d {
     font-size: 14px;
     color: var(--muted);
-    line-height: 1.4;
+    line-height: 1.5;
+    max-width: 34ch;
   }
 
   /* ------------------------------------------------------------ projects */

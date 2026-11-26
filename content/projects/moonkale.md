@@ -23,6 +23,18 @@ work on the same graph through the same interface as the user.
 It is written in Rust with Dioxus, one codebase for desktop, web and Android, and it is
 extension-driven: the built-in editors are extensions with no privileged access.
 
+## Rust, not Electron
+
+Most editors of the last decade, VS Code and Obsidian among them, are Electron apps: a web page
+with its own copy of Chromium and Node.js. Moonkale ships neither. It is a native Rust process
+that draws its interface in the operating system's own webview (WebKitGTK, WebView2, WKWebView,
+the Android WebView); indexing, language servers, git, search, history, the databases and the
+agent all run in Rust, and extensions are WebAssembly modules rather than Node modules with full
+access to the machine. JavaScript is left only where no Rust replacement exists yet (the code
+editor, the rich-text editor, the terminal), and the vault's
+[JavaScript inventory](https://mathstruct.org/Moonkale/architecture/JavaScript-Inventory) says
+how each is to go.
+
 ## What works
 
 Tested on Linux (desktop and browser) and on Android:

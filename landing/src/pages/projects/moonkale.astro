@@ -64,6 +64,21 @@ const features = [
   { k: "Platforms", t: "Desktop, browser, phone", d: "One Rust codebase with Dioxus; moonkale-server serves the same app to a browser or an Android phone." },
 ]
 
+// "Rust, not Electron": from the vault's JavaScript Inventory and Overview (as of 2026-11-18)
+const stack = [
+  ["What ships with the app", "a complete Chromium browser and Node.js, in every app you install", "no browser and no Node.js: the operating system's own webview (WebKitGTK, WebView2, WKWebView, Android WebView)"],
+  ["Where the logic runs", "JavaScript, in Node and in the page", "a native Rust process: indexing, language servers, git, search, history, databases and the agent"],
+  ["Memory safety", "a JavaScript runtime plus native add-ons in C and C++", "Rust's guarantees for everything that thinks; JavaScript only draws the text editors and the terminal"],
+  ["Extensions", "Node modules, with the same access to your machine as the editor", "WebAssembly modules (wasmtime on the desktop); the built-in editors are extensions with no privileged access"],
+  ["Platforms", "desktop; the web and phones are separate products", "one Rust codebase for the desktop, the browser (as wasm) and Android"],
+]
+const jsRoad = [
+  { t: "Terminal", d: "xterm.js → alacritty_terminal and a Rust grid", s: "next" },
+  { t: "Code editor", d: "CodeMirror → the pure-Rust editor, already opt-in", s: "in progress" },
+  { t: "Rich Markdown", d: "Milkdown → a Rust block editor", s: "the long one" },
+  { t: "Renderer", d: "the webview → dioxus-native: Rust drawing straight to the GPU", s: "later" },
+]
+
 const works = [
   "Opening folders and databases, the graph, the rich editor with wiki-links and KaTeX",
   "CodeMirror with language servers, git, the change history, remote folders over SSH",
@@ -135,6 +150,7 @@ const audiences = [
           </div>
           <ul class="facts mono reveal" style="--d:.2s">
             <li>Rust · Dioxus</li>
+            <li>No Electron</li>
             <li>Linux, web, Android</li>
             <li>MIT licence</li>
             <li>Working prototype</li>
@@ -238,6 +254,58 @@ const audiences = [
               </table>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- stack -->
+    <section class="section" id="stack">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Under the hood</span>
+            <h2 class="reveal" style="--d:.05s">Rust, <span class="serif">not Electron.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Most editors of the last decade, VS Code and Obsidian among them, are Electron apps: a web
+            page with its own copy of Chrome and Node.js. Moonkale is written in Rust with
+            <a href="https://dioxuslabs.com">Dioxus</a>, on a newer stack: lighter to ship, with
+            memory-safe code underneath and less to attack.
+          </p>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="compare compare--3">
+            <thead>
+              <tr><th></th><th>a typical Electron editor</th><th>Moonkale</th></tr>
+            </thead>
+            <tbody>
+              {stack.map(([a, b, c]) => (
+                <tr><th scope="row">{a}</th><td class="them" data-l="Electron">{b}</td><td data-l="Moonkale">{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="jsroad">
+          <div class="reveal">
+            <h3 class="jsroad-h">Honest about what is left</h3>
+            <p>
+              Moonkale is still a webview app today: about 3 MB of JavaScript draws the code editor, the
+              rich-text editor and the terminal, and server mode is for a trusted local network only. Each
+              piece has a Rust replacement planned, in this order (the vault's
+              <a href={note("architecture/JavaScript-Inventory")}>JavaScript inventory</a>):
+            </p>
+          </div>
+          <ol class="jsroad-list">
+            {jsRoad.map((r, i) => (
+              <li class="reveal" style={`--d:${0.04 * i}s`}>
+                <span class="mono jr-n">0{i + 1}</span>
+                <span class="jr-t">{r.t}</span>
+                <span class="jr-d">{r.d}</span>
+                <span class="mono jr-s">{r.s}</span>
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
     </section>
@@ -585,6 +653,121 @@ const audiences = [
   .compare td {
     color: var(--fg);
     font-size: 15px;
+  }
+  .compare--3 {
+    min-width: 640px;
+  }
+  .compare--3 tbody th {
+    width: 22%;
+  }
+  .compare--3 td {
+    width: 39%;
+    padding-right: 24px;
+  }
+  .compare--3 td.them {
+    color: var(--muted);
+  }
+  .compare--3 thead th:last-child {
+    color: var(--fg);
+  }
+  @media (max-width: 700px) {
+    .compare--3 {
+      min-width: 0;
+    }
+    .compare--3 thead {
+      display: none;
+    }
+    .compare--3 tr,
+    .compare--3 th,
+    .compare--3 td {
+      display: block;
+      width: auto !important;
+    }
+    .compare--3 tbody tr {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .compare--3 tbody th,
+    .compare--3 td {
+      border: 0;
+      padding: 0 0 8px;
+    }
+    .compare--3 td::before {
+      content: attr(data-l);
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+  }
+  .jsroad {
+    margin-top: clamp(48px, 7vw, 72px);
+    display: grid;
+    gap: 28px;
+  }
+  @media (min-width: 960px) {
+    .jsroad {
+      grid-template-columns: 5fr 7fr;
+      gap: 64px;
+    }
+  }
+  .jsroad-h {
+    font-size: 22px;
+  }
+  .jsroad p {
+    margin: 12px 0 0;
+    color: var(--fg-2);
+    font-size: 16px;
+    max-width: 52ch;
+  }
+  .jsroad p a {
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .jsroad p a:hover {
+    border-bottom-color: var(--fg);
+  }
+  .jsroad-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+  .jsroad-list li {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    grid-template-areas: "n t s" ". d d";
+    gap: 2px 14px;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .jr-n,
+  .jr-s {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .jr-s {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .jr-n {
+    grid-area: n;
+  }
+  .jr-s {
+    grid-area: s;
+    white-space: nowrap;
+  }
+  .jr-t {
+    grid-area: t;
+    font-weight: 500;
+  }
+  .jr-d {
+    grid-area: d;
+    font-size: 15px;
+    color: var(--fg-2);
   }
   .familiar {
     display: grid;
