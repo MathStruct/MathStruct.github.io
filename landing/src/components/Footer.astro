@@ -1,7 +1,44 @@
 ---
 import Wordmark from "./Wordmark.astro"
 
-const columns = [
+// The Chinese pages in src/pages/zh/ reuse this footer with Chinese labels (Nav.astro tells the
+// two languages apart the same way). Blog, notes and the authoring guide are English only, so
+// their links stay; About and People have Chinese copies.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+
+const columns = zh
+  ? [
+      {
+        title: "项目",
+        links: [
+          { label: "Lenticulum.jl", href: "https://mathstruct.org/Lenticulum.jl/" },
+          { label: "LenticulumLM", href: "https://mathstruct.org/LenticulumLM/" },
+          { label: "Sophia", href: "https://mathstruct.org/Sophia/" },
+          { label: "Moonkale", href: "https://mathstruct.org/Moonkale/" },
+          { label: "范畴论与机器学习维基", href: "https://mathstruct.org/CategoryTheory-ML-Wiki/" },
+        ],
+      },
+      {
+        title: "组织",
+        links: [
+          { label: "关于", href: "/zh/about" },
+          { label: "成员", href: "/people/index-zh.html" },
+          { label: "博客", href: "/blog/" },
+          { label: "笔记", href: "/notes/" },
+          { label: "写作指南", href: "/guides/authoring" },
+        ],
+      },
+      {
+        title: "更多",
+        links: [
+          { label: "GitHub", href: "https://github.com/MathStruct" },
+          { label: "讨论区", href: "https://github.com/MathStruct/MathStruct.github.io/discussions" },
+          { label: "Zenodo", href: "https://doi.org/10.5281/zenodo.23314723" },
+          { label: "RSS", href: "/index.xml" },
+        ],
+      },
+    ]
+  : [
   {
     title: "Projects",
     links: [
@@ -42,10 +79,19 @@ const year = new Date().getFullYear()
         <a href="/" class="name">
           <Wordmark height={38} />
         </a>
-        <p>
-          Open-source tooling for mathematics, scientific computing and AI/ML, built from parts
-          that <span class="serif">compose</span>.
-        </p>
+        {
+          zh ? (
+            <p>
+              面向数学、科学计算与 AI/ML 的开源工具，由可以
+              <span class="serif">组合</span>的部件构建。
+            </p>
+          ) : (
+            <p>
+              Open-source tooling for mathematics, scientific computing and AI/ML, built from parts
+              that <span class="serif">compose</span>.
+            </p>
+          )
+        }
       </div>
       {
         columns.map((c) => (
@@ -64,7 +110,7 @@ const year = new Date().getFullYear()
     </div>
     <div class="bottom mono">
       <span>© {year} MathStruct</span>
-      <span>Software MIT-licensed</span>
+      <span>{zh ? "软件采用 MIT 许可" : "Software MIT-licensed"}</span>
     </div>
     <div class="wordmark" aria-hidden="true">MathStruct</div>
   </div>
