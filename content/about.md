@@ -64,7 +64,7 @@ The pieces arrived one at a time, over several years:
   [implicit layers tutorial](http://implicit-layers-tutorial.org) showed how to differentiate
   through the solution of an equation rather than through the steps of a solver.
 - **Energy-based models.** Yann LeCun's
-  [tutorial on energy-based learning](https://yann.lecun.com/exdb/publis/pdf/lecun-06.pdf)
+  [tutorial on energy-based learning](https://cs.nyu.edu/~yann/2011f-G22-2565-001/diglib/lecun-06.pdf)
   gave the language for models that score configurations instead of computing outputs, which is
   what a factor is.
 - **Parametric lenses.** Curiosity led to category theory, and there to
