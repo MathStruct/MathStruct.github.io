@@ -2,6 +2,52 @@
 // The four ideas of Moonkale, from its vault's "Getting started — Moonkale for VS Code and
 // Obsidian users", each with a small looping drawing. The drawings start when the step scrolls
 // into view (the page's .reveal → .in).
+// The Chinese page (/zh/projects/moonkale) shows the same steps in Chinese (Nav.astro tells the
+// two languages apart the same way).
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const t = zh
+  ? {
+      steps: [
+        {
+          title: "文件夹与数据库是同一类东西",
+          body: "你打开的是<em>来源</em>：一个文件夹、一个笔记库、一个 SQLite 或 DuckDB 文件、一个装 CSV 的目录、一个图数据库、另一台机器上经 SSH 的文件夹。可以同时开好几个，并排放着，都喂给同一张图。",
+        },
+        {
+          title: "图是主旨，不是附加功能",
+          body: "文件、其中的函数与结构体、笔记之间的 wiki 链接、数据库的表：一张连通的图，由 GPU 绘制，十万节点依然流畅。<em>Local</em> 显示你所在文件周围两跳。点一个节点，它就打开。",
+        },
+        {
+          title: "你的笔记库始终是你的",
+          body: "笔记是带 Obsidian 的 <code>[[wiki-links]]</code>、front matter 与 KaTeX 的普通 Markdown。明天用 Obsidian 打开这个文件夹，一切原样。Moonkale 添加的东西都在一个可以删掉的隐藏文件夹里。",
+        },
+        {
+          title: "一切都是扩展，代理也是应用的一部分",
+          body: "编辑器、终端、git 与图都是无特权的扩展，每一个都可以关掉。代理经与你相同的接口使用你的来源，只有在你点<em>允许</em>之后才编辑。",
+        },
+      ],
+      labels: { folder: "文件夹", database: "数据库", overSSH: "经 SSH", safeToDelete: "可安全删除", agent: "代理：编辑？", allow: "允许" },
+    }
+  : {
+      steps: [
+        {
+          title: "Folders and databases are the same kind of thing",
+          body: "You open <em>sources</em>: a folder, a vault, a SQLite or DuckDB file, a directory of CSVs, a graph database, a folder on another machine over SSH. Several at once, side by side, all feeding the same graph.",
+        },
+        {
+          title: "The graph is the point, not a feature",
+          body: "Files, the functions and structs inside them, wiki-links between notes, tables of a database: one connected graph, GPU-drawn, fine at 100 000 nodes. <em>Local</em> shows two hops around the file you are in. Click a node and it opens.",
+        },
+        {
+          title: "Your vault stays your vault",
+          body: "Notes are plain Markdown with Obsidian's <code>[[wiki-links]]</code>, front matter and KaTeX. Open the folder in Obsidian tomorrow; nothing changed behind your back. What Moonkale adds lives in one hidden folder you can delete.",
+        },
+        {
+          title: "Everything is an extension; the agent is part of the app",
+          body: "The editors, the terminal, git and the graph are extensions without privileged access, each one can be switched off. The agent uses your sources through the same interface as you, and edits only after you click <em>Allow</em>.",
+        },
+      ],
+      labels: { folder: "folder", database: "database", overSSH: "over SSH", safeToDelete: "safe to delete", agent: "agent: edit?", allow: "Allow" },
+    }
 ---
 
 <ol class="hiw">
@@ -10,12 +56,12 @@
       <svg viewBox="0 0 220 150">
         <!-- a folder, a database, a remote folder: one graph -->
         <path class="shape" d="M14 22 h20 l5 6 h28 v30 h-53 z"></path>
-        <text x="40" y="74" class="tag">folder</text>
+        <text x="40" y="74" class="tag">{t.labels.folder}</text>
         <ellipse class="shape" cx="40" cy="96" rx="22" ry="6"></ellipse>
         <path class="shape open" d="M18 96 v22 a22 6 0 0 0 44 0 v-22"></path>
-        <text x="40" y="140" class="tag">database</text>
+        <text x="40" y="140" class="tag">{t.labels.database}</text>
         <path class="shape dashy" d="M156 22 h20 l5 6 h28 v30 h-53 z"></path>
-        <text x="182" y="74" class="tag">over SSH</text>
+        <text x="182" y="74" class="tag">{t.labels.overSSH}</text>
         <path class="flow" d="M68 42 C 96 42, 98 72, 112 76"></path>
         <path class="flow" d="M64 106 C 92 106, 98 84, 112 80"></path>
         <path class="flow" d="M154 44 C 140 46, 136 70, 128 76"></path>
@@ -29,12 +75,8 @@
       </svg>
     </div>
     <span class="num mono">01</span>
-    <h3>Folders and databases are the same kind of thing</h3>
-    <p>
-      You open <em>sources</em>: a folder, a vault, a SQLite or DuckDB file, a directory of CSVs, a
-      graph database, a folder on another machine over SSH. Several at once, side by side, all
-      feeding the same graph.
-    </p>
+    <h3>{t.steps[0].title}</h3>
+    <p set:html={t.steps[0].body} />
   </li>
 
   <li class="step reveal" style="--d:.06s">
@@ -61,12 +103,8 @@
       </svg>
     </div>
     <span class="num mono">02</span>
-    <h3>The graph is the point, not a feature</h3>
-    <p>
-      Files, the functions and structs inside them, wiki-links between notes, tables of a
-      database: one connected graph, GPU-drawn, fine at 100 000 nodes. <em>Local</em> shows two hops
-      around the file you are in. Click a node and it opens.
-    </p>
+    <h3>{t.steps[1].title}</h3>
+    <p set:html={t.steps[1].body} />
   </li>
 
   <li class="step reveal" style="--d:.12s">
@@ -82,17 +120,13 @@
         <g class="extra">
           <path class="shape dashy" d="M146 70 h18 l5 6 h28 v34 h-51 z"></path>
           <text x="172" y="124" class="tag">.moonkale/</text>
-          <text x="172" y="138" class="tag">safe to delete</text>
+          <text x="172" y="138" class="tag">{t.labels.safeToDelete}</text>
         </g>
       </svg>
     </div>
     <span class="num mono">03</span>
-    <h3>Your vault stays your vault</h3>
-    <p>
-      Notes are plain Markdown with Obsidian's <code>[[wiki-links]]</code>, front matter and KaTeX.
-      Open the folder in Obsidian tomorrow; nothing changed behind your back. What Moonkale adds
-      lives in one hidden folder you can delete.
-    </p>
+    <h3>{t.steps[2].title}</h3>
+    <p set:html={t.steps[2].body} />
   </li>
 
   <li class="step reveal" style="--d:.18s">
@@ -106,20 +140,16 @@
         <g class="ext e5"><rect class="shape" x="85" y="62" width="50" height="24" rx="5"></rect><text x="110" y="78" class="tag dark">git</text></g>
         <g class="ext e6"><rect class="shape" x="142" y="62" width="50" height="24" rx="5"></rect><text x="167" y="78" class="tag dark">table</text></g>
         <rect class="shape" x="28" y="96" width="164" height="26" rx="5"></rect>
-        <text x="40" y="113" class="tag dark left">agent: edit?</text>
+        <text x="40" y="113" class="tag dark left">{t.labels.agent}</text>
         <g class="allow">
           <rect x="140" y="100" width="44" height="18" rx="9"></rect>
-          <text x="162" y="112" class="tag inv">Allow</text>
+          <text x="162" y="112" class="tag inv">{t.labels.allow}</text>
         </g>
       </svg>
     </div>
     <span class="num mono">04</span>
-    <h3>Everything is an extension; the agent is part of the app</h3>
-    <p>
-      The editors, the terminal, git and the graph are extensions without privileged access, each
-      one can be switched off. The agent uses your sources through the same interface as you, and
-      edits only after you click <em>Allow</em>.
-    </p>
+    <h3>{t.steps[3].title}</h3>
+    <p set:html={t.steps[3].body} />
   </li>
 </ol>
 

@@ -42,29 +42,40 @@ while (q.length) {
   for (const b of adj[a]) if (dist[b] > dist[a] + 1) (dist[b] = dist[a] + 1), q.push(b)
 }
 const maxD = Math.min(14, Math.max(...dist.filter((d) => d < 99)))
-const presets = [
-  { label: "“2 + 2 = ?”", depth: 1 },
-  { label: "Summarise a paragraph", depth: 4 },
-  { label: "Answer from the codebase", depth: 7 },
-  { label: "A proof, checked in Lean", depth: 11 },
-]
+// The Chinese page (/zh/projects/lenticulumLM) shows the same queries in Chinese (Nav.astro
+// tells the two languages apart the same way).
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const presets = zh
+  ? [
+      { label: "“2 + 2 = ?”", depth: 1 },
+      { label: "概括一段话", depth: 4 },
+      { label: "从代码库回答", depth: 7 },
+      { label: "一个证明，在 Lean 里检查", depth: 11 },
+    ]
+  : [
+      { label: "“2 + 2 = ?”", depth: 1 },
+      { label: "Summarise a paragraph", depth: 4 },
+      { label: "Answer from the codebase", depth: 7 },
+      { label: "A proof, checked in Lean", depth: 11 },
+    ]
 ---
 
 <div class="qd" data-qd data-total={pts.length} data-max={maxD}>
   <div class="qd-top">
-    <div class="qd-presets" role="group" aria-label="Example queries">
+    <div class="qd-presets" role="group" aria-label={zh ? "示例查询" : "Example queries"}>
       {presets.map((p) => (
         <button type="button" class="qd-p" data-depth={p.depth}>{p.label}</button>
       ))}
     </div>
     <label class="qd-slider mono">
-      <span>reach</span>
+      <span>{zh ? "触及深度" : "reach"}</span>
       <input type="range" min="0" max={maxD} step="1" value="4" data-range />
       <span class="qd-dv" data-dv>4</span>
     </label>
   </div>
   <div class="qd-art">
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="A large graph of small factors; the factors within reach of the query are drawn solid, the rest stay faint in the store">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={zh ? "一张由小因子组成的大图；查询触及的因子画为实色，其余在存储中保持暗淡" : "A large graph of small factors; the factors within reach of the query are drawn solid, the rest stay faint in the store"}>
+      <title>{zh ? "查询触及的因子" : "The factors a query reaches"}</title>
       <g class="qd-edges">
         {edges.map(([a, b]) => (
           <line x1={pts[a][0]} y1={pts[a][1]} x2={pts[b][0]} y2={pts[b][1]} data-d={Math.max(dist[a], dist[b])} />
@@ -80,9 +91,9 @@ const presets = [
     </svg>
   </div>
   <div class="qd-stats">
-    <div><span class="qd-n" data-loaded>0</span><span class="qd-k mono">factors loaded</span></div>
-    <div><span class="qd-n" data-share>0%</span><span class="qd-k mono">of the store</span></div>
-    <div><span class="qd-n" data-rest>0</span><span class="qd-k mono">left on disk, never touched</span></div>
+    <div><span class="qd-n" data-loaded>0</span><span class="qd-k mono">{zh ? "个因子被加载" : "factors loaded"}</span></div>
+    <div><span class="qd-n" data-share>0%</span><span class="qd-k mono">{zh ? "占整个存储" : "of the store"}</span></div>
+    <div><span class="qd-n" data-rest>0</span><span class="qd-k mono">{zh ? "留在磁盘上，从未触及" : "left on disk, never touched"}</span></div>
   </div>
 </div>
 

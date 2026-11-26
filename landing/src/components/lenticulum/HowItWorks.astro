@@ -1,6 +1,52 @@
 ---
 // The four steps of "How it works" in Lenticulum.jl's README, each with a small looping drawing.
 // The drawings start when the step scrolls into view (the page's .reveal → .in).
+// The Chinese page (/zh/projects/lenticulum-jl) shows the same steps in Chinese (Nav.astro tells
+// the two languages apart the same way).
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const t = zh
+  ? {
+      steps: [
+        {
+          title: "关系是习得残差的零点集",
+          body: "模型学的不是函数 <em>y</em> = <em>f</em>(<em>x</em>)，而是一个残差 <em>r</em><sub>θ</sub>(<em>z</em>)：一个关于全部坐标 <em>z</em> = (<em>x</em>, <em>y</em>, …) 的函数，在数据上为零、在数据之外非零。关系就是它消失的地方：<em>R</em><sub>θ</sub> = { z : <em>r</em><sub>θ</sub>(z) = 0 }。最简单的例子是圆 <em>x</em>² + <em>y</em>² − 1 = 0。",
+        },
+        {
+          title: "一次查询选定一个极性",
+          body: "每次查询把坐标分成输入（已知）、输出（想要）与潜变量（两者皆非）；这个选择称为极性。每个坐标分到一个精度，即其方差的倒数：∞ 表示钉住，0 表示放开，中间值是一次带噪测量。换个方向问，同一个模型就交换输入与输出。",
+        },
+        {
+          title: "推断即求根",
+          body: "输入钉住后，牛顿法之类的求解器调整自由坐标，直到残差为零，如同深度平衡模型的求值。几个根就是几个答案：圆上一个 <em>x</em> 对应两个 <em>y</em>。",
+        },
+        {
+          title: "反向传播即隐函数定理",
+          body: "训练需要答案的梯度。隐函数定理只需在答案处解一次线性方程组，就同时给出对参数、输入与精度的梯度。求解器的各步不被展开（存储并逐层求导），内存也就不随步数增长。",
+        },
+      ],
+      labels: { input: "输入 ∞", output: "输出 0", latent: "潜变量", start: "起点", root: "根", unrolled: "展开式", solve: "一次线性求解" },
+    }
+  : {
+      steps: [
+        {
+          title: "A relation is the zero set of a learned residual",
+          body: "Instead of a function <em>y</em> = <em>f</em>(<em>x</em>), the model learns a residual <em>r</em><sub>θ</sub>(<em>z</em>): one function of all the coordinates together, <em>z</em> = (<em>x</em>, <em>y</em>, …), that is zero on the data and nonzero away from it. The relation is where it vanishes: <em>R</em><sub>θ</sub> = { z : <em>r</em><sub>θ</sub>(z) = 0 }. The circle <em>x</em>² + <em>y</em>² − 1 = 0 is the simplest example.",
+        },
+        {
+          title: "A query chooses a polarity",
+          body: "Each query sorts the coordinates into inputs (known), outputs (wanted) and latents (neither); this choice is called a polarity. Each coordinate gets a precision, one over its variance: ∞ holds it fixed, 0 leaves it free, anything in between is a noisy measurement. Asked the other way round, the same model swaps inputs and outputs.",
+        },
+        {
+          title: "Inference is root finding",
+          body: "With the inputs held fixed, a solver such as Newton's method adjusts the free coordinates until the residual is zero, the way a deep equilibrium model is evaluated. Several roots mean several answers: one <em>x</em> on the circle has two <em>y</em>.",
+        },
+        {
+          title: "Backpropagation is the implicit function theorem",
+          body: "Training needs the gradient of the answer. The implicit function theorem gives it from one linear solve at the answer, for the parameters, the inputs and the precisions alike. The solver's steps are not unrolled (stored and differentiated through), so memory does not grow with them.",
+        },
+      ],
+      labels: { input: "input ∞", output: "output 0", latent: "latent", start: "start", root: "root", unrolled: "unrolled", solve: "one linear solve" },
+    }
 ---
 
 <ol class="hiw">
@@ -14,15 +60,8 @@
       </svg>
     </div>
     <span class="num mono">01</span>
-    <h3>A relation is the zero set of a learned residual</h3>
-    <p>
-      Instead of a function <em>y</em> = <em>f</em>(<em>x</em>), the model learns a residual
-      <em>r</em><sub>θ</sub>(<em>z</em>): one function of all the coordinates together,
-      <em>z</em> = (<em>x</em>, <em>y</em>, …), that is zero on the data and nonzero away from
-      it. The relation is where it vanishes:
-      <em>R</em><sub>θ</sub> = {"{"} z : <em>r</em><sub>θ</sub>(z) = 0 {"}"}. The circle
-      <em>x</em>² + <em>y</em>² − 1 = 0 is the simplest example.
-    </p>
+    <h3>{t.steps[0].title}</h3>
+    <p set:html={t.steps[0].body} />
   </li>
 
   <li class="step reveal" style="--d:.06s">
@@ -40,21 +79,16 @@
           <rect x="146" y="40" width="52" height="52" rx="8"></rect>
           <text x="172" y="73" class="sym">u</text>
         </g>
-        <text x="48" y="114" class="tag tag-a1">input ∞</text>
-        <text x="48" y="114" class="tag tag-a2">output 0</text>
-        <text x="110" y="114" class="tag tag-b1">output 0</text>
-        <text x="110" y="114" class="tag tag-b2">input ∞</text>
-        <text x="172" y="114" class="tag">latent</text>
+        <text x="48" y="114" class="tag tag-a1">{t.labels.input}</text>
+        <text x="48" y="114" class="tag tag-a2">{t.labels.output}</text>
+        <text x="110" y="114" class="tag tag-b1">{t.labels.output}</text>
+        <text x="110" y="114" class="tag tag-b2">{t.labels.input}</text>
+        <text x="172" y="114" class="tag">{t.labels.latent}</text>
       </svg>
     </div>
     <span class="num mono">02</span>
-    <h3>A query chooses a polarity</h3>
-    <p>
-      Each query sorts the coordinates into inputs (known), outputs (wanted) and latents (neither);
-      this choice is called a polarity. Each coordinate gets a precision, one over its variance:
-      ∞ holds it fixed, 0 leaves it free, anything in between is a noisy measurement. Asked the
-      other way round, the same model swaps inputs and outputs.
-    </p>
+    <h3>{t.steps[1].title}</h3>
+    <p>{t.steps[1].body}</p>
   </li>
 
   <li class="step reveal" style="--d:.12s">
@@ -67,17 +101,13 @@
         <circle class="it it1" cx="150" cy="70" r="3"></circle>
         <circle class="it it2" cx="150" cy="50" r="3"></circle>
         <circle class="root" cx="150" cy="44.5" r="6"></circle>
-        <text x="160" y="128" class="tag left">start</text>
-        <text x="122" y="30" class="tag left">root</text>
+        <text x="160" y="128" class="tag left">{t.labels.start}</text>
+        <text x="122" y="30" class="tag left">{t.labels.root}</text>
       </svg>
     </div>
     <span class="num mono">03</span>
-    <h3>Inference is root finding</h3>
-    <p>
-      With the inputs held fixed, a solver such as Newton's method adjusts the free coordinates
-      until the residual is zero, the way a deep equilibrium model is evaluated. Several roots
-      mean several answers: one <em>x</em> on the circle has two <em>y</em>.
-    </p>
+    <h3>{t.steps[2].title}</h3>
+    <p set:html={t.steps[2].body} />
   </li>
 
   <li class="step reveal" style="--d:.18s">
@@ -91,7 +121,7 @@
           <rect x="128" y="20" width="18" height="18" rx="3"></rect>
           <rect x="156" y="20" width="18" height="18" rx="3"></rect>
           <line x1="10" y1="29" x2="182" y2="29" class="strike"></line>
-          <text x="196" y="33" class="tag">unrolled</text>
+          <text x="196" y="33" class="tag">{t.labels.unrolled}</text>
         </g>
         <circle class="theta" cx="36" cy="112" r="15"></circle>
         <text x="36" y="117" class="sym small">θ</text>
@@ -101,17 +131,12 @@
         <circle class="pulse" r="4">
           <animateMotion dur="2.2s" repeatCount="indefinite" path="M160 104 C 130 64, 82 64, 52 104"></animateMotion>
         </circle>
-        <text x="106" y="64" class="tag">one linear solve</text>
+        <text x="106" y="64" class="tag">{t.labels.solve}</text>
       </svg>
     </div>
     <span class="num mono">04</span>
-    <h3>Backpropagation is the implicit function theorem</h3>
-    <p>
-      Training needs the gradient of the answer. The implicit function theorem gives it from one
-      linear solve at the answer, for the parameters, the inputs and the precisions alike. The
-      solver's steps are not unrolled (stored and differentiated through), so memory does not
-      grow with them.
-    </p>
+    <h3>{t.steps[3].title}</h3>
+    <p>{t.steps[3].body}</p>
   </li>
 </ol>
 

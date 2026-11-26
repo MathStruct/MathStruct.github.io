@@ -8,14 +8,17 @@
 // The halos are exact: the marginal standard deviations of the linear-Gaussian toy graph,
 // diag(Λ⁻¹) by a dense Cholesky solve, recomputed at every step. The graph is a toy; the
 // bookkeeping (what is touched, what batch would redo) is the real one.
+// The Chinese page (/zh/projects/lenticulumLM) tells the same story in Chinese (Nav.astro tells
+// the two languages apart the same way); the script below switches with location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
 ---
 
 <div class="isam" data-isam>
   <div class="isam-top">
     <div class="isam-event" aria-live="polite">
-      <span class="isam-step mono" data-step>step 0</span>
-      <p class="isam-text" data-text>The prompt is clamped: four known positions, like the first poses of a map.</p>
-      <p class="isam-slam mono" data-slam>SLAM: the starting poses, known</p>
+      <span class="isam-step mono" data-step>{zh ? "第 0 步" : "step 0"}</span>
+      <p class="isam-text" data-text>{zh ? "提示词被钉住：四个已知位置，如同地图最初的几个位姿。" : "The prompt is clamped: four known positions, like the first poses of a map."}</p>
+      <p class="isam-slam mono" data-slam>{zh ? "SLAM：初始位姿，已知" : "SLAM: the starting poses, known"}</p>
     </div>
     <div class="isam-ctrl">
       <button class="btn btn--solid isam-btn" type="button" data-play aria-pressed="true">Pause</button>
@@ -25,7 +28,8 @@
   </div>
 
   <div class="isam-scroll">
-    <svg class="isam-svg" viewBox="0 0 1000 400" role="img" aria-label="A factor graph of token positions growing one token at a time; at each step the variables that are re-solved are highlighted, and a halo around each position shows its uncertainty">
+    <svg class="isam-svg" viewBox="0 0 1000 400" role="img" aria-label={zh ? "一张词元位置的因子图，一次长一个词元；每一步中被重新求解的变量会高亮，每个位置周围的光晕显示其不确定性" : "A factor graph of token positions growing one token at a time; at each step the variables that are re-solved are highlighted, and a halo around each position shows its uncertainty"}>
+      <title>{zh ? "逐词元生长的因子图" : "A factor graph growing one token at a time"}</title>
       <g data-layer="arcs"></g>
       <g data-layer="edges"></g>
       <g data-layer="halos"></g>
@@ -37,28 +41,28 @@
 
   <div class="isam-meter">
     <div class="meter-row">
-      <span class="meter-k mono">re-solved this step</span>
+      <span class="meter-k mono">{zh ? "本步重新求解" : "re-solved this step"}</span>
       <span class="meter-bars"><span class="bar bar--inc" data-bar-inc></span></span>
       <span class="meter-v mono" data-inc>0</span>
     </div>
     <div class="meter-row">
-      <span class="meter-k mono">batch would re-solve</span>
+      <span class="meter-k mono">{zh ? "整批求解需要重做" : "batch would re-solve"}</span>
       <span class="meter-bars"><span class="bar bar--batch" data-bar-batch></span></span>
       <span class="meter-v mono" data-batch>0</span>
     </div>
     <div class="meter-row meter-total">
-      <span class="meter-k mono">total so far</span>
-      <span class="meter-v mono" data-total>incremental 0 · batch 0</span>
+      <span class="meter-k mono">{zh ? "到目前为止总计" : "total so far"}</span>
+      <span class="meter-v mono" data-total>{zh ? "增量 0 · 整批 0" : "incremental 0 · batch 0"}</span>
     </div>
   </div>
 
   <ul class="isam-legend mono" aria-hidden="true">
-    <li><span class="lg lg-clamp"></span>prompt token (clamped)</li>
-    <li><span class="lg lg-var"></span>generated token</li>
-    <li><span class="lg lg-fac"></span>factor</li>
-    <li><span class="lg lg-mark"></span>fact from the store</li>
-    <li><span class="lg lg-hot"></span>re-solved now</li>
-    <li><span class="lg lg-halo"></span>uncertainty (±1 sd)</li>
+    <li><span class="lg lg-clamp"></span>{zh ? "提示词词元（钉住）" : "prompt token (clamped)"}</li>
+    <li><span class="lg lg-var"></span>{zh ? "生成的词元" : "generated token"}</li>
+    <li><span class="lg lg-fac"></span>{zh ? "因子" : "factor"}</li>
+    <li><span class="lg lg-mark"></span>{zh ? "来自存储的事实" : "fact from the store"}</li>
+    <li><span class="lg lg-hot"></span>{zh ? "正在重新求解" : "re-solved now"}</li>
+    <li><span class="lg lg-halo"></span>{zh ? "不确定性（±1 标准差）" : "uncertainty (±1 sd)"}</li>
   </ul>
 </div>
 
@@ -74,6 +78,7 @@
   }
 
   // the proof being written; positions 0–3 are the prompt
+  const zh = location.pathname.startsWith("/zh")
   const EVENTS: Ev[] = [
     { tok: "Lemma", clamp: true, text: "", slam: "" },
     { tok: "every", clamp: true, text: "", slam: "" },
@@ -91,6 +96,41 @@
     { tok: "so", text: "Drift builds up again after the last correction.", slam: "SLAM: odometry" },
     { tok: "p = 2", loop: 3, text: "A contradiction with “p > 2”: another long-range factor back to the statement, and another re-solve of the span between.", slam: "SLAM: a second loop closure" },
     { tok: "∎", verify: [4, 15], text: "A Lean 4 check over the whole proof: one hard factor across the span. Where it holds, the positions it covers are pinned.", slam: "SLAM: a global constraint, like a GPS fix" },
+  ]
+
+  // The Chinese page (/zh/projects/lenticulumLM) tells the same story in Chinese; per-step
+  // captions and SLAM asides, in the order of EVENTS.
+  const ZH_TEXT: (string | null)[] = [
+    null, null, null,
+    "提示词被钉住：四个已知位置，如同地图最初的几个位姿。",
+    "一个新位置，经一个局部语言因子与上一个相连。只有新因子的两端被重新求解。",
+    "每前进一步都增加不确定性，如同航位推算：离已知越远，光晕越大。",
+    "仍是一条链。无论文本多长，每个词元的工作量保持不变。",
+    "仍是常量的工作量。整批求解器现在要重做全部八个位置，而且每步都更多。",
+    "离提示词越远，新的位置就越不确定。",
+    "“p”回指命题里的 p：一次回环。两者之间的每个位置都被重新求解，不确定性随之塌缩。",
+    "一条从存储加载的事实在这里被观测：一个路标。触及的仍只有最新的位置。",
+    "回到普通的一步向前。",
+    "又是常量的工作：早先的修正已经折进分解里了。",
+    "漂移在上次修正之后再次累积。",
+    "与“p > 2”矛盾：又一条指回命题的长程因子，以及区间内的又一次重新求解。",
+    "一个覆盖整个证明的 Lean 4 检查：横跨区间的一个硬因子。在它成立之处，它覆盖的位置被钉住。",
+  ]
+  const ZH_SLAM: (string | null)[] = [
+    null, null, null,
+    "SLAM：初始位姿，已知",
+    "SLAM：里程计，向前一步",
+    "SLAM：里程计，漂移累积",
+    "SLAM：里程计",
+    "SLAM：里程计",
+    "SLAM：里程计，远离起点",
+    "SLAM：回环，一个似曾相识的地方",
+    "SLAM：一次路标观测",
+    "SLAM：里程计",
+    "SLAM：里程计",
+    "SLAM：里程计",
+    "SLAM：第二次回环",
+    "SLAM：一个全局约束，如同一次 GPS 修正",
   ]
 
   const N = EVENTS.length
@@ -219,7 +259,7 @@
         const g = el("g", { class: "mark fresh" }, layer("vars"))
         el("rect", { x: x - 46, y: MARK_Y - 14, width: 92, height: 28, rx: 6 }, g)
         el("text", { x, y: MARK_Y + 4, class: "mark-t" }, g).textContent = e.mark
-        el("text", { x, y: MARK_Y - 22, class: "mark-k" }, g).textContent = "fact · Sophia"
+        el("text", { x, y: MARK_Y - 22, class: "mark-k" }, g).textContent = zh ? "事实 · Sophia" : "fact · Sophia"
       }
       if (e.loop !== undefined) {
         const xa = px(e.loop)
@@ -236,7 +276,7 @@
         for (let k = a; k <= b; k++) el("line", { x1: xc, y1: VER_Y + 8, x2: px(k), y2: py(k), class: "wire wire--ver fresh" }, layer("arcs"))
         const g = el("g", { class: "mark mark--ver fresh" }, layer("vars"))
         el("rect", { x: xc - 70, y: VER_Y - 16, width: 140, height: 30, rx: 6 }, g)
-        el("text", { x: xc, y: VER_Y + 4, class: "mark-t" }, g).textContent = "Lean 4 kernel ✓"
+        el("text", { x: xc, y: VER_Y + 4, class: "mark-t" }, g).textContent = zh ? "Lean 4 内核 ✓" : "Lean 4 kernel ✓"
       }
       halos.push(el("circle", { cx: x, cy: y, r: 9, class: "halo" }, layer("halos")) as SVGCircleElement)
       vars.push(el("circle", { cx: x, cy: y, r: 8, class: e.clamp ? "var var--clamp fresh" : "var fresh" }, layer("vars")) as SVGCircleElement)
@@ -264,10 +304,17 @@
       $("batch").textContent = String(batch)
       $("bar-inc").style.width = `${(inc / 12) * 100}%`
       $("bar-batch").style.width = `${(batch / 12) * 100}%`
-      $("total").textContent = `incremental ${totInc} · batch ${totBatch}`
-      $("step").textContent = i < 4 ? "prompt" : `step ${i - 3} · token “${EVENTS[i].tok}”`
-      if (EVENTS[i].text) $("text").textContent = EVENTS[i].text
-      if (EVENTS[i].slam) $("slam").textContent = EVENTS[i].slam
+      $("total").textContent = zh ? `增量 ${totInc} · 整批 ${totBatch}` : `incremental ${totInc} · batch ${totBatch}`
+      $("step").textContent =
+        i < 4
+          ? zh
+            ? "提示词"
+            : "prompt"
+          : zh
+            ? `第 ${i - 3} 步 · 词元“${EVENTS[i].tok}”`
+            : `step ${i - 3} · token “${EVENTS[i].tok}”`
+      if (EVENTS[i].text) $("text").textContent = (zh ? ZH_TEXT[i] : null) ?? EVENTS[i].text
+      if (EVENTS[i].slam) $("slam").textContent = (zh ? ZH_SLAM[i] : null) ?? EVENTS[i].slam
     }
 
     function step() {

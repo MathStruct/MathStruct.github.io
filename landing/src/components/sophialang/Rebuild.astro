@@ -39,56 +39,102 @@ const deps: [string, string, string?][] = [
 const at = Object.fromEntries(nodes.map((n) => [n.id, n]))
 const w = (n: N) => Math.max(44, n.label.length * 7.6 + 22)
 
-const scenarios = [
-  {
-    key: "rename",
-    label: "Rename add → plus",
-    target: "add",
-    hit: [] as string[],
-    why: "A name is a label on a definition, not part of it. The id of add does not change, so nothing that refers to add changes either.",
-  },
-  {
-    key: "proof",
-    label: "Prove a fact about double",
-    target: "double",
-    hit: [],
-    why: "Proofs, docs and test results are annotations attached to an id. They never enter it, so a new proof rebuilds nothing.",
-  },
-  {
-    key: "body",
-    label: "Change add’s body",
-    target: "add",
-    hit: ["add", "fib", "t_add", "t_fib"],
-    why: "add gets a new id; so does fib, whose term points at it, and so do the tests of the two. Everything else keeps its id and its cached results.",
-  },
-  {
-    key: "nat",
-    label: "Change the type Nat",
-    target: "nat",
-    hit: ["nat", "add", "even", "fib", "t_add", "t_even", "t_fib"],
-    why: "Everything that mentions Nat, directly or through another definition, gets a new id. double and mean never mention it, so they stay.",
-  },
-  {
-    key: "method",
-    label: "Add a method +(Int32, Int32)",
-    target: "plus",
-    hit: [],
-    why: "+ is a generic function with its own fixed identity. The recorded dispatch facts say double called +(Int64, Int64) and mean +(Float64, Float64); the new signature overlaps neither, so no compiled code and no test result is invalidated.",
-  },
-]
+// The Chinese page (/zh/projects/sophialang) shows the same toy in Chinese (Nav.astro tells the
+// two languages apart the same way); the script below switches with location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
+const scenarios = zh
+  ? [
+      {
+        key: "rename",
+        label: "把 add 改名为 plus",
+        target: "add",
+        hit: [] as string[],
+        why: "名字是定义身上的标签，不是它的一部分。add 的 id 不变，引用 add 的一切也都不变。",
+      },
+      {
+        key: "proof",
+        label: "证明一个关于 double 的事实",
+        target: "double",
+        hit: [],
+        why: "证明、文档与测试结果是附在 id 上的注解，永远进不了它，所以一个新的证明什么也不用重建。",
+      },
+      {
+        key: "body",
+        label: "改 add 的函数体",
+        target: "add",
+        hit: ["add", "fib", "t_add", "t_fib"],
+        why: "add 得到新 id；项指向它的 fib 也是，两者的测试也是。其余的一切保持自己的 id 与缓存的结果。",
+      },
+      {
+        key: "nat",
+        label: "改类型 Nat",
+        target: "nat",
+        hit: ["nat", "add", "even", "fib", "t_add", "t_even", "t_fib"],
+        why: "凡是提到 Nat 的——直接地或经由另一个定义——都得到新 id。double 与 mean 从不提它，所以不变。",
+      },
+      {
+        key: "method",
+        label: "加一个方法 +(Int32, Int32)",
+        target: "plus",
+        hit: [],
+        why: "+ 是一个有自身固定身份的泛型函数。记录下的分派事实说 double 调用过 +(Int64, Int64)、mean 调用过 +(Float64, Float64)；新签名与两者都不重叠，所以没有任何编译结果或测试结果失效。",
+      },
+    ]
+  : [
+      {
+        key: "rename",
+        label: "Rename add → plus",
+        target: "add",
+        hit: [] as string[],
+        why: "A name is a label on a definition, not part of it. The id of add does not change, so nothing that refers to add changes either.",
+      },
+      {
+        key: "proof",
+        label: "Prove a fact about double",
+        target: "double",
+        hit: [],
+        why: "Proofs, docs and test results are annotations attached to an id. They never enter it, so a new proof rebuilds nothing.",
+      },
+      {
+        key: "body",
+        label: "Change add’s body",
+        target: "add",
+        hit: ["add", "fib", "t_add", "t_fib"],
+        why: "add gets a new id; so does fib, whose term points at it, and so do the tests of the two. Everything else keeps its id and its cached results.",
+      },
+      {
+        key: "nat",
+        label: "Change the type Nat",
+        target: "nat",
+        hit: ["nat", "add", "even", "fib", "t_add", "t_even", "t_fib"],
+        why: "Everything that mentions Nat, directly or through another definition, gets a new id. double and mean never mention it, so they stay.",
+      },
+      {
+        key: "method",
+        label: "Add a method +(Int32, Int32)",
+        target: "plus",
+        hit: [],
+        why: "+ is a generic function with its own fixed identity. The recorded dispatch facts say double called +(Int64, Int64) and mean +(Float64, Float64); the new signature overlaps neither, so no compiled code and no test result is invalidated.",
+      },
+    ]
 const nDefs = nodes.filter((n) => !n.test).length
 const nTests = nodes.filter((n) => n.test).length
 
-const panels = [
-  { key: "today", title: "Keyed by files and packages", sub: "a typical build cache" },
-  { key: "sophia", title: "Keyed by structure", sub: "sophialang’s rules" },
-]
+const panels = zh
+  ? [
+      { key: "today", title: "以文件与包为键", sub: "一个典型的构建缓存" },
+      { key: "sophia", title: "以结构为键", sub: "sophialang 的规则" },
+    ]
+  : [
+      { key: "today", title: "Keyed by files and packages", sub: "a typical build cache" },
+      { key: "sophia", title: "Keyed by structure", sub: "sophialang’s rules" },
+    ]
 ---
 
 <div class="rb" data-rb data-defs={nDefs} data-tests={nTests}>
   <div class="rb-top">
-    <span class="rb-ask mono">Change one thing:</span>
-    <div class="rb-chips" role="group" aria-label="Changes to make">
+    <span class="rb-ask mono">{zh ? "改一处：" : "Change one thing:"}</span>
+    <div class="rb-chips" role="group" aria-label={zh ? "要做的修改" : "Changes to make"}>
       {scenarios.map((s, i) => (
         <button type="button" class="rb-chip" data-s={i} aria-pressed={i === 0 ? "true" : "false"}>{s.label}</button>
       ))}
@@ -102,7 +148,8 @@ const panels = [
           <span class="rb-title">{p.title}</span>
           <span class="rb-sub mono">{p.sub}</span>
         </figcaption>
-        <svg viewBox="0 0 460 300" role="img" aria-label={`${p.title}: a program of seven definitions and five tests; the ones that must be rebuilt or re-run are filled`}>
+        <svg viewBox="0 0 460 300" role="img" aria-label={zh ? `${p.title}：一个七个定义五个测试的程序；需要重建或重跑的会填充` : `${p.title}: a program of seven definitions and five tests; the ones that must be rebuilt or re-run are filled`}>
+          <title>{p.title}</title>
           <g class="rb-edges">
             {deps.map(([a, b, sig]) => {
               const A = at[a]
@@ -132,8 +179,8 @@ const panels = [
           </g>
         </svg>
         <div class="rb-count">
-          <div><span class="rb-n" data-c="defs">0</span><span class="rb-k mono">of {nDefs} definitions recompiled</span></div>
-          <div><span class="rb-n" data-c="tests">0</span><span class="rb-k mono">of {nTests} tests re-run</span></div>
+          <div><span class="rb-n" data-c="defs">0</span><span class="rb-k mono">/ {nDefs} {zh ? "个定义被重编译" : "definitions recompiled"}</span></div>
+          <div><span class="rb-n" data-c="tests">0</span><span class="rb-k mono">/ {nTests} {zh ? "个测试被重跑" : "tests re-run"}</span></div>
         </div>
       </figure>
     ))}
@@ -189,10 +236,16 @@ const panels = [
     function badge(panel: HTMLElement, s: S) {
       const g = panel.querySelector<SVGGElement>("[data-badge]")!
       const n = nodes.find((x) => x.id === s.target)!
-      const txt = { rename: "renamed", proof: "+ proof", body: "edited", nat: "edited", method: "+ method" }[s.key] ?? ""
+      const zh = location.pathname.startsWith("/zh")
+      const txt =
+        (
+          zh
+            ? { rename: "已改名", proof: "+ 证明", body: "已编辑", nat: "已编辑", method: "+ 方法" }
+            : { rename: "renamed", proof: "+ proof", body: "edited", nat: "edited", method: "+ method" }
+        )[s.key] ?? ""
       const t = g.querySelector("text")!
       const r = g.querySelector("rect")!
-      const bw = txt.length * 7 + 18
+      const bw = [...txt].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x7f ? 10 : 7), 18)
       const bx = Math.min(460 - bw - 2, Math.max(2, n.x - bw / 2))
       const by = n.y < 60 ? n.y + 18 : n.y - 38
       r.setAttribute("x", String(bx))

@@ -5,24 +5,28 @@
 // proof; every later "p" is tied to the statement's p), at a rate set by the distance to a pin.
 // The glyphs are scrambled with probability equal to each position's noise level; the bars below
 // are that level, position by position.
+// The Chinese page (/zh/projects/lenticulumLM) shows the same schedules in Chinese (Nav.astro
+// tells the two languages apart the same way).
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
 ---
 
 <div class="dn" data-dn>
   <div class="dn-top">
-    <div class="seg" role="radiogroup" aria-label="Noise schedule">
-      <button type="button" role="radio" aria-checked="true" data-mode="stream">Stream</button>
-      <button type="button" role="radio" aria-checked="false" data-mode="graph">Graph</button>
+    <div class="seg" role="radiogroup" aria-label={zh ? "噪声调度" : "Noise schedule"}>
+      <button type="button" role="radio" aria-checked="true" data-mode="stream">{zh ? "流" : "Stream"}</button>
+      <button type="button" role="radio" aria-checked="false" data-mode="graph">{zh ? "图" : "Graph"}</button>
     </div>
     <p class="dn-cap" data-cap aria-live="polite"></p>
   </div>
   <p class="dn-text mono" data-text aria-hidden="true"></p>
   <p class="sr-only">
-    The proof “Lemma: every prime p &gt; 2 is odd. Proof: if p were even, then 2 ∣ p, so p = 2,
-    contradicting p &gt; 2. ∎”, its tokens denoised one schedule or the other.
+    {zh
+      ? "证明“Lemma: every prime p &gt; 2 is odd. Proof: if p were even, then 2 ∣ p, so p = 2, contradicting p &gt; 2. ∎”，按两种调度之一去噪它的词元。"
+      : "The proof “Lemma: every prime p &gt; 2 is odd. Proof: if p were even, then 2 ∣ p, so p = 2, contradicting p &gt; 2. ∎”, its tokens denoised one schedule or the other."}
   </p>
   <svg class="dn-bars" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true" data-bars></svg>
   <div class="dn-axis mono" aria-hidden="true">
-    <span>position 1</span><span data-active></span><span>position 26</span>
+    <span>{zh ? "位置 1" : "position 1"}</span><span data-active></span><span>{zh ? "位置 26" : "position 26"}</span>
   </div>
 </div>
 
@@ -62,16 +66,21 @@
   }
 
   const W = 6 // width of the stream's front, in tokens
+  const zh = location.pathname.startsWith("/zh")
   const schedules = {
     stream: {
       end: N - PROMPT + W + 1,
       noise: (i: number, t: number) => (i < PROMPT ? 0 : clamp((i - PROMPT + 1 - t) / W)),
-      cap: "Stream: one front moves forward. Behind it the text is clean; ahead of it, pure noise. Tokens near the front are partly denoised, and can still change.",
+      cap: zh
+        ? "流：一道锋面向前推进。它身后文本已干净；身前是纯噪声。锋面附近的词元部分去噪，仍可改变。"
+        : "Stream: one front moves forward. Behind it the text is clean; ahead of it, pure noise. Tokens near the front are partly denoised, and can still change.",
     },
     graph: {
       end: 6.4,
       noise: (i: number, t: number) => (dist[i] === 0 ? 0 : clamp(1 - (t - 1.1 * (dist[i] - 1)) / 3.2)),
-      cap: "Graph: the prompt and the closing ∎ are pinned, and every later p, 2 and > is tied to the statement by an edge. Noise falls at many positions at once, fastest next to what is known, in no fixed order.",
+      cap: zh
+        ? "图：提示词与结尾的 ∎ 被钉住，其后每个 p、2、> 都经一条边连回命题。噪声同时在许多位置上落下，已知之处旁最快，次序不定。"
+        : "Graph: the prompt and the closing ∎ are pinned, and every later p, 2 and > is tied to the statement by an edge. Noise falls at many positions at once, fastest next to what is known, in no fixed order.",
     },
   }
   type Mode = keyof typeof schedules

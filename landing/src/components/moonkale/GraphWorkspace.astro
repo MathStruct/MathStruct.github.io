@@ -5,15 +5,18 @@
 // replays one scripted exchange: the agent queries the same graph, proposes an edit, and changes
 // nothing until "Allow" is clicked. Everything here is a mock drawn in the browser; the app
 // indexes real folders with tree-sitter and language servers.
+// The Chinese page (/zh/projects/moonkale) shows the same mock in Chinese (Nav.astro tells the two
+// languages apart the same way); the script below switches with location.pathname.
+const zh = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "").startsWith("/zh")
 ---
 
 <div class="gw">
   <div class="gw-graph">
-    <div class="gw-sources mono" aria-label="Sources">
-      <span><i class="src-folder" aria-hidden="true"></i>solver/ · folder</span>
-      <span><i class="src-db" aria-hidden="true"></i>runs.sqlite · database</span>
+    <div class="gw-sources mono" aria-label={zh ? "来源" : "Sources"}>
+      <span><i class="src-folder" aria-hidden="true"></i>{zh ? "solver/ · 文件夹" : "solver/ · folder"}</span>
+      <span><i class="src-db" aria-hidden="true"></i>{zh ? "runs.sqlite · 数据库" : "runs.sqlite · database"}</span>
     </div>
-    <svg class="gw-svg" viewBox="0 0 420 300" role="group" aria-label="The workspace as one graph: files, symbols, notes and a table">
+    <svg class="gw-svg" viewBox="0 0 420 300" role="group" aria-label={zh ? "作为一张图的工作区：文件、符号、笔记与一张表" : "The workspace as one graph: files, symbols, notes and a table"}>
       <defs>
         <marker id="gw-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0 0 L8 4 L0 8 z" class="gw-arrowhead"></path>
@@ -23,9 +26,9 @@
       <g class="gw-nodes"></g>
     </svg>
     <div class="gw-status mono">
-      <span>index: 3 files · 3 links · 3 symbols · 1 table</span>
+      <span>{zh ? "索引：3 个文件 · 3 条链接 · 3 个符号 · 1 张表" : "index: 3 files · 3 links · 3 symbols · 1 table"}</span>
       <span class="gw-legend">
-        <i class="lg lg-file"></i>file <i class="lg lg-sym"></i>symbol <i class="lg lg-note"></i>note <i class="lg lg-table"></i>table
+        <i class="lg lg-file"></i>{zh ? "文件" : "file"} <i class="lg lg-sym"></i>{zh ? "符号" : "symbol"} <i class="lg lg-note"></i>{zh ? "笔记" : "note"} <i class="lg lg-table"></i>{zh ? "表" : "table"}
       </span>
     </div>
   </div>
@@ -35,8 +38,8 @@
       <span class="gw-tab"></span>
       <span class="gw-kind"></span>
       <span class="gw-modes" hidden>
-        <button type="button" class="gw-mode is-on" data-mode="rich">Rich</button>
-        <button type="button" class="gw-mode" data-mode="source">Source</button>
+        <button type="button" class="gw-mode is-on" data-mode="rich">{zh ? "富文本" : "Rich"}</button>
+        <button type="button" class="gw-mode" data-mode="source">{zh ? "源码" : "Source"}</button>
       </span>
     </div>
     <div class="gw-body" aria-live="polite"></div>
@@ -44,9 +47,9 @@
 
   <div class="gw-agent">
     <div class="gw-agent-head">
-      <span class="mono gw-agent-k">Agent</span>
-      <button type="button" class="gw-ask">Ask: what calls <code>step</code>?</button>
-      <button type="button" class="gw-reset" hidden>Start over</button>
+      <span class="mono gw-agent-k">{zh ? "代理" : "Agent"}</span>
+      <button type="button" class="gw-ask">{zh ? "问：谁调用了" : "Ask: what calls"} <code>step</code>{zh ? "？" : "?"}</button>
+      <button type="button" class="gw-reset" hidden>{zh ? "重新开始" : "Start over"}</button>
     </div>
     <ol class="gw-chat" aria-live="polite"></ol>
   </div>
@@ -249,8 +252,9 @@
     function paintView() {
       const n = byId.get(selected)!
       const isCode = n.kind === "file" || n.kind === "symbol"
+      const zh = location.pathname.startsWith("/zh")
       tab.textContent = isCode ? "src/lib.rs" : n.kind === "note" ? `notes/${n.label}` : "runs.sqlite · runs"
-      kindEl.textContent = isCode ? "code editor" : n.kind === "note" ? "" : "table editor"
+      kindEl.textContent = isCode ? (zh ? "代码编辑器" : "code editor") : n.kind === "note" ? "" : zh ? "表格编辑器" : "table editor"
       modes.hidden = n.kind !== "note"
       modes.querySelectorAll<HTMLButtonElement>(".gw-mode").forEach((b) => b.classList.toggle("is-on", b.dataset.mode === noteMode))
       body.innerHTML = isCode ? codeView() : n.kind === "note" ? noteView() : tableView()
@@ -282,15 +286,20 @@
     ask.addEventListener("click", async () => {
       ask.disabled = true
       chat.innerHTML = ""
-      say("you", "What calls <code>step</code>?")
+      const zh = location.pathname.startsWith("/zh")
+      say("you", zh ? "谁调用了 <code>step</code>？" : "What calls <code>step</code>?")
       await wait(500)
-      say("tool", "graph.query · callers of <code>fn step</code> → 1 node")
+      say("tool", zh ? "graph.query · <code>fn step</code> 的调用者 → 1 个节点" : "graph.query · callers of <code>fn step</code> → 1 node")
       agentHit = "solve"
       select("solve")
       await wait(600)
       const li = say(
         "agent",
-        `Only <code>solve</code>, in src/lib.rs. Rename <code>step</code> to <code>halve</code>? It is changed in 2 places:
+        zh
+          ? `只有 <code>solve</code>，在 src/lib.rs 里。把 <code>step</code> 改名为 <code>halve</code>？共有 2 处修改：
+        <span class="gw-diff mono"><span class="del">- pub fn step(g: &amp;mut Grid) {</span><span class="add">+ pub fn halve(g: &amp;mut Grid) {</span><span class="del">-     for _ in 0..n { step(&amp;mut g); }</span><span class="add">+     for _ in 0..n { halve(&amp;mut g); }</span></span>
+        <span class="gw-gate"><button type="button" class="gw-allow">允许</button><button type="button" class="gw-deny">拒绝</button><span class="mono">你允许之前不会有任何改动</span></span>`
+          : `Only <code>solve</code>, in src/lib.rs. Rename <code>step</code> to <code>halve</code>? It is changed in 2 places:
         <span class="gw-diff mono"><span class="del">- pub fn step(g: &amp;mut Grid) {</span><span class="add">+ pub fn halve(g: &amp;mut Grid) {</span><span class="del">-     for _ in 0..n { step(&amp;mut g); }</span><span class="add">+     for _ in 0..n { halve(&amp;mut g); }</span></span>
         <span class="gw-gate"><button type="button" class="gw-allow">Allow</button><button type="button" class="gw-deny">Deny</button><span class="mono">nothing changes until you allow it</span></span>`,
       )
@@ -300,11 +309,11 @@
           stepName = "halve"
           agentHit = "step"
           select("step")
-          say("agent", "Done. The file, the graph and every open view show the new name; the edit is in the change history, with restore.")
+          say("agent", zh ? "完成。文件、图和每个打开的视图都显示新名字；这次编辑在变更历史里，可恢复。" : "Done. The file, the graph and every open view show the new name; the edit is in the change history, with restore.")
         } else {
           agentHit = null
           paintGraph()
-          say("agent", "Nothing was changed.")
+          say("agent", zh ? "什么都没有改。" : "Nothing was changed.")
         }
         reset.hidden = false
       }
