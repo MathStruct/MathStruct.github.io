@@ -40,11 +40,28 @@ types as an exchangeable checker, and one governing principle, *autoresolve → 
   those are recompiled and only their tests re-run. A new method invalidates only the call
   sites whose recorded argument types it overlaps.
 
+## One language, not three
+
+[Computational trinitarianism](https://existentialtype.wordpress.com/2011/03/27/the-holy-trinity/)
+is Robert Harper's name for the observation that logic, type theory and category theory are
+three views of one subject: a proposition is a type is an object, a proof is a program is a
+morphism. sophialang takes it as its design. The typing language, the query language and the
+logic are one language over one store: a specification is a type, a query is a set of Horn
+clauses (sophialang relations and rules), and a proof is a term of the type it proves, stored
+and hashed like any other definition. Today the query language runs as its own crate on shared
+primitives; folding it into sophialang is the design, not yet the code.
+
+**Compiling to an exact binary is a query over the graph store.** A definition's id is the hash
+of its structure, so everything `main` needs is the answer to a recursive query over `refs`,
+plus the methods dispatch can reach at pinned versions. Compile that answer, erase types and
+proofs, and link a GC, dispatcher or JIT only where some section asks for one
+([Minimal Binaries](https://mathstruct.org/Sophia/vault/Design/Minimal-Binaries)).
+
 ## Where it stands
 
 | Level | Status |
 |---|---|
-| L1 Parsed | yes: Julia- and Rust-flavoured profiles, round-trip tested |
+| L1 Parsed | yes: Julia- and Rust-flavoured profiles, round-trip tested; a Lean-flavoured profile is planned |
 | L2 Normalised | yes: `sophialang-core@0`, names never change ids |
 | L3 Resolved | yes |
 | L5 Executable | no: no interpreter, no type checker |
