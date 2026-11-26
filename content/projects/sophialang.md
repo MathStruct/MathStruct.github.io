@@ -35,6 +35,8 @@ sophialang is not stored as text and is not meant to be read. The store holds th
 compressed core term: no names, de Bruijn indices, references as hashes, shared structure stored
 once. How it is displayed (Julia-like, Rust-like, Lean-like, …) is the reader's configuration, a
 rendering profile. So it is less a programming language than a programming system.
+The idea of code stored by the hash of its structure, with names as labels and no source files,
+comes from [Unison](https://www.unison-lang.org/), and Sophia builds on it.
 
 **Planned:** agents that work directly on the graph (core terms and mined abstractions) instead
 of through a frontend language such as Julia. Today models reach the store through a profile,

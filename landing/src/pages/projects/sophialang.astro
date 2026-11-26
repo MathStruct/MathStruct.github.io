@@ -35,6 +35,7 @@ const links = {
   sophia: "/projects/sophia",
   moonkale: "/projects/moonkale",
   lenticulum: "/projects/lenticulum-jl",
+  unison: "https://www.unison-lang.org/",
 }
 
 // ---------------------------------------------------------------- the pitch
@@ -183,6 +184,9 @@ const roadmap = [
             the normalised, compressed core term. What you read is a projection of it, in the syntax
             your configuration asks for. So sophialang is less a programming language than a
             programming system: one store of definitions, with as many surfaces as its users want.
+            The idea is not ours alone: <a href={links.unison}>Unison</a> pioneered code stored by
+            the hash of its structure, with names as labels and no source files, and Sophia builds
+            on it.
           </p>
         </div>
         <ul class="features features--3 reveal">
@@ -259,7 +263,8 @@ const roadmap = [
           how coarse they are today (Julia's package images, a crate, a file), and a precise cache is
           what <a class="il" href={links.precompile}>content-addressed precompilation</a> is about: the
           win is not caching, it is precision of invalidation. A test with effects that escape the
-          store (files, network, clocks) is never cached.
+          store (files, network, clocks) is never cached. Content-addressed definitions, with names
+          as labels, come from <a class="il" href={links.unison}>Unison</a>.
         </p>
       </div>
     </section>
@@ -276,7 +281,9 @@ const roadmap = [
             Julia showed that dynamism and performance can be reconciled by design. Rust showed
             that safety can be checked without a garbage collector. Lean and Idris showed that
             proofs and programs can be one thing, and Idris 2 that types can cost nothing at run
-            time. sophialang is the bet that these do not have to be four different languages.
+            time. <a href={links.unison}>Unison</a> showed that code can be identified by the hash of
+            its structure rather than by its name or file. sophialang is the bet that these do not
+            have to be five different languages.
           </p>
         </div>
         <div class="table-wrap reveal">
