@@ -1,11 +1,12 @@
 ---
 // The hero of /projects/sophialang: one definition shown four ways. The first three texts are what
 // sophialang-syntax prints and parses today (the Julia and Rust profiles, then the Julia profile
-// with every name changed); all three normalise to the same content id. The fourth changes the
+// with every name changed); all three normalise to the same content id. The last changes the
 // body, and the id changes with it. The texts and ids were produced by MathStruct/Sophia@ec58583
 // (sophialang-syntax's printer and parser, sophialang-core's normaliser), not written by hand:
-// regenerate them there if the core's encoding changes. The exception is the Lean profile: it is
-// planned and not in sophialang-syntax yet, so its text is written by hand, and the page says so.
+// regenerate them there if the core's encoding changes. The exceptions are the Lean and Unison
+// profiles: they are planned and not in sophialang-syntax yet, so their texts are written by hand,
+// and the page says so.
 // Its id is the definition's because a profile is only a view of the stored term (SPEC-005).
 const ADD = "8bcfc885631dfc75a61dafd537f94c8acaab807e304641914cbb891aeee82c76"
 const EDITED = "8806a207045dc0d35e6eb9ffbe7a29274a452db9ca71fbb06bf6c142d913b8c0"
@@ -42,6 +43,15 @@ end`,
   | .succ k => Nat.succ (add k b)`,
   },
   {
+    tag: "Unison profile",
+    note: "planned, for readers from Unison · written by hand, not printed yet",
+    id: ADD,
+    text: `add : Nat -> Nat -> Nat
+add a b = match a with
+  zero -> b
+  succ k -> Nat.succ (add k b)`,
+  },
+  {
     tag: "Renamed",
     note: "add → plus, a, b → m, n",
     id: ADD,
@@ -68,7 +78,7 @@ const short = (id: string) => `${id.slice(0, 8)} ${id.slice(8, 16)} ${id.slice(1
 ---
 
 <div class="pf" data-pf>
-  <div class="pf-tabs mono" role="tablist" aria-label="Five texts of one definition">
+  <div class="pf-tabs mono" role="tablist" aria-label="Six texts of one definition">
     {frames.map((f, i) => (
       <button type="button" role="tab" aria-selected={i === 0 ? "true" : "false"} data-i={i}>
         {f.tag}

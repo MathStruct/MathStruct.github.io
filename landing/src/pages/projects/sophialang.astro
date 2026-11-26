@@ -55,7 +55,7 @@ const compare: [string, string, string][] = [
 // Code §1, §4. Agents on the graph are planned; today models reach the store through a profile.
 const system = [
   { k: "Stored", t: "Normalised and compressed", d: "No names, no variables, no whitespace: de Bruijn indices, references as 32-byte hashes, shared structure stored once. It is not meant to be read by anyone." },
-  { k: "Shown", t: "In the syntax you choose", d: "Julia-like, Rust-like, Lean-like or one you configure: a profile is a setting, stored like any other. Two people can read one definition in two syntaxes and edit the same id." },
+  { k: "Shown", t: "In the syntax you choose", d: "Julia-like, Rust-like, Lean-like, Unison-like or one you configure: a profile is a setting, stored like any other. Two people can read one definition in two syntaxes and edit the same id." },
   { k: "Planned", t: "Agents on the graph", d: "Today models work through a profile, Julia-like text, and every write is parsed back. We want agents that work on the graph itself: core terms and mined abstractions, with no frontend language in between." },
 ]
 
@@ -154,7 +154,7 @@ const roadmap = [
         <figure class="hero-art reveal" style="--d:.1s">
           <Profiles />
           <figcaption class="mono">
-            Julia and Rust printed and parsed by sophialang-syntax today, Lean planned; ids from sophialang-core
+            Julia and Rust printed and parsed by sophialang-syntax today, Lean and Unison planned; ids from sophialang-core
           </figcaption>
         </figure>
       </div>
@@ -202,7 +202,7 @@ const roadmap = [
           From Sophia's notes <a class="il" href={links.compression}>Compression and Canonical Form</a>
           and <a class="il" href={links.llms}>LLMs and Mixed-Language Code</a>. Compression here is
           structural sharing, which exists; mining a corpus for abstractions is planned, as a derived
-          layer that never changes ids. Julia and Rust profiles exist; Lean is planned. Sophia's agent
+          layer that never changes ids. Julia and Rust profiles exist; Lean and Unison are planned. Sophia's agent
           server already lets models query and read the store; agents that edit the graph directly
           are for the future.
         </p>
