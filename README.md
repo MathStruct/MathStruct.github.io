@@ -1,7 +1,7 @@
 # MathStruct
 
 The organisation website for [MathStruct](https://github.com/MathStruct). The front page and
-a few promotional pages (`/projects/lenticulum-jl`, `/projects/lenticulumLM`, `/projects/sophia`, `/projects/sophialang`, `/projects/moonkale`) are a small [Astro](https://astro.build)
+a few promotional pages (`/projects/lenticulum-jl`, `/projects/lenticulumLM`, `/projects/sophia`, `/projects/sophialang`, `/projects/moonkale`, `/projects/category-theory-ml-wiki`) are a small [Astro](https://astro.build)
 site in `landing/`; everything else (blog, projects,
 people, notes) is built with [Quartz 4](https://quartz.jzhao.xyz) from an Obsidian vault, in the
 same style as the project wikis.
@@ -81,6 +81,11 @@ address (plus `/assets/` and `/favicon.svg`):
 - `src/pages/projects/moonkale.astro`: Moonkale's page, with the README's screenshots
   (`public/projects/moonkale-media/`) and a mock workspace where every editor is a view on one
   graph (`src/components/moonkale/`). Its facts come from Moonkale's README and vault.
+- `src/pages/projects/category-theory-ml-wiki.astro`: the Category Theory & ML Wiki's page. It shows
+  the vault as it is (a first draft) and the knowledge graph it is being turned into, and says which
+  is which; its learning map (`src/components/ctml/`) draws 22 notes as a prerequisite graph that
+  the reader marks as known. Its facts and counts come from the wiki's vault and from the Lenticulum.jl
+  and Sophia vaults that link to it.
 
 A page here keeps its Markdown note in `content/` for the site's search, graph and link
 previews; keep the two in step. A folder in `public/` must not have the name of a page

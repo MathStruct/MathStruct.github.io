@@ -1,0 +1,907 @@
+---
+// The learning map on /projects/category-theory-ml-wiki: 22 notes of the Category Theory & ML Wiki
+// and the two projects that rest on them, as a prerequisite graph. The reader marks notes as known;
+// a note whose prerequisites are all known is "ready"; choosing a goal draws the route to it.
+//
+// Facts come from the vault as of 2026-11-26 (MathStruct/CategoryTheory-ML-Wiki, default branch):
+// - which notes and the prerequisite edges: the study order of "Start Here" (Stages 2–4,
+//   Track E, Track F); every edge is also a wiki-link between the two notes;
+// - "src": each note's "> Sources:" line, shortened;
+// - "lean": the first line of each note's Lean tab;
+// - "used": how many notes of Lenticulum.jl's vault (vault/) and Sophia's vault (vault/) link to
+//   the note's page on mathstruct.org/CategoryTheory-ML-Wiki/.
+// The summaries are written for this page. Progress is kept in this browser only (localStorage).
+const wiki = "https://mathstruct.org/CategoryTheory-ML-Wiki/"
+
+type Node = {
+  id: string
+  label: string[]
+  x: number
+  y: number
+  track: "core" | "ml" | "db" | "project"
+  title: string
+  tags?: string
+  sum: string
+  src?: string
+  lean?: string
+  used?: [number, number]
+  href: string
+  pre: string[]
+  bow?: Record<string, number>
+}
+
+const n = (slug: string) => wiki + slug
+
+const nodes: Node[] = [
+  {
+    id: "category", label: ["Category"], x: 60, y: 270, track: "core", title: "Category",
+    tags: "definition · example",
+    sum: "Objects, arrows between them, and a composition that is associative and has identities. The vault calls it the template for every other note.",
+    src: "7 Sketches Def. 3.6 · Kittenlab Lecture 3 · DaoFP §1–2, §8.1",
+    lean: "class Category (C : Type u) extends CategoryStruct C",
+    used: [0, 15], href: n("Category"), pre: [],
+  },
+  {
+    id: "functor", label: ["Functor"], x: 170, y: 270, track: "core", title: "Functor",
+    tags: "definition · theorem · proof · program",
+    sum: "A map between categories: objects to objects, arrows to arrows, identities and composition preserved.",
+    src: "7 Sketches Def. 3.35 · Kittenlab Lectures 4–6 · DaoFP §8.2",
+    lean: "#check CategoryTheory.Functor    -- notation C ⥤ D",
+    used: [3, 2], href: n("Functor"), pre: ["category"],
+  },
+  {
+    id: "nat", label: ["Natural", "transformation"], x: 280, y: 270, track: "core", title: "Natural transformation",
+    tags: "definition · theorem · proof · program",
+    sum: "One arrow F(c) → G(c) for every object c, such that every naturality square commutes: a map between functors.",
+    src: "7 Sketches Def. 3.49 · Kittenlab Lecture 7 · DaoFP §3",
+    lean: "#check CategoryTheory.NatTrans",
+    used: [0, 2], href: n("Natural-Transformation"), pre: ["functor"],
+  },
+  {
+    id: "adj", label: ["Adjunction"], x: 390, y: 270, track: "core", title: "Adjunction",
+    tags: "definition · example · theorem · proof",
+    sum: "L ⊣ R: arrows L(c) → d correspond, naturally, to arrows c → R(d). Free and forgetful, currying, Σ ⊣ Δ ⊣ Π.",
+    src: "7 Sketches §3.4 (Def. 3.70) · DaoFP Ch. 10 · CTfS §5.1",
+    lean: "#check CategoryTheory.Adjunction    -- notation F ⊣ G",
+    used: [0, 0], href: n("Adjunction"), pre: ["nat"],
+  },
+  {
+    id: "monad", label: ["Monad"], x: 500, y: 270, track: "core", title: "Monad",
+    tags: "definition · theorem · example · program",
+    sum: "An endofunctor T with a unit η and a multiplication μ: a monoid of endofunctors, and the shape of side effects. Every adjunction gives one.",
+    src: "DaoFP Ch. 14–15",
+    lean: "#check @CategoryTheory.Monad",
+    used: [3, 2], href: n("Monad"), pre: ["adj"],
+  },
+  {
+    id: "kleisli", label: ["Kleisli", "category"], x: 610, y: 270, track: "core", title: "Kleisli category",
+    tags: "definition · theorem · example",
+    sum: "Arrows a → T b, composed with the “fish”; the monad laws are exactly its category laws. Probabilistic kernels live in one.",
+    src: "DaoFP §14.2–14.3, §15.5",
+    lean: "#check @CategoryTheory.Kleisli",
+    used: [2, 0], href: n("Kleisli-Category"), pre: ["monad"],
+  },
+  {
+    id: "monoidal", label: ["Monoidal", "category"], x: 280, y: 150, track: "core", title: "Monoidal category",
+    tags: "definition · example · theorem",
+    sum: "A category with a tensor ⊗ and a unit I, associative and unital up to coherent isomorphism: processes side by side.",
+    src: "7 Sketches §4.4.3 (Def. 4.45), §5–6 · DaoFP §4.4",
+    lean: "#check CategoryTheory.MonoidalCategory",
+    used: [0, 0], href: n("Monoidal-Category"), pre: ["functor"],
+  },
+  {
+    id: "string", label: ["String", "diagram"], x: 390, y: 150, track: "core", title: "String diagram",
+    tags: "definition · example · annotation",
+    sum: "Functors drawn as lines and natural transformations as dots: equations about monads and adjunctions become pictures.",
+    src: "DaoFP §15.1–15.4",
+    lean: "#check @CategoryTheory.whiskerLeft    -- F ◁ α",
+    used: [1, 0], href: n("String-Diagram"), pre: ["monoidal"],
+  },
+  {
+    id: "cd", label: ["Copy-discard", "category"], x: 500, y: 150, track: "ml", title: "Copy-discard category",
+    tags: "definition · example",
+    sum: "A symmetric monoidal category in which every object can be copied and discarded: the setting of categorical probability.",
+    src: "Cho & Jacobs, arXiv:1709.00322",
+    lean: "class CopyDiscard (C : Type*) [Category C] [MonoidalCategory C] [SymmetricCategory C]",
+    used: [1, 0], href: n("Copy-Discard-Category"), pre: ["string"],
+  },
+  {
+    id: "markov", label: ["Markov", "category"], x: 720, y: 200, track: "ml", title: "Markov category",
+    tags: "definition · theorem · example",
+    sum: "A copy-discard category in which discarding is natural, so every process is normalised. Stochastic kernels are the example.",
+    src: "Fritz, arXiv:1908.07021, Def. 2.1",
+    lean: "#check Kernel    -- ProbabilityTheory.Kernel α β",
+    used: [14, 0], href: n("Markov-Category"), pre: ["cd", "kleisli"],
+  },
+  {
+    id: "inv", label: ["Bayesian", "inversion"], x: 830, y: 200, track: "ml", title: "Bayesian inversion",
+    tags: "definition · theorem · example",
+    sum: "Given a prior p and a likelihood f : X → Y, a kernel back from Y to X that reproduces the same joint distribution: Bayes’ rule, without densities.",
+    src: "Cho & Jacobs, arXiv:1709.00322, §3",
+    lean: "#check @posterior",
+    used: [50, 0], href: n("Bayesian-Inversion"), pre: ["markov"],
+  },
+  {
+    id: "lens", label: ["Lens"], x: 390, y: 50, track: "ml", title: "Lens",
+    tags: "definition · theorem · example · program",
+    sum: "A get and a put: look at a part of a structure, and update it. A forward pass and a backward pass, in one shape.",
+    src: "DaoFP §16.3, §17.9, §18 · Cruttwell et al., arXiv:2103.01931",
+    lean: "structure Lens (s a : Type) where",
+    used: [35, 0], href: n("Lens"), pre: ["monoidal"],
+  },
+  {
+    id: "plens", label: ["Parametric", "lens"], x: 500, y: 50, track: "ml", title: "Parametric lens",
+    tags: "definition · example",
+    sum: "A lens with parameters, from the Para construction: a layer of a neural network together with its gradient.",
+    src: "Cruttwell, Gavranović, Ghani, Wilson & Zanasi, arXiv:2103.01931",
+    lean: "structure PLens (P P' A A' B B' : Type) where",
+    used: [19, 0], href: n("Parametric-Lens"), pre: ["lens"],
+  },
+  {
+    id: "blens", label: ["Bayesian", "lens"], x: 830, y: 90, track: "ml", title: "Bayesian lens",
+    tags: "definition · theorem · example",
+    sum: "A channel forward and a state-dependent inversion back: Bayesian updates that compose the way lenses do.",
+    src: "St Clere Smithe, arXiv:2006.01631",
+    lean: "structure BLens (Hom : Type → Type → Type) (X A Y B : Type) where",
+    used: [28, 0], href: n("Bayesian-Lens"), pre: ["inv", "lens"], bow: { lens: -48 },
+  },
+  {
+    id: "statgame", label: ["Statistical", "game"], x: 930, y: 90, track: "ml", title: "Statistical game",
+    tags: "definition · theorem · example",
+    sum: "A Bayesian lens with a loss attached (AutoBayes, Def. 20): variational inference, made compositional. Lenticulum’s notes cite it more than any other.",
+    src: "St Clere Smithe & Perin, AutoBayes, arXiv:2503.18608",
+    lean: "structure StatGame (X Y : Type) where",
+    used: [53, 0], href: n("Statistical-Game"), pre: ["blens"],
+  },
+  {
+    id: "cset", label: ["C-set"], x: 280, y: 390, track: "db", title: "C-set",
+    tags: "definition · example · program",
+    sum: "A functor from a schema to Set: a database instance, a graph, an ACSet in Catlab.",
+    src: "7 Sketches §3.3 (Def. 3.44) · Kittenlab",
+    used: [0, 1], href: n("C-Set"), pre: ["functor"],
+  },
+  {
+    id: "migr", label: ["Data", "migration"], x: 500, y: 390, track: "db", title: "Data migration functor",
+    tags: "definition · example · theorem",
+    sum: "Σ ⊣ Δ ⊣ Π: moving the data of one schema to another along a functor, as three adjoint functors.",
+    src: "7 Sketches §3.4 (Def. 3.68) · FQL",
+    lean: "#check CategoryTheory.Functor.lan    -- Σ_F",
+    used: [0, 1], href: n("Data-Migration-Functor"), pre: ["cset", "adj"],
+  },
+  {
+    id: "cq", label: ["Conjunctive", "query"], x: 610, y: 390, track: "db", title: "Conjunctive query",
+    tags: "definition · theorem · example · program",
+    sum: "Queries built from atoms with ∧ and ∃ only: SQL’s select-from-where, and string diagrams in a cartesian bicategory.",
+    src: "Chandra & Merlin, STOC 1977 · Bonchi, Seeber & Sobociński, CSL 2018",
+    lean: "def relComp {α β γ : Type*} (R : α → β → Prop) (S : β → γ → Prop) : α → γ → Prop",
+    used: [0, 10], href: n("Conjunctive-Query"), pre: ["migr"],
+  },
+  {
+    id: "lfp", label: ["Least fixed", "point"], x: 760, y: 390, track: "db", title: "Least fixed point",
+    tags: "definition · theorem · algorithm · program",
+    sum: "The least solution of x = f(x) for a monotone f, reached by iteration from the bottom: what a Datalog program means.",
+    src: "Tarski 1955 · van Emden & Kowalski 1976",
+    lean: "def stepT {α : Type*} (E : Set (α × α)) : Set (α × α) →o Set (α × α)",
+    used: [2, 10], href: n("Least-Fixed-Point"), pre: ["cq"],
+  },
+  {
+    id: "initalg", label: ["Initial", "algebra"], x: 280, y: 470, track: "db", title: "Initial algebra",
+    tags: "definition · theorem · proof · program",
+    sum: "The initial F-algebra: a data type as the least fixed point μF, with its fold (the catamorphism) for free.",
+    src: "DaoFP §12.2–12.4",
+    lean: "#check @CategoryTheory.Endofunctor.Algebra.Initial.strInv    -- Lambek",
+    used: [1, 8], href: n("Initial-Algebra"), pre: ["functor"],
+  },
+  {
+    id: "congr", label: ["Congruence"], x: 390, y: 470, track: "db", title: "Congruence",
+    tags: "definition · theorem · example · program",
+    sum: "An equivalence relation that every operation respects: equal arguments give equal results.",
+    src: "Burris & Sankappanavar, A Course in Universal Algebra, Ch. II §§5–6",
+    lean: "#check @Con.ker    -- (f : M →* P) → Con M",
+    used: [0, 6], href: n("Congruence"), pre: ["initalg"],
+  },
+  {
+    id: "egraph", label: ["E-graph"], x: 500, y: 470, track: "db", title: "E-graph",
+    tags: "definition · theorem · algorithm · program",
+    sum: "A small structure that holds many terms and a congruence on them; equality saturation rewrites in it.",
+    src: "Willsey et al., egg, POPL 2021, arXiv:2004.03082",
+    lean: "def IsCongruence {α : Type*} (r : Setoid α) (f : α → α) : Prop",
+    used: [0, 21], href: n("E-Graph"), pre: ["congr"],
+  },
+  {
+    id: "lenticulum", label: ["Lenticulum.jl"], x: 1010, y: 50, track: "project", title: "Lenticulum.jl",
+    sum: "Relation learners composed on factor graphs, with uncertainty carried as beliefs. 121 notes of its vault link to this wiki for the theory.",
+    href: "/projects/lenticulum-jl", pre: ["statgame", "plens"],
+  },
+  {
+    id: "sophia", label: ["Sophia"], x: 1010, y: 450, track: "project", title: "Sophia",
+    sum: "A content-addressed store for code, with a Datalog query language and e-graphs for equivalence. 67 notes of its vault link to this wiki.",
+    href: "/projects/sophia", pre: ["egraph", "lfp"],
+  },
+]
+
+const edges = nodes.flatMap((t) => t.pre.map((s) => ({ s, t: t.id, bow: t.bow?.[s] ?? 0 })))
+const byId = Object.fromEntries(nodes.map((x) => [x.id, x]))
+const path = (e: { s: string; t: string; bow: number }) => {
+  const a = byId[e.s]
+  const b = byId[e.t]
+  const dx = (b.x - a.x) / 2
+  return `M${a.x} ${a.y} C${a.x + dx} ${a.y + e.bow} ${b.x - dx} ${b.y + e.bow} ${b.x} ${b.y}`
+}
+const goals = [
+  { id: "lenticulum", label: "Lenticulum.jl" },
+  { id: "sophia", label: "Sophia" },
+  { id: "kleisli", label: "Kleisli category" },
+]
+const concepts = nodes.filter((x) => x.track !== "project").length
+---
+
+<div class="lm" data-lm>
+  <div class="lm-bar">
+    <div class="lm-goals" role="group" aria-label="Choose a goal">
+      <span class="mono lm-k">Goal</span>
+      {goals.map((g) => <button type="button" class="lm-chip" data-goal={g.id} aria-pressed="false">{g.label}</button>)}
+    </div>
+    <div class="lm-progress">
+      <span class="mono lm-k" data-count>0 / {concepts} known</span>
+      <span class="lm-meter" aria-hidden="true"><span data-meter></span></span>
+      <button type="button" class="lm-reset mono" data-reset>Reset</button>
+    </div>
+  </div>
+
+  <div class="lm-canvas">
+    <svg viewBox="0 0 1070 520" role="group" aria-label="A prerequisite graph of 22 notes of the wiki and two projects">
+      <g class="lm-lanes" aria-hidden="true">
+        <text x="20" y="22">Track E · towards machine learning</text>
+        <text x="20" y="246">Stages 2–4 · the core</text>
+        <text x="20" y="366">Track F · towards compilers and databases</text>
+      </g>
+      <g class="lm-edges">
+        {edges.map((e) => <path d={path(e)} data-edge data-s={e.s} data-t={e.t} />)}
+      </g>
+      <g class="lm-nodes">
+        {nodes.map((x) => (
+          <g
+            class={`lm-node t-${x.track}`}
+            data-node={x.id}
+            transform={`translate(${x.x} ${x.y})`}
+            tabindex="0"
+            role="button"
+            aria-label={x.title}
+          >
+            <circle class="lm-hit" r="26" />
+            <circle class="lm-ring" r="13" />
+            {x.track === "project" ? <rect class="lm-dot" x="-8" y="-8" width="16" height="16" rx="2" /> : <circle class="lm-dot" r="7" />}
+            <text class="lm-label" y={x.track === "project" ? 27 : 23}>
+              {x.label.map((l, i) => <tspan x="0" dy={i === 0 ? 0 : 12}>{l}</tspan>)}
+            </text>
+          </g>
+        ))}
+      </g>
+    </svg>
+  </div>
+
+  <div class="lm-panel">
+    <article class="lm-card" aria-live="polite">
+      <div class="lm-card-top">
+        <span class="mono lm-k" data-c-kind></span>
+        <span class="mono lm-state" data-c-state></span>
+      </div>
+      <h3 data-c-title></h3>
+      <p class="lm-sum" data-c-sum></p>
+      <dl class="lm-meta">
+        <div data-c-src-row><dt class="mono">Sources</dt><dd data-c-src></dd></div>
+        <div data-c-code-row><dt class="mono">Code</dt><dd><span class="lm-tabs mono">Julia · Lean · Haskell</span><code class="lm-code" data-c-lean></code></dd></div>
+        <div data-c-used-row><dt class="mono">Linked from</dt><dd data-c-used></dd></div>
+        <div data-c-pre-row><dt class="mono">Needs</dt><dd class="lm-refs" data-c-pre></dd></div>
+        <div data-c-next-row><dt class="mono">Opens</dt><dd class="lm-refs" data-c-next></dd></div>
+      </dl>
+      <div class="lm-actions">
+        <button type="button" class="btn btn--solid" data-c-toggle>I know this</button>
+        <a class="btn" data-c-href href="#">Read the note <span class="arrow">→</span></a>
+      </div>
+    </article>
+    <aside class="lm-route">
+      <h4 class="mono lm-k">Route</h4>
+      <p data-route>Choose a goal above, or click a note in the graph.</p>
+      <ul class="lm-legend mono" aria-label="Legend">
+        <li><span class="lg known"></span>known</li>
+        <li><span class="lg ready"></span>ready: every prerequisite known</li>
+        <li><span class="lg locked"></span>not yet</li>
+        <li><span class="lg proj"></span>a project</li>
+      </ul>
+    </aside>
+  </div>
+
+  <script type="application/json" data-data set:html={JSON.stringify(nodes.map(({ x, y, label, bow, ...rest }) => rest))} />
+</div>
+
+<script>
+  type N = {
+    id: string
+    track: string
+    title: string
+    tags?: string
+    sum: string
+    src?: string
+    lean?: string
+    used?: [number, number]
+    href: string
+    pre: string[]
+  }
+  const KEY = "ctml-learning-map"
+  for (const root of document.querySelectorAll<HTMLElement>("[data-lm]")) {
+    const nodes = JSON.parse(root.querySelector("[data-data]")!.textContent!) as N[]
+    const byId = new Map(nodes.map((x) => [x.id, x]))
+    const next = new Map<string, string[]>(nodes.map((x) => [x.id, []]))
+    for (const x of nodes) for (const p of x.pre) next.get(p)!.push(x.id)
+    const concepts = nodes.filter((x) => x.track !== "project")
+    const q = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!
+    const els = new Map([...root.querySelectorAll<SVGGElement>("[data-node]")].map((g) => [g.dataset.node!, g]))
+    const edgeEls = [...root.querySelectorAll<SVGPathElement>("[data-edge]")]
+    const goalBtns = [...root.querySelectorAll<HTMLButtonElement>("[data-goal]")]
+
+    let known = new Set<string>()
+    try {
+      const raw = localStorage.getItem(KEY)
+      if (raw) known = new Set((JSON.parse(raw) as string[]).filter((id) => byId.has(id)))
+    } catch {}
+    let selected = "category"
+    let goal: string | null = null
+
+    const save = () => {
+      try {
+        localStorage.setItem(KEY, JSON.stringify([...known]))
+      } catch {}
+    }
+    const isKnown = (id: string) => known.has(id) || (byId.get(id)!.track === "project" && byId.get(id)!.pre.every((p) => known.has(p)))
+    const state = (id: string) => (isKnown(id) ? "known" : byId.get(id)!.pre.every(isKnown) ? "ready" : "locked")
+    const ancestors = (id: string, acc = new Set<string>()) => {
+      for (const p of byId.get(id)!.pre) if (!acc.has(p)) acc.add(p), ancestors(p, acc)
+      return acc
+    }
+    // the notes still to read for a goal, in an order that respects prerequisites
+    const route = (id: string) => {
+      const need = [...ancestors(id)].filter((a) => !known.has(a))
+      if (byId.get(id)!.track !== "project" && !known.has(id)) need.push(id)
+      const out: string[] = []
+      const seen = new Set<string>()
+      const visit = (a: string) => {
+        if (seen.has(a) || !need.includes(a)) return
+        seen.add(a)
+        byId.get(a)!.pre.forEach(visit)
+        out.push(a)
+      }
+      need.forEach(visit)
+      return out
+    }
+
+    const chip = (id: string) => {
+      const b = document.createElement("button")
+      b.type = "button"
+      b.className = `lm-ref s-${state(id)}`
+      b.textContent = byId.get(id)!.title
+      b.addEventListener("click", () => select(id))
+      return b
+    }
+    const fill = (sel: string, ids: string[]) => {
+      const el = q(sel)
+      el.replaceChildren(...ids.map(chip))
+      ;(el.parentElement as HTMLElement).hidden = ids.length === 0
+    }
+
+    function render() {
+      const onRoute = goal ? new Set([...route(goal), goal]) : null
+      for (const [id, g] of els) {
+        g.classList.remove("s-known", "s-ready", "s-locked")
+        g.classList.add(`s-${state(id)}`)
+        g.classList.toggle("sel", id === selected)
+        g.classList.toggle("dim", !!onRoute && !onRoute.has(id) && !isKnown(id))
+        g.classList.toggle("route", !!onRoute && onRoute.has(id))
+        g.setAttribute("aria-pressed", String(id === selected))
+        g.setAttribute("aria-label", `${byId.get(id)!.title}: ${state(id)}`)
+      }
+      for (const e of edgeEls) {
+        const s = e.dataset.s!
+        const t = e.dataset.t!
+        e.classList.toggle("done", isKnown(s))
+        e.classList.toggle("route", !!onRoute && onRoute.has(t) && (onRoute.has(s) || isKnown(s)))
+        e.classList.toggle("dim", !!onRoute && !(onRoute.has(t) && (onRoute.has(s) || isKnown(s))))
+      }
+      const k = concepts.filter((x) => known.has(x.id)).length
+      q("[data-count]").textContent = `${k} / ${concepts.length} known`
+      q("[data-meter]").style.width = `${(100 * k) / concepts.length}%`
+      for (const b of goalBtns) b.setAttribute("aria-pressed", String(b.dataset.goal === goal))
+
+      // the card
+      const x = byId.get(selected)!
+      const st = state(selected)
+      const proj = x.track === "project"
+      q("[data-c-kind]").textContent = proj ? "project" : x.tags ?? ""
+      q("[data-c-state]").textContent = proj ? (st === "known" ? "reached" : "not reached yet") : st === "ready" ? "ready to read" : st === "locked" ? "not yet" : "known"
+      q("[data-c-state]").dataset.s = st
+      q("[data-c-title]").textContent = x.title
+      q("[data-c-sum]").textContent = x.sum
+      q("[data-c-src]").textContent = x.src ?? ""
+      q("[data-c-src-row]").hidden = !x.src
+      q("[data-c-lean]").textContent = x.lean ?? ""
+      q("[data-c-lean]").hidden = !x.lean
+      q("[data-c-code-row]").hidden = proj
+      const u = x.used
+      q("[data-c-used]").textContent = u
+        ? [u[0] && `${u[0]} Lenticulum.jl note${u[0] > 1 ? "s" : ""}`, u[1] && `${u[1]} Sophia note${u[1] > 1 ? "s" : ""}`].filter(Boolean).join(" · ") || "no project note yet"
+        : ""
+      q("[data-c-used-row]").hidden = !u
+      fill("[data-c-pre]", x.pre)
+      fill("[data-c-next]", next.get(selected)!)
+      const t = q<HTMLButtonElement>("[data-c-toggle]")
+      t.hidden = proj
+      t.textContent = known.has(selected) ? "Forget it" : "I know this"
+      t.classList.toggle("btn--solid", !known.has(selected))
+      const a = q<HTMLAnchorElement>("[data-c-href]")
+      a.href = x.href
+      a.firstChild!.textContent = proj ? "The project " : "Read the note "
+
+      // the route
+      const r = q("[data-route]")
+      if (goal) {
+        const left = route(goal)
+        const g = byId.get(goal)!
+        if (left.length === 0) {
+          r.textContent = g.track === "project" ? `You have the theory ${g.title} links to here. ` : `You know ${g.title}. `
+          const go = document.createElement("a")
+          go.href = g.href
+          go.textContent = g.track === "project" ? `Go to ${g.title} →` : "Read it again →"
+          r.append(go)
+        } else {
+          const ready = left.filter((id) => state(id) === "ready")
+          r.replaceChildren(
+            `${left.length} note${left.length > 1 ? "s" : ""} to ${g.title}. Start with `,
+            ...ready.flatMap((id, i) => [i ? (i === ready.length - 1 ? " or " : ", ") : "", chip(id)]),
+            ".",
+          )
+        }
+      } else {
+        const ready = concepts.filter((c) => state(c.id) === "ready").map((c) => c.id)
+        r.replaceChildren(
+          k === 0 ? "Click a note to read about it, then mark it as known. Ready now: " : "Ready now: ",
+          ...ready.slice(0, 4).flatMap((id, i) => [i ? ", " : "", chip(id)]),
+          ready.length > 4 ? ` and ${ready.length - 4} more.` : ".",
+        )
+      }
+    }
+
+    function select(id: string) {
+      selected = id
+      render()
+    }
+
+    for (const [id, g] of els) {
+      g.addEventListener("click", () => select(id))
+      g.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          select(id)
+        }
+      })
+    }
+    q("[data-c-toggle]").addEventListener("click", () => {
+      if (known.has(selected)) known.delete(selected)
+      else known.add(selected)
+      save()
+      render()
+    })
+    for (const b of goalBtns)
+      b.addEventListener("click", () => {
+        goal = goal === b.dataset.goal ? null : b.dataset.goal!
+        if (goal) selected = route(goal).find((id) => state(id) === "ready") ?? goal
+        render()
+      })
+    q("[data-reset]").addEventListener("click", () => {
+      known = new Set()
+      goal = null
+      selected = "category"
+      save()
+      render()
+    })
+    render()
+  }
+</script>
+
+<style>
+  .lm {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .lm-k {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lm-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px 24px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .lm-goals {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .lm-goals .lm-k {
+    margin-right: 4px;
+  }
+  .lm-chip {
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--fg);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 4px 14px;
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+  }
+  .lm-chip:hover {
+    border-color: var(--fg);
+  }
+  .lm-chip[aria-pressed="true"] {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .lm-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .lm-meter {
+    width: 120px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .lm-meter span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--fg);
+    transition: width 0.4s var(--ease);
+  }
+  .lm-reset {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .lm-reset:hover {
+    color: var(--fg);
+  }
+
+  /* ------------------------------------------------------------- graph */
+  .lm-canvas {
+    overflow-x: auto;
+    padding: 12px 8px 4px;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .lm-canvas svg {
+    display: block;
+    width: 100%;
+    min-width: 820px;
+    height: auto;
+    overflow: visible;
+  }
+  .lm-lanes text {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    fill: var(--faint);
+  }
+  .lm-edges path {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 4;
+    transition: stroke 0.3s var(--ease), opacity 0.3s var(--ease);
+  }
+  .lm-edges path.done {
+    stroke: var(--fg);
+    stroke-dasharray: none;
+    opacity: 0.55;
+  }
+  .lm-edges path.route {
+    stroke: var(--fg);
+    stroke-width: 2;
+    stroke-dasharray: none;
+    opacity: 1;
+  }
+  .lm-edges path.dim {
+    opacity: 0.25;
+  }
+  .lm-node {
+    cursor: pointer;
+    outline: none;
+    transition: opacity 0.3s var(--ease);
+  }
+  .lm-node.dim {
+    opacity: 0.35;
+  }
+  .lm-hit {
+    fill: transparent;
+  }
+  .lm-dot {
+    fill: var(--bg-raised);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+    transition: fill 0.3s var(--ease);
+  }
+  .lm-ring {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1;
+    opacity: 0;
+    transition: opacity 0.3s var(--ease);
+  }
+  .lm-label {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    text-anchor: middle;
+    fill: var(--fg-2);
+    pointer-events: none;
+  }
+  .t-project .lm-label {
+    font-weight: 600;
+    fill: var(--fg);
+  }
+  .s-locked .lm-dot {
+    stroke-dasharray: 2.5 2.5;
+    stroke: var(--muted);
+  }
+  .s-locked .lm-label {
+    fill: var(--muted);
+  }
+  .s-ready .lm-ring {
+    opacity: 0.5;
+    animation: lm-pulse 2.4s var(--ease) infinite;
+  }
+  .s-known .lm-dot {
+    fill: var(--fg);
+  }
+  .lm-node.sel .lm-ring {
+    opacity: 1;
+    animation: none;
+    stroke-width: 1.6;
+  }
+  .lm-node.sel .lm-label {
+    fill: var(--fg);
+    font-weight: 600;
+  }
+  .lm-node:focus-visible .lm-hit {
+    stroke: var(--fg);
+    stroke-dasharray: 2 3;
+  }
+  @keyframes lm-pulse {
+    0%,
+    100% {
+      opacity: 0.15;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .s-ready .lm-ring {
+      animation: none;
+    }
+  }
+
+  /* ------------------------------------------------------------- panel */
+  .lm-panel {
+    display: grid;
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 860px) {
+    .lm-panel {
+      grid-template-columns: 1.7fr 1fr;
+    }
+    .lm-route {
+      border-left: 1px solid var(--line);
+    }
+  }
+  .lm-card,
+  .lm-route {
+    padding: 24px;
+    min-width: 0;
+  }
+  .lm-route {
+    background: var(--bg);
+  }
+  @media (max-width: 859px) {
+    .lm-route {
+      border-top: 1px solid var(--line);
+    }
+  }
+  .lm-card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .lm-state {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 1px 10px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .lm-state[data-s="known"] {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  .lm-state[data-s="ready"] {
+    border: 1px dashed var(--fg);
+    color: var(--fg);
+  }
+  .lm-card h3 {
+    margin-top: 12px;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+  .lm-sum {
+    margin: 10px 0 0;
+    color: var(--fg-2);
+    font-size: 15.5px;
+    max-width: 62ch;
+  }
+  .lm-meta {
+    margin: 18px 0 0;
+    display: grid;
+    gap: 10px;
+  }
+  .lm-meta > div {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .lm-meta > div[hidden] {
+    display: none;
+  }
+  .lm-meta dt {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lm-meta dd {
+    margin: 0;
+    font-size: 14px;
+    color: var(--fg-2);
+    min-width: 0;
+  }
+  .lm-tabs {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .lm-code {
+    display: block;
+    margin-top: 6px;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .lm-code[hidden] {
+    display: none;
+  }
+  .lm-refs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  :global(.lm-ref) {
+    font: inherit;
+    font-size: 13px;
+    color: var(--fg);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 1px 10px;
+    cursor: pointer;
+  }
+  :global(.lm-ref:hover) {
+    border-color: var(--fg);
+  }
+  :global(.lm-ref.s-known) {
+    background: var(--invert-bg);
+    border-color: var(--invert-bg);
+    color: var(--invert-fg);
+  }
+  :global(.lm-ref.s-ready) {
+    border-style: dashed;
+    border-color: var(--fg);
+  }
+  :global(.lm-ref.s-locked) {
+    color: var(--muted);
+  }
+  .lm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .lm-actions [hidden] {
+    display: none;
+  }
+  .lm-route h4 {
+    margin: 0;
+  }
+  .lm-route p {
+    margin: 12px 0 0;
+    font-size: 15px;
+    color: var(--fg-2);
+    line-height: 1.9;
+  }
+  .lm-route p a {
+    border-bottom: 1px solid var(--fg);
+  }
+  .lm-legend {
+    list-style: none;
+    margin: 22px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .lm-legend li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .lg {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid var(--fg);
+    flex: none;
+  }
+  .lg.known {
+    background: var(--fg);
+  }
+  .lg.ready {
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--muted);
+  }
+  .lg.locked {
+    border-style: dashed;
+    border-color: var(--muted);
+  }
+  .lg.proj {
+    border-radius: 2px;
+  }
+</style>
