@@ -121,6 +121,12 @@ results written down instead of quietly dropped; code, notes and evidence in one
 our projects will fail; Sophia, by its own risk list, may be one of them. When they do, the
 vault will say why, so that whoever tries next starts further along.
 
+**We do not build on technical debt.** Agents make a rewrite cheap, so we choose the
+better-designed stack over the familiar one: Julia rather than Python, C++ and PyTorch; Rust
+rather than JavaScript and React, or C++ on the backend. Rust has turned out to be particularly
+good for coding with agents, because its strict compiler catches their mistakes early. Poor
+performance and a large memory footprint are treated as bugs.
+
 ### "Isn't this just AI slop?"
 
 Fair question. Our answer:
@@ -135,7 +141,7 @@ Fair question. Our answer:
 - **Correctness can be proved, not only tested.** Formal software verification can show that an
   implementation does what its specification says, and we intend to use it;
   [FiniteFields](https://github.com/MathStruct/FiniteFields) is a first step.
-- **We read the code.** We wrote Julia, C++, Rust, Pascal, JavaScript and more long before
+- **We read the code.** We wrote Julia, Python, C++, Rust, Pascal, JavaScript and more long before
   any of this, and we still review what the agents produce. The gain in productivity is simply
   too large to leave on the table.
 
