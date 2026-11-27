@@ -27,7 +27,7 @@ export interface Person {
   photo?: string
   links: { label: string; href: string }[]
   /** earlier and outside work: what, with which tools, and why it matters here */
-  background?: { k: T; t: T; d: T; tools: string[]; more?: { label: T; href: string } }[]
+  background?: { k: T; d: T; tools: string[]; more?: { label: T; href: string } }[]
   /** their own projects outside MathStruct */
   work?: {
     name: string
@@ -45,8 +45,8 @@ export const people: Person[] = [
     slug: "daniel-boigk",
     role: { en: "Mathematician; founder of MathStruct", zh: "数学家；MathStruct 创始人" },
     bio: {
-      en: "Mathematician working on scientific computing, inverse problems and machine learning, with a background in motion capture and sensor fusion. Founded MathStruct, and maintains Lenticulum.jl, Moonkale and Sophia.",
-      zh: "研究科学计算、逆问题与机器学习的数学家，有动作捕捉与传感器融合的工作背景。创立了 MathStruct，维护 Lenticulum.jl、Moonkale 与 Sophia。",
+      en: "Mathematician working on scientific computing, inverse problems and machine learning, with a background in motion capture and sensor fusion.",
+      zh: "研究科学计算、逆问题与机器学习的数学家，有动作捕捉与传感器融合的工作背景。",
     },
     areas: [
       { en: "Scientific computing", zh: "科学计算" },
@@ -60,19 +60,17 @@ export const people: Person[] = [
     background: [
       {
         k: { en: "Motion capture", zh: "动作捕捉" },
-        t: { en: "Bodies, measured", zh: "测量人体运动" },
         d: {
-          en: "Motion capture with the Azure Kinect depth camera and Vicon's marker-based optical system, in Python.",
-          zh: "用 Azure Kinect 深度相机与 Vicon 基于标记点的光学系统做动作捕捉，使用 Python。",
+          en: "With the Azure Kinect depth camera and Vicon's marker-based optical system, in Python.",
+          zh: "使用 Azure Kinect 深度相机与 Vicon 基于标记点的光学系统，用 Python 编写。",
         },
         tools: ["Python", "Azure Kinect", "Vicon"],
       },
       {
         k: { en: "Sensor fusion", zh: "传感器融合" },
-        t: { en: "Measurements, combined", zh: "融合多路测量" },
         d: {
-          en: "Sensor fusion with GTSAM, on factor graphs. Their limits (Gaussian, linearised, built by hand) raised the question that became Lenticulum.jl: what if a factor graph were non-Gaussian, non-linear and learned?",
-          zh: "用 GTSAM 在因子图上做传感器融合。因子图的局限（高斯、线性化、手工搭建）引出了后来成为 Lenticulum.jl 的问题：如果因子图是非高斯、非线性、可学习的呢？",
+          en: "With GTSAM, on factor graphs. Their limits (Gaussian, linearised, built by hand) raised the question that became Lenticulum.jl: what if a factor graph were non-Gaussian, non-linear and learned?",
+          zh: "使用 GTSAM，在因子图上。因子图的局限（高斯、线性化、手工搭建）引出了后来成为 Lenticulum.jl 的问题：如果因子图是非高斯、非线性、可学习的呢？",
         },
         tools: ["GTSAM", "Factor graphs"],
         more: { label: { en: "Where Lenticulum.jl came from", zh: "Lenticulum.jl 的由来" }, href: "about#origins" },
