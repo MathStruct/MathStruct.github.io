@@ -7,6 +7,11 @@ description: 数学家；MathStruct 创始人。
 
 - GitHub：[@DanielBoigk](https://github.com/DanielBoigk)
 
+## 背景
+
+- **动作捕捉**：用 Azure Kinect 深度相机与 Vicon 基于标记点的光学系统，使用 Python。
+- **传感器融合**：用 GTSAM 在因子图上做传感器融合。因子图的局限（高斯、线性化、手工搭建）引出了后来成为 Lenticulum.jl 的问题：[Lenticulum.jl 的由来](/zh/about#origins)。
+
 ## 其他项目
 
 **[ModularEIT.jl](https://github.com/DanielBoigk/ModularEIT.jl)**：面向电阻抗断层成像（EIT）的 Julia 库。EIT 是从边界电压与电流测量反演电导率的逆问题，该库由可替换的部件构建：

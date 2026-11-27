@@ -3,11 +3,19 @@ title: Daniel Boigk
 description: Mathematician; founder of MathStruct.
 ---
 
-Mathematician working on scientific computing, inverse problems and machine learning. Founder of
+Mathematician working on scientific computing, inverse problems and machine learning, with a
+background in motion capture and sensor fusion. Founder of
 MathStruct; maintains [[projects/lenticulum-jl|Lenticulum.jl]],
 [[projects/moonkale|Moonkale]] and [[projects/sophia|Sophia]].
 
 - GitHub: [@DanielBoigk](https://github.com/DanielBoigk)
+
+## Background
+
+- **Motion capture**: with the Azure Kinect depth camera and Vicon's marker-based optical
+  system, in Python.
+- **Sensor fusion**: with GTSAM, on factor graphs. Their limits (Gaussian, linearised, built by
+  hand) raised the question that became Lenticulum.jl: [[about#Where this comes from|where it came from]].
 
 ## Other projects
 

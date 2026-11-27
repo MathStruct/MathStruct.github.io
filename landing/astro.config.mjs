@@ -1,6 +1,6 @@
 import { defineConfig } from "astro/config"
 
-// The front page of mathstruct.org, the about page and a few promotional pages (projects/lenticulum-jl,
+// The front page of mathstruct.org, the about and people pages and a few promotional pages (projects/lenticulum-jl,
 // projects/lenticulumLM, projects/sophia, projects/sophialang, projects/moonkale).
 // site/build.sh builds this after Quartz and copies dist/ over Quartz's output, so each page here
 // replaces the Quartz page at the same address; every other page stays a Quartz page.

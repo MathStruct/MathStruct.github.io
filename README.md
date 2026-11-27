@@ -81,6 +81,10 @@ address (plus `/assets/` and `/favicon.svg`):
 - `src/pages/projects/moonkale.astro`: Moonkale's page, with the README's screenshots
   (`public/projects/moonkale-media/`) and a mock workspace where every editor is a view on one
   graph (`src/components/moonkale/`). Its facts come from Moonkale's README and vault.
+- `src/pages/people/index.astro` and `src/pages/people/[slug].astro`: the people page and one page
+  per person, in English and Chinese (`src/pages/zh/people/`), all built from the list in
+  `src/lib/people.ts` by `src/components/people/`. A new member is one entry there, plus their
+  note in `content/people/`. `site/build.sh` moves the built `people.html` to `people/index.html`.
 - `src/pages/projects/category-theory-ml-wiki.astro`: the Category Theory & ML Wiki's page. It shows
   the vault as it is (a first draft) and the knowledge graph it is being turned into, and says which
   is which; its learning map (`src/components/ctml/`) draws 22 notes as a prerequisite graph that

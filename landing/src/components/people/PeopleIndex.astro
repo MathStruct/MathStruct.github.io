@@ -1,0 +1,546 @@
+---
+// /people/ and /zh/people/: everyone in lib/people.ts as a card, with a graph of who maintains
+// which project in the hero. Built for a list that grows: the cards wrap into a grid, and once
+// there are more than a handful of people, a filter by project and area appears above them.
+import Layout from "../../layouts/Layout.astro"
+import Nav from "../Nav.astro"
+import Footer from "../Footer.astro"
+import Avatar from "./Avatar.astro"
+import { people } from "../../lib/people"
+import { projects } from "../../lib/projects"
+import { zhProjects } from "../../lib/projects.zh"
+
+interface Props {
+  lang: "en" | "zh"
+}
+const { lang } = Astro.props
+const zh = lang === "zh"
+const pre = zh ? "/zh" : ""
+const L = <A, B>(en: A, zhs: B) => (zh ? zhs : en)
+
+const projectList = zh ? zhProjects : projects
+const projectNamed = (name: string) => {
+  const i = projects.findIndex((p) => p.name === name)
+  return i < 0 ? undefined : projectList[i]
+}
+
+// the hero graph: people on the left, the projects they maintain on the right, and an open seat
+const shown = projects.filter((p) => people.some((x) => x.maintains.includes(p.name)))
+const rows = Math.max(people.length + 1, shown.length)
+const H = 56 * rows + 24
+const yOf = (i: number, n: number) => 12 + ((i + 0.5) * (H - 24)) / n
+const personNodes = people.map((p, i) => ({ p, y: yOf(i, people.length + 1) }))
+const openY = yOf(people.length, people.length + 1)
+const projectNodes = shown.map((p, i) => ({ p, y: yOf(i, shown.length) }))
+const edges = personNodes.flatMap(({ p, y }) =>
+  p.maintains.flatMap((name) => {
+    const t = projectNodes.find((n) => n.p.name === name)
+    return t ? [{ y1: y, y2: t.y }] : []
+  }),
+)
+
+// filter chips: every project anyone maintains, then every area
+const filters = [
+  ...shown.map((p) => ({ key: "p:" + p.name, label: projectNamed(p.name)?.name ?? p.name })),
+  ...[...new Map(people.flatMap((p) => p.areas.map((a) => [a.en, a] as const))).values()].map((a) => ({
+    key: "a:" + a.en,
+    label: zh ? a.zh : a.en,
+  })),
+]
+const showFilter = people.length > 6
+
+const join = zh ? "/zh/about#collaborate" : "/about#collaborate"
+const steps = [
+  {
+    n: "01",
+    t: L("Say hello", "打个招呼"),
+    d: L(
+      "Open an issue or a discussion on any MathStruct repository, or comment on a page of one of the vaults. Tell us what you would like to work on.",
+      "在任意 MathStruct 仓库开一个 issue 或讨论，或在某个知识库的页面上评论，告诉我们你想做什么。",
+    ),
+  },
+  {
+    n: "02",
+    t: L("Contribute", "参与贡献"),
+    d: L(
+      "Fix something, write a note, run an experiment. Each repository's CONTRIBUTING.md and AGENTS.md say how we work, with or without AI agents.",
+      "修一个问题、写一篇笔记、跑一个实验。每个仓库的 CONTRIBUTING.md 与 AGENTS.md 说明了我们的工作方式，无论是否使用 AI 智能体。",
+    ),
+  },
+  {
+    n: "03",
+    t: L("Add yourself", "把自己加进来"),
+    d: L(
+      "One entry in landing/src/lib/people.ts gives you a card here and a page of your own, in both languages, plus a note in content/people/ for the site's search.",
+      "在 landing/src/lib/people.ts 中加一条记录，就会在这里得到一张卡片和一个双语个人页面；再在 content/people/ 中加一篇笔记，供站内搜索使用。",
+    ),
+  },
+]
+---
+
+<Layout
+  title={L("People · MathStruct", "成员 · MathStruct")}
+  description={L(
+    "The people behind MathStruct: who they are, what they work on and which projects they maintain. Small for now, and open to new members.",
+    "MathStruct 背后的人：他们是谁、做什么、维护哪些项目。目前规模还小，欢迎新成员。",
+  )}
+  lang={lang}
+  path={pre + "/people/"}
+>
+  <Nav />
+
+  <main>
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow reveal">{L("People", "成员")}</span>
+          <h1 class="reveal" style="--d:.05s">
+            {L("Small for now,", "现在还小，")}<br /><span class="serif">{L("open to more.", "欢迎加入。")}</span>
+          </h1>
+          <p class="lede reveal" style="--d:.1s">
+            {L(
+              "MathStruct is the people who build it. Each of us maintains a part of one connected structure: models, code, the editor around them and the knowledge underneath. There is room for more.",
+              "MathStruct 就是建造它的人。我们每个人维护同一个相互连接的结构中的一部分：模型、代码、围绕它们的编辑器，以及底层的知识。这里还有空位。",
+            )}
+          </p>
+          <div class="cta reveal" style="--d:.16s">
+            <a class="btn btn--solid" href="#join">{L("How to join", "如何加入")} <span class="arrow">→</span></a>
+            <a class="btn" href={pre + "/about"}>{L("About MathStruct", "关于 MathStruct")}</a>
+          </div>
+        </div>
+
+        <figure class="roster reveal" style="--d:.1s">
+          <svg viewBox={`0 0 400 ${H}`} role="img" aria-label={L("Who maintains which project", "谁维护哪个项目")}>
+            {edges.map((e) => <path class="edge" d={`M 114 ${e.y1} C 200 ${e.y1}, 200 ${e.y2}, 270 ${e.y2}`} />)}
+            <path class="edge open" d={`M 114 ${openY} L 200 ${openY}`} />
+            {personNodes.map(({ p, y }) => (
+              <a href={`${pre}/people/${p.slug}`}>
+                <circle class="node" cx="100" cy={y} r="14" />
+                <text class="ini" x="100" y={y + 4.5}>{p.name.split(" ").map((w) => w[0]).join("").slice(0, 2)}</text>
+                <text class="lbl" x="78" y={y + 4} text-anchor="end">{p.name.split(" ")[0]}</text>
+              </a>
+            ))}
+            <circle class="node open" cx="100" cy={openY} r="14" />
+            <text class="ini" x="100" y={openY + 4.5}>?</text>
+            <text class="lbl" x="78" y={openY + 4} text-anchor="end">{L("you", "你")}</text>
+            {projectNodes.map(({ p, y }) => (
+              <a href={projectNamed(p.name)?.page ?? p.page}>
+                <rect class="node f" x="270" y={y - 9} width="18" height="18" />
+                <text class="lbl" x="298" y={y + 4}>{p.name.replace(".jl", "")}</text>
+              </a>
+            ))}
+          </svg>
+          <figcaption class="mono">{L("people ○ — maintain — □ projects", "成员 ○ — 维护 — □ 项目")}</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section" id="directory">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">{L("Directory", "名录")}</span>
+            <h2 class="reveal" style="--d:.05s">{L("Who works", "谁在做")}{zh ? "" : " "}<span class="serif">{L("on what.", "什么。")}</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            {L(
+              `${people.length === 1 ? "One person" : `${people.length} people`} so far. Each has a page with their background, the projects they maintain and their own work.`,
+              `目前共 ${people.length} 人。每人都有一个页面，介绍其背景、维护的项目和个人作品。`,
+            )}
+          </p>
+        </div>
+
+        {showFilter && (
+          <div class="filter reveal" role="group" aria-label={L("Filter by project or area", "按项目或领域筛选")}>
+            <button type="button" class="chip on" data-f="">{L("Everyone", "全部")}</button>
+            {filters.map((f) => <button type="button" class="chip" data-f={f.key}>{f.label}</button>)}
+          </div>
+        )}
+
+        <ul class="cards">
+          {people.map((p, i) => (
+            <li
+              class="card reveal"
+              style={`--d:${Math.min(i, 6) * 0.05}s`}
+              data-keys={[...p.maintains.map((m) => "p:" + m), ...p.areas.map((a) => "a:" + a.en)].join("|")}
+            >
+              <a class="card-link" href={`${pre}/people/${p.slug}`}>
+                <div class="card-top">
+                  <Avatar person={p} size={56} />
+                  <div>
+                    <h3>{p.name}</h3>
+                    <p class="role">{zh ? p.role.zh : p.role.en}</p>
+                  </div>
+                </div>
+                <p class="bio">{zh ? p.bio.zh : p.bio.en}</p>
+                {p.maintains.length > 0 && (
+                  <p class="maint mono">
+                    <span>{L("maintains", "维护")}</span> {p.maintains.map((m) => projectNamed(m)?.name ?? m).join(" · ")}
+                  </p>
+                )}
+                <ul class="tags">
+                  {p.areas.map((a) => <li>{zh ? a.zh : a.en}</li>)}
+                </ul>
+                <span class="go mono">{L("Profile", "个人页")} <span class="arrow">→</span></span>
+              </a>
+            </li>
+          ))}
+          <li class="card card--open reveal" style={`--d:${Math.min(people.length, 6) * 0.05}s`} data-keys="*">
+            <a class="card-link" href="#join">
+              <div class="card-top">
+                <span class="open-av serif" aria-hidden="true">?</span>
+                <div>
+                  <h3>{L("Your name here", "你的名字")}</h3>
+                  <p class="role">{L("Mathematician, engineer, student, sceptic", "数学家、工程师、学生、怀疑者")}</p>
+                </div>
+              </div>
+              <p class="bio">
+                {L(
+                  "If any of this is your kind of problem, there is a seat. No credentials needed: a pull request is an introduction.",
+                  "如果这些正是你感兴趣的问题，这里就有你的位置。无需资历：一个 pull request 就是自我介绍。",
+                )}
+              </p>
+              <span class="go mono">{L("How to join", "如何加入")} <span class="arrow">→</span></span>
+            </a>
+          </li>
+        </ul>
+        {showFilter && <p class="empty mono" hidden>{L("Nobody matches that yet.", "暂时没有匹配的人。")}</p>}
+      </div>
+    </section>
+
+    <section class="section" id="join">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">{L("Join", "加入")}</span>
+            <h2 class="reveal" style="--d:.05s">{L("Three steps,", "三步，")}{zh ? "" : " "}<span class="serif">{L("no gatekeeping.", "没有门槛。")}</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            {L("Everything happens in the open, on GitHub. ", "一切都在 GitHub 上公开进行。")}
+            <a class="il" href={join}>{L("More on how we collaborate", "更多关于我们如何协作")}</a>.
+          </p>
+        </div>
+        <ol class="steps">
+          {steps.map((s, i) => (
+            <li class="reveal" style={`--d:${i * 0.06}s`}>
+              <span class="n mono">{s.n}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
+        <div class="cta">
+          <a class="btn btn--solid" href="https://github.com/MathStruct/MathStruct.github.io/discussions">
+            {L("Start a discussion", "发起讨论")} <span class="arrow">→</span>
+          </a>
+          <a class="btn" href="https://github.com/MathStruct">{L("MathStruct on GitHub", "MathStruct 的 GitHub")}</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script>
+  // the filter on /people/: shown only once the list is long enough (see showFilter)
+  const chips = document.querySelectorAll<HTMLButtonElement>(".filter .chip")
+  const cards = document.querySelectorAll<HTMLElement>(".cards .card")
+  const empty = document.querySelector<HTMLElement>(".empty")
+  chips.forEach((chip) =>
+    chip.addEventListener("click", () => {
+      const f = chip.dataset.f ?? ""
+      chips.forEach((c) => c.classList.toggle("on", c === chip))
+      let n = 0
+      cards.forEach((card) => {
+        const keys = card.dataset.keys ?? ""
+        const hit = !f || keys === "*" || keys.split("|").includes(f)
+        card.hidden = !hit
+        if (hit && keys !== "*") n++
+      })
+      if (empty) empty.hidden = n > 0
+    }),
+  )
+</script>
+
+<style>
+  .hero {
+    padding: clamp(32px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -68px 0 0 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 65% 40%, #000 20%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: clamp(32px, 5vw, 56px);
+    align-items: center;
+  }
+  @media (min-width: 960px) {
+    .hero-grid {
+      grid-template-columns: 1.2fr 1fr;
+    }
+  }
+  .hero-copy {
+    min-width: 0;
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(46px, 7vw, 92px);
+    letter-spacing: -0.05em;
+    line-height: 0.96;
+  }
+  .hero-copy .lede {
+    margin-top: 26px;
+    font-size: clamp(17px, 1.7vw, 20px);
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .roster {
+    margin: 0;
+    padding: 24px 20px 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.35);
+    min-width: 0;
+  }
+  .roster svg {
+    width: 100%;
+    height: auto;
+    max-height: 420px;
+  }
+  .roster figcaption {
+    margin-top: 12px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    text-align: center;
+  }
+  .edge {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.4;
+  }
+  .edge.open {
+    stroke-dasharray: 3 4;
+  }
+  .node {
+    fill: var(--bg-raised);
+    stroke: var(--fg);
+    stroke-width: 1.4;
+    transition: fill 0.2s var(--ease);
+  }
+  .node.f {
+    fill: var(--fg);
+  }
+  .node.open {
+    stroke-dasharray: 3 3;
+    stroke: var(--muted);
+  }
+  .roster a:hover .node:not(.f) {
+    fill: var(--bg-sunken);
+  }
+  .ini {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 13px;
+    text-anchor: middle;
+    fill: var(--fg);
+  }
+  .lbl {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  .roster a:hover .lbl {
+    fill: var(--fg);
+  }
+
+  .filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .chip {
+    font: 500 13px var(--font-sans);
+    color: var(--fg-2);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s var(--ease);
+  }
+  .chip:hover {
+    border-color: var(--fg);
+  }
+  .chip.on {
+    background: var(--invert-bg);
+    color: var(--invert-fg);
+    border-color: var(--invert-bg);
+  }
+
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  }
+  .card[hidden] {
+    display: none;
+  }
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    padding: 26px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    transition:
+      border-color 0.2s var(--ease),
+      transform 0.25s var(--ease),
+      box-shadow 0.25s var(--ease);
+  }
+  .card-link:hover {
+    border-color: var(--fg);
+    transform: translateY(-2px);
+    box-shadow: 0 24px 48px -36px rgba(0, 0, 0, 0.4);
+  }
+  .card--open .card-link {
+    background: transparent;
+    border-style: dashed;
+  }
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .open-av {
+    display: inline-grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border-radius: 50%;
+    border: 1px dashed var(--line-strong);
+    font-size: 26px;
+    color: var(--muted);
+  }
+  .card h3 {
+    font-size: 21px;
+  }
+  .role {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .bio {
+    margin: 0;
+    font-size: 15px;
+    color: var(--fg-2);
+    flex: 1;
+  }
+  .maint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--fg-2);
+  }
+  .maint span {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 4px;
+  }
+  .tags {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tags li {
+    font-size: 12px;
+    color: var(--fg-2);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+  }
+  .go {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card-link:hover .go {
+    color: var(--fg);
+  }
+  .go .arrow {
+    display: inline-block;
+    transition: transform 0.25s var(--ease);
+  }
+  .card-link:hover .go .arrow {
+    transform: translateX(3px);
+  }
+  .empty {
+    margin-top: 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 900px) {
+    .steps {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .steps li {
+    background: var(--bg);
+    padding: 28px 26px 32px;
+  }
+  .steps .n {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .steps h3 {
+    margin-top: 14px;
+  }
+  .steps p {
+    margin: 10px 0 0;
+    color: var(--fg-2);
+    font-size: 15px;
+  }
+</style>
