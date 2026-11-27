@@ -21,6 +21,7 @@ const links = {
   query: note("vault/Specifications/SPEC-007-Sophia-Query-Language"),
   metamath: note("vault/Languages/Metamath/Metamath-Overview"),
   contributing: "https://github.com/MathStruct/Sophia/blob/master/CONTRIBUTING.md",
+  naming: note("vault/Design/Naming-and-Change-Propagation"),
 }
 
 // vault/Design/Equivalence and Witnesses.md 的“强度阶梯”
@@ -186,6 +187,35 @@ const axioms = ["ax-mp", "ax-1", "ax-2", "ax-3", "ax-4", "ax-5", "ax-6", "ax-7",
           </p>
         </div>
         <HowItWorks />
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------ why it matters -->
+    <section class="section" id="why">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">为什么重要</span>
+            <h2 class="reveal" style="--d:.05s">没有边界，<span class="serif">只有一个库。</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            今天的代码被命名空间、仓库和 crate 切割开来。这些边界说明的是代码在哪里写成、如何发布，而不是它计算什么。当一个定义按它是什么被找到时，这些边界就不再是墙。
+          </p>
+        </div>
+        <div class="aside-grid aside-grid--four">
+          <p class="reveal">
+            <strong>没有任意的边界。</strong>命名空间、仓库、crate 和包都是有些任意的界线：它们决定谁能看到谁、什么必须一起发布。在 Sophia 中，每个定义都以自己的 id 存放在同一个存储里。命名空间只是覆盖其上的一组名字，所以代码可以跨越过去的包边界被复用，无需包装或复制进来。
+          </p>
+          <p class="reveal" style="--d:.06s">
+            <strong>另一种版本与依赖管理。</strong>依赖指向一个 id，而不是一个包加一个版本范围，所以它不会漂移，也不会冲突：一个函数的两个版本就是并存的两个 id。一次发布是一组命名绑定，而一次改动属于补丁、次版本还是主版本，是<a href={links.naming}>由证据推导出来的</a>，而不是人为声明的。
+          </p>
+          <p class="reveal" style="--d:.12s">
+            <strong>对抗 AI 带来的代码膨胀。</strong>编程智能体往往会写一个新的辅助函数，而不是找到已有的那个，于是库里堆满了名字不同、内容相同的副本。在按结构寻址的存储中，完全相同的副本会得到原定义的 id 并与之合并；近似副本则需要下文的等价边。智能体还可以在动手之前先问存储：这个东西是否已经存在（MCP 服务器，M3b，计划中）。
+          </p>
+          <p class="reveal" style="--d:.18s">
+            <strong>复用，而非重写。</strong>AI 让重写别人的代码变得廉价，但重写会丢掉旧代码积累下来的测试、证明和信任。我们的意图正相反：找到已有的库，连同附着在它上面的事实，然后使用它。
+          </p>
+        </div>
       </div>
     </section>
 
@@ -593,6 +623,11 @@ const axioms = ["ax-mp", "ax-1", "ax-2", "ax-3", "ax-4", "ax-5", "ax-6", "ax-7",
     .aside-grid {
       grid-template-columns: repeat(3, 1fr);
       gap: 40px;
+    }
+  }
+  @media (min-width: 900px) {
+    .aside-grid--four {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
   .aside-grid p {

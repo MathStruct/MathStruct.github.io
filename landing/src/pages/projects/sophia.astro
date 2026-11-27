@@ -23,6 +23,7 @@ const links = {
   query: note("vault/Specifications/SPEC-007-Sophia-Query-Language"),
   metamath: note("vault/Languages/Metamath/Metamath-Overview"),
   contributing: "https://github.com/MathStruct/Sophia/blob/master/CONTRIBUTING.md",
+  naming: note("vault/Design/Naming-and-Change-Propagation"),
 }
 
 // vault/Design/Equivalence and Witnesses.md, "The ladder of strength"
@@ -197,6 +198,52 @@ const axioms = ["ax-mp", "ax-1", "ax-2", "ax-3", "ax-4", "ax-5", "ax-6", "ax-7",
           </p>
         </div>
         <HowItWorks />
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------ why it matters -->
+    <section class="section" id="why">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow reveal">Why it matters</span>
+            <h2 class="reveal" style="--d:.05s">No boundaries, <span class="serif">one library.</span></h2>
+          </div>
+          <p class="lede reveal" style="--d:.1s">
+            Code today is cut up by namespaces, repositories and crates. Those borders say where code
+            was written and how it is shipped, not what it computes. When a definition is found by
+            what it is, they stop being walls.
+          </p>
+        </div>
+        <div class="aside-grid aside-grid--four">
+          <p class="reveal">
+            <strong>No arbitrary boundaries.</strong> Namespaces, repositories, crates and packages
+            are somewhat arbitrary lines: they decide what can see what and what has to ship together.
+            In Sophia every definition sits in one store under its own id. A namespace is only a set
+            of names laid over it, so code is reused across what used to be package borders, without
+            wrapping or vendoring.
+          </p>
+          <p class="reveal" style="--d:.06s">
+            <strong>Versions and dependencies, done differently.</strong> A dependency points at an
+            id, not at a package and a version range, so it cannot drift or conflict: two versions of
+            a function are two ids, side by side. A release is a named set of bindings, and whether a
+            change is a patch, minor or major release is
+            <a href={links.naming}>derived from the evidence</a> instead of declared.
+          </p>
+          <p class="reveal" style="--d:.12s">
+            <strong>Against AI code bloat.</strong> Coding agents tend to write a new helper instead
+            of finding the one that exists, and a library fills up with copies of the same function
+            under different names. In a store keyed by structure, an exact duplicate gets the
+            original's id and folds into it; near-duplicates need equivalence edges, below. And an
+            agent can ask the store whether something exists before writing it (the MCP server, M3b,
+            planned).
+          </p>
+          <p class="reveal" style="--d:.18s">
+            <strong>Reuse, not rewrite.</strong> AI makes rewriting other people's code cheap, but a
+            rewrite throws away the tests, proofs and trust the old code had gathered. The intention
+            is the opposite: find the existing library, with the facts attached to it, and use it.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -629,6 +676,11 @@ const axioms = ["ax-mp", "ax-1", "ax-2", "ax-3", "ax-4", "ax-5", "ax-6", "ax-7",
     .aside-grid {
       grid-template-columns: repeat(3, 1fr);
       gap: 40px;
+    }
+  }
+  @media (min-width: 900px) {
+    .aside-grid--four {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
   .aside-grid p {
