@@ -43,4 +43,8 @@ if [[ -z "${SKIP_LANDING:-}" ]]; then
   # Astro builds landing/src/pages/zh/index.astro to zh.html (build.format is "file"); the Chinese
   # front page belongs at /zh/, so move it to where GitHub Pages serves it from
   mv "$OUT/zh.html" "$OUT/zh/index.html"
+  # the same for the people index (src/pages/people/index.astro): people.html next to the people/
+  # folder would never be served, so it replaces Quartz's people/index.html instead
+  mv "$OUT/people.html" "$OUT/people/index.html"
+  mv "$OUT/zh/people.html" "$OUT/zh/people/index.html"
 fi

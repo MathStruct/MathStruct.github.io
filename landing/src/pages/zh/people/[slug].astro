@@ -1,0 +1,10 @@
+---
+// /zh/people/<slug>: the Chinese copy of each person's page, from the same list (lib/people.ts).
+import PersonPage from "../../../components/people/PersonPage.astro"
+import { people, type Person } from "../../../lib/people"
+
+export const getStaticPaths = () => people.map((person) => ({ params: { slug: person.slug }, props: { person } }))
+const { person } = Astro.props as { person: Person }
+---
+
+<PersonPage person={person} lang="zh" />

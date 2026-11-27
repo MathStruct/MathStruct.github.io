@@ -1,0 +1,11 @@
+---
+// /people/<slug>: one page per entry in lib/people.ts. Each replaces the Quartz page built from
+// content/people/<slug>.md, which stays for the site's search, graph and blog bylines.
+import PersonPage from "../../components/people/PersonPage.astro"
+import { people, type Person } from "../../lib/people"
+
+export const getStaticPaths = () => people.map((person) => ({ params: { slug: person.slug }, props: { person } }))
+const { person } = Astro.props as { person: Person }
+---
+
+<PersonPage person={person} lang="en" />
